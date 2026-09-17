@@ -27,14 +27,28 @@ $$\Delta = \frac{|V_{\text{cand}} - V_{\text{ref}}|}{\max(|V_{\text{ref}}|, 10^{
   $$\text{Proximity} = 1.0 - \frac{\Delta}{0.15}$$
 * Eliminates the penalty on natural blockchain fluctuations (gas base fees, priority tips, minor funding rounding, and `.0005` dev snipe variations).
 
-### 3. Interactive Web Dashboard (`index.html`)
+### 3. Pre-Launch vs. Post-Launch Parameter Pipeline
+* **Pre-Launch Sniping Parameters (Block 0 Decision)**:
+  * Bytecode normalized SHA-256, opcode dispatcher hashes, compiler version, deployer wallet, 1-hop and 2-hop funder lineage, initial dev snipe amount (e.g. `.0005` ETH), nonce, creation gas used, gas base fee, and priority gwei.
+  * Allows instantaneous scoring before or at the moment of liquidity addition to make automated snipe decisions.
+* **Post-Launch Holding & Confirmation Parameters**:
+  * Bundler wallet cluster, bundle ETH ratio, buyer distribution, dev holding vs. sold ratio, top 10 holder concentration, marketing boost speed (first/second boost delay), website tech stack, and Telegram/X handle naming patterns.
+  * Used to confirm whether to hold the token or take early profit.
+
+### 4. Rug Token Identification & Visual Highlighting
+* Tokens flagged with an All-Time High $\le \$5,000$ are categorized as **Rugs**.
+* Automatically highlighted in the leads table with a **40% Red Opacity background fill** (`rgba(239, 68, 68, 0.40)`) and an unmistakable `[🚨 RUG]` badge.
+* Includes a quick filter toggle to view All Tokens, Hide Rugs, or view Rugs Only.
+
+### 5. Interactive Web Dashboard (`index.html`)
 * **Page 1 (Candidate Leads Table)**:
-  * Sortable, filterable table of all 140 candidate leads.
+  * **Launch Date (UTC)** column with bidirectional sorting (newest/oldest).
+  * Sortable by Score, Token Symbol, Inferred Team, and Launch Date.
   * Displays Confidence Badges (`HIGH_LEAD`, `PROBABLE_LEAD`, `WATCH`, `WEAK`), match scores, inferred team, and **Nearest Sibling Token** (e.g. `$GME`, `$INTEL`, `$PANTHER`, `$DEGENFLY`).
   * Direct browser links to **GMGN**, **DexScreener**, and **RobinScan Blockscout**.
 * **Page 2 (Parameter Weights & Tolerance Buffer)**:
   * **3-Column Table**:
-    * Column 1: Parameter / Forensic Habit (50 parameters across 6 categories).
+    * Column 1: Parameter / Forensic Habit (50 parameters tagged as `⚡ PRE-LAUNCH (SNIPE)` or `🛡️ POST-LAUNCH (HOLD)`).
     * Column 2: Weighted (Active Applied Value).
     * Column 3: Customize Weight (interactive input + slider).
   * Interactive **Numerical Habit Tolerance Buffer** slider (default $\pm 15\%$).

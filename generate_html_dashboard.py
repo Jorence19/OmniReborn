@@ -27,6 +27,10 @@ for idx, r in merged.iterrows():
     best_match_symbol = str(r['best_match_symbol']) if pd.notna(r.get('best_match_symbol')) else ''
     best_match_ca = str(r['best_match_ca']) if pd.notna(r.get('best_match_ca')) else ''
     ath = float(r['ath']) if pd.notna(r.get('ath')) and float(r['ath']) > 0 else 0.0
+    token_live = str(r.get('token_live')) if pd.notna(r.get('token_live')) else ''
+    
+    # Rug identification: peak ATH <= $5,000 or zero volume/failed launch
+    is_rug = (ath <= 5000.0)
     
     # Parse evidence
     ev_raw = r['evidence']
@@ -45,39 +49,29 @@ for idx, r in merged.iterrows():
         "best_match_symbol": best_match_symbol,
         "best_match_ca": best_match_ca,
         "ath": ath,
+        "is_rug": is_rug,
         "evidence": ev_list,
-        "token_live": str(r.get('token_live')) if pd.notna(r.get('token_live')) else '',
+        "token_live": token_live,
         "website": str(r.get('website')) if pd.notna(r.get('website')) else '',
         "x": str(r.get('x')) if pd.notna(r.get('x')) else '',
     })
 
-# Define the 50 parameters with default Phase 1 weights and forensic descriptions
+# Define the 50 parameters with Pre-Launch vs Post-Launch phase tags and default weights
 PARAMETERS = [
-    # 1. Wallets & Lineage (High Reliability)
+    # ==================== ⚡ PRE-LAUNCH (SNIPE DECISIONS) ====================
+    # 1. Wallets & Lineage (Pre-Launch)
     {
         "id": "dev_wallet",
         "name": "Deployer Wallet (dev_wallet)",
+        "phase": "PRE_LAUNCH",
         "category": "Wallets & Lineage",
         "default": 1.00,
         "description": "Direct deployer wallet reused across tokens (immediate 100% attribution)."
     },
     {
-        "id": "bundler_wallet",
-        "name": "Bundler Wallet (bundler_wallet)",
-        "category": "Wallets & Lineage",
-        "default": 1.00,
-        "description": "Wallet coordinating or funding launch bundles at block 0."
-    },
-    {
-        "id": "buyer_wallet",
-        "name": "Insider Buyer Wallet (buyer_wallet)",
-        "category": "Wallets & Lineage",
-        "default": 1.00,
-        "description": "Repeat sniper or internal buyer wallet detected across multiple team coins."
-    },
-    {
         "id": "funder_1hop",
         "name": "1-Hop Funder Address (funder_1hop)",
+        "phase": "PRE_LAUNCH",
         "category": "Wallets & Lineage",
         "default": 0.85,
         "description": "Immediate upstream funding source transferring ETH to the dev wallet (e.g. Astro Treasury)."
@@ -85,6 +79,7 @@ PARAMETERS = [
     {
         "id": "funder_2hop",
         "name": "2-Hop Funder Address (funder_2hop)",
+        "phase": "PRE_LAUNCH",
         "category": "Wallets & Lineage",
         "default": 0.85,
         "description": "Grandparent funding root or distribution hub two hops upstream."
@@ -92,15 +87,17 @@ PARAMETERS = [
     {
         "id": "funder_label",
         "name": "Funder Label / Exchange Tag (funder_label)",
+        "phase": "PRE_LAUNCH",
         "category": "Wallets & Lineage",
         "default": 0.08,
         "description": "Recognized CEX hot wallet or bridge tag (e.g. Binance Hot Wallet, FixedFloat)."
     },
 
-    # 2. Bytecode & Smart Contract Architecture
+    # 2. Bytecode & Smart Contract Architecture (Pre-Launch)
     {
         "id": "normalized_bytecode_hash",
         "name": "Normalized Bytecode Hash",
+        "phase": "PRE_LAUNCH",
         "category": "Bytecode & Architecture",
         "default": 0.55,
         "description": "Exact SHA-256 bytecode match after stripping CBOR compiler metadata and constructor addresses."
@@ -108,6 +105,7 @@ PARAMETERS = [
     {
         "id": "contract_factory",
         "name": "Contract Factory / Proxy",
+        "phase": "PRE_LAUNCH",
         "category": "Bytecode & Architecture",
         "default": 0.55,
         "description": "Factory or proxy deployer contract address used to spawn token contracts."
@@ -115,6 +113,7 @@ PARAMETERS = [
     {
         "id": "template_hash",
         "name": "Template Structural Hash",
+        "phase": "PRE_LAUNCH",
         "category": "Bytecode & Architecture",
         "default": 0.35,
         "description": "Structural opcode flow hash representing token contract implementation framework."
@@ -122,6 +121,7 @@ PARAMETERS = [
     {
         "id": "selectors_hash",
         "name": "Function Selectors Hash",
+        "phase": "PRE_LAUNCH",
         "category": "Bytecode & Architecture",
         "default": 0.30,
         "description": "Combined hash of all public ABI 4-byte function selectors supported by the token."
@@ -129,6 +129,7 @@ PARAMETERS = [
     {
         "id": "method_selector",
         "name": "Creation Method Selector",
+        "phase": "PRE_LAUNCH",
         "category": "Bytecode & Architecture",
         "default": 0.15,
         "description": "4-byte function selector used to deploy the token (e.g. 0xf85f8e41 launchAndBuy)."
@@ -136,6 +137,7 @@ PARAMETERS = [
     {
         "id": "compiler_version",
         "name": "Solidity Compiler Version",
+        "phase": "PRE_LAUNCH",
         "category": "Bytecode & Architecture",
         "default": 0.10,
         "description": "Exact solc compiler version extracted from bytecode metadata (e.g. 0.8.28)."
@@ -143,87 +145,17 @@ PARAMETERS = [
     {
         "id": "launchpad",
         "name": "Launchpad Platform",
+        "phase": "PRE_LAUNCH",
         "category": "Bytecode & Architecture",
         "default": 0.10,
         "description": "Platform or bonding curve mechanism used (e.g. pons, uniswap_v4)."
     },
 
-    # 3. Branding, Socials & Web Infrastructure
-    {
-        "id": "favicon_hash",
-        "name": "Favicon MMH3 / SHA-256 Hash",
-        "category": "Branding & Socials",
-        "default": 1.00,
-        "description": "Exact cryptographic hash of website favicon icon asset."
-    },
-    {
-        "id": "tg_handle",
-        "name": "Telegram Channel / Group Handle",
-        "category": "Branding & Socials",
-        "default": 1.00,
-        "description": "Exact Telegram username or invite link reused by team."
-    },
-    {
-        "id": "x_handle",
-        "name": "Twitter / X Profile Handle",
-        "category": "Branding & Socials",
-        "default": 1.00,
-        "description": "Exact X / Twitter profile handle linked to project."
-    },
-    {
-        "id": "website_domain",
-        "name": "Website Root Domain",
-        "category": "Branding & Socials",
-        "default": 0.85,
-        "description": "Base domain name hosting the token's landing page."
-    },
-    {
-        "id": "website_host_type",
-        "name": "Website Hosting Infrastructure",
-        "category": "Branding & Socials",
-        "default": 0.22,
-        "description": "Hosting provider signature (Vercel, Carrd, Netlify, Cloudflare Pages)."
-    },
-    {
-        "id": "tg_naming_pattern",
-        "name": "Telegram Naming Regex Pattern",
-        "category": "Branding & Socials",
-        "default": 0.22,
-        "description": "Syntax habits in TG handle construction (e.g. _portal, _sol, _erc20)."
-    },
-    {
-        "id": "x_naming_pattern",
-        "name": "Twitter / X Naming Pattern",
-        "category": "Branding & Socials",
-        "default": 0.22,
-        "description": "Syntax habits in X handle naming conventions (e.g. _coin, real_token)."
-    },
-    {
-        "id": "description_length_bucket",
-        "name": "Description Length Bucket",
-        "category": "Branding & Socials",
-        "default": 0.22,
-        "description": "50-character binned length of token description copy."
-    },
-    {
-        "id": "description_hashtag_count",
-        "name": "Description Hashtag Count",
-        "category": "Branding & Socials",
-        "default": 0.22,
-        "description": "Number of '#' hashtags included in description."
-    },
-    {
-        "id": "description_mention_count",
-        "name": "Description Mention Count",
-        "category": "Branding & Socials",
-        "default": 0.22,
-        "description": "Number of '@' handles tagged in description."
-    },
-
-    # 4. Execution, Setup & Gas Habits
+    # 3. Execution, Setup & Gas Habits (Pre-Launch)
     {
         "id": "setup_time_seconds",
         "name": "Setup Time (Funding to Deploy)",
+        "phase": "PRE_LAUNCH",
         "category": "Execution & Gas",
         "default": 0.20,
         "description": "Time elapsed between funder ETH arrival and token deployment (±15% buffer)."
@@ -231,6 +163,7 @@ PARAMETERS = [
     {
         "id": "wallet_age_at_deploy_seconds",
         "name": "Wallet Age at Deploy Bucket",
+        "phase": "PRE_LAUNCH",
         "category": "Execution & Gas",
         "default": 0.20,
         "description": "Total age of deployer address from its very first tx on chain (±15% buffer)."
@@ -238,6 +171,7 @@ PARAMETERS = [
     {
         "id": "nonce",
         "name": "Deployer Nonce at Launch",
+        "phase": "PRE_LAUNCH",
         "category": "Execution & Gas",
         "default": 0.20,
         "description": "Wallet nonce count when issuing the token creation transaction."
@@ -245,13 +179,15 @@ PARAMETERS = [
     {
         "id": "value_eth",
         "name": "Deployment ETH Value (Snipe / Liquidity)",
+        "phase": "PRE_LAUNCH",
         "category": "Execution & Gas",
         "default": 0.25,
-        "description": "Exact native ETH sent alongside token creation call (±15% buffer)."
+        "description": "Exact native ETH sent alongside token creation call (e.g. .0005 snipe habit, ±15% buffer)."
     },
     {
         "id": "fund_amount",
         "name": "Funder Transfer Amount",
+        "phase": "PRE_LAUNCH",
         "category": "Execution & Gas",
         "default": 0.25,
         "description": "ETH amount sent by upstream funder to seed the deployer (±15% buffer)."
@@ -259,6 +195,7 @@ PARAMETERS = [
     {
         "id": "funding_count_before_deploy",
         "name": "Funding Tx Count Before Deploy",
+        "phase": "PRE_LAUNCH",
         "category": "Execution & Gas",
         "default": 0.20,
         "description": "Number of incoming funding transactions into deployer before creation."
@@ -266,6 +203,7 @@ PARAMETERS = [
     {
         "id": "funding_total_eth_before_deploy",
         "name": "Total ETH Seed Capital",
+        "phase": "PRE_LAUNCH",
         "category": "Execution & Gas",
         "default": 0.20,
         "description": "Cumulative ETH received by deployer before token deployment (±15% buffer)."
@@ -273,6 +211,7 @@ PARAMETERS = [
     {
         "id": "creation_gas_used",
         "name": "Creation Gas Used",
+        "phase": "PRE_LAUNCH",
         "category": "Execution & Gas",
         "default": 0.15,
         "description": "Gas units consumed by token deployment transaction (±15% buffer)."
@@ -280,6 +219,7 @@ PARAMETERS = [
     {
         "id": "creation_tx_fee_eth",
         "name": "Creation Tx Fee (ETH)",
+        "phase": "PRE_LAUNCH",
         "category": "Execution & Gas",
         "default": 0.15,
         "description": "Total transaction fee paid to block builder in ETH (±15% buffer)."
@@ -287,6 +227,7 @@ PARAMETERS = [
     {
         "id": "gwei",
         "name": "Gas Base Fee (Gwei)",
+        "phase": "PRE_LAUNCH",
         "category": "Execution & Gas",
         "default": 0.15,
         "description": "Effective gas price chosen by dev during deployment (±15% buffer)."
@@ -294,6 +235,7 @@ PARAMETERS = [
     {
         "id": "max_gwei",
         "name": "Max Fee Per Gas (Max Gwei)",
+        "phase": "PRE_LAUNCH",
         "category": "Execution & Gas",
         "default": 0.15,
         "description": "EIP-1559 maxFeePerGas setting configured in launch transaction (±15% buffer)."
@@ -301,22 +243,42 @@ PARAMETERS = [
     {
         "id": "priority_gwei",
         "name": "Priority Tip Fee (Priority Gwei)",
+        "phase": "PRE_LAUNCH",
         "category": "Execution & Gas",
         "default": 0.20,
         "description": "EIP-1559 maxPriorityFeePerGas habit (e.g. 0.1 Gwei, ±15% buffer)."
     },
-
-    # 5. Launch Economics & Bundle Dynamics
     {
         "id": "initial_snipe_tokens",
         "name": "Dev Initial Snipe Token Amount",
+        "phase": "PRE_LAUNCH",
         "category": "Economics & Bundles",
         "default": 0.20,
         "description": "Number of tokens bought by dev in the deployment transaction (±15% buffer)."
     },
+
+    # ==================== 🛡️ POST-LAUNCH (HOLDING & EXIT DECISIONS) ====================
+    # 4. Bundle & Insider Dynamics (Post-Launch)
+    {
+        "id": "bundler_wallet",
+        "name": "Bundler Wallet (bundler_wallet)",
+        "phase": "POST_LAUNCH",
+        "category": "Wallets & Lineage",
+        "default": 1.00,
+        "description": "Wallet coordinating or funding launch bundles at block 0."
+    },
+    {
+        "id": "buyer_wallet",
+        "name": "Insider Buyer Wallet (buyer_wallet)",
+        "phase": "POST_LAUNCH",
+        "category": "Wallets & Lineage",
+        "default": 1.00,
+        "description": "Repeat sniper or internal buyer wallet detected across multiple team coins."
+    },
     {
         "id": "bundle_eth",
         "name": "Total Bundle ETH Spent",
+        "phase": "POST_LAUNCH",
         "category": "Economics & Bundles",
         "default": 0.20,
         "description": "Aggregate ETH spent across all coordinated block 0 bundle transactions (±15% buffer)."
@@ -324,6 +286,7 @@ PARAMETERS = [
     {
         "id": "dev_eth",
         "name": "Dev Snipe ETH Amount",
+        "phase": "POST_LAUNCH",
         "category": "Economics & Bundles",
         "default": 0.20,
         "description": "Exact ETH capital committed by the dev address at launch (±15% buffer)."
@@ -331,6 +294,7 @@ PARAMETERS = [
     {
         "id": "buyer_eth",
         "name": "Top Insider Buyer ETH",
+        "phase": "POST_LAUNCH",
         "category": "Economics & Bundles",
         "default": 0.20,
         "description": "ETH capital deployed by top coordinated insider buyer (±15% buffer)."
@@ -338,6 +302,7 @@ PARAMETERS = [
     {
         "id": "bundle_ratio",
         "name": "Bundle Supply Ratio (%)",
+        "phase": "POST_LAUNCH",
         "category": "Economics & Bundles",
         "default": 0.20,
         "description": "Percentage of total token supply sniped in the launch bundle (±15% buffer)."
@@ -345,6 +310,7 @@ PARAMETERS = [
     {
         "id": "bundle_wallets_count",
         "name": "Bundle Wallets Count",
+        "phase": "POST_LAUNCH",
         "category": "Economics & Bundles",
         "default": 0.20,
         "description": "Number of coordinated buyer wallets participating in the launch bundle."
@@ -352,6 +318,7 @@ PARAMETERS = [
     {
         "id": "dev_holding_ratio",
         "name": "Dev Supply Retention Ratio",
+        "phase": "POST_LAUNCH",
         "category": "Economics & Bundles",
         "default": 0.20,
         "description": "Percentage of total supply retained by dev post-graduation (±15% buffer)."
@@ -359,6 +326,7 @@ PARAMETERS = [
     {
         "id": "dev_sold_ratio",
         "name": "Dev Supply Sold Ratio",
+        "phase": "POST_LAUNCH",
         "category": "Economics & Bundles",
         "default": 0.20,
         "description": "Percentage of dev holdings sold into the market (±15% buffer)."
@@ -366,15 +334,17 @@ PARAMETERS = [
     {
         "id": "top_10_ratio",
         "name": "Top 10 Holders Supply Concentration",
+        "phase": "POST_LAUNCH",
         "category": "Economics & Bundles",
         "default": 0.20,
         "description": "Percentage of supply controlled by the top 10 holders combined (±15% buffer)."
     },
 
-    # 6. Marketing & Launch Timing
+    # 5. Marketing Speed & Boost Purchases (Post-Launch)
     {
         "id": "first_boost_used",
         "name": "Dex Paid 1st Boost Purchase",
+        "phase": "POST_LAUNCH",
         "category": "Marketing & Timing",
         "default": 0.22,
         "description": "Whether dev bought DexScreener/DexTools 1st marketing boost."
@@ -382,6 +352,7 @@ PARAMETERS = [
     {
         "id": "second_boost_used",
         "name": "Dex Paid 2nd Boost Purchase",
+        "phase": "POST_LAUNCH",
         "category": "Marketing & Timing",
         "default": 0.22,
         "description": "Whether dev followed up with 2nd marketing boost."
@@ -389,6 +360,7 @@ PARAMETERS = [
     {
         "id": "ads_paid_used",
         "name": "Banner Ads Paid at Launch",
+        "phase": "POST_LAUNCH",
         "category": "Marketing & Timing",
         "default": 0.22,
         "description": "Whether dev paid for sponsored banner advertisements on DexScreener."
@@ -396,6 +368,7 @@ PARAMETERS = [
     {
         "id": "launch_hour_utc",
         "name": "Launch Hour (UTC)",
+        "phase": "POST_LAUNCH",
         "category": "Marketing & Timing",
         "default": 0.22,
         "description": "UTC hour of day when dev team habitually deploys."
@@ -403,6 +376,7 @@ PARAMETERS = [
     {
         "id": "launch_quarter_hour_utc",
         "name": "Launch 15-Minute Window (UTC)",
+        "phase": "POST_LAUNCH",
         "category": "Marketing & Timing",
         "default": 0.22,
         "description": "Specific 15-minute window habit within the hour."
@@ -410,9 +384,92 @@ PARAMETERS = [
     {
         "id": "launch_weekday_utc",
         "name": "Launch Day of Week (UTC)",
+        "phase": "POST_LAUNCH",
         "category": "Marketing & Timing",
         "default": 0.22,
         "description": "Day of the week preferred by team for deployments."
+    },
+
+    # 6. Branding, Socials & Web Infrastructure (Post-Launch)
+    {
+        "id": "favicon_hash",
+        "name": "Favicon MMH3 / SHA-256 Hash",
+        "phase": "POST_LAUNCH",
+        "category": "Branding & Socials",
+        "default": 1.00,
+        "description": "Exact cryptographic hash of website favicon icon asset."
+    },
+    {
+        "id": "tg_handle",
+        "name": "Telegram Channel / Group Handle",
+        "phase": "POST_LAUNCH",
+        "category": "Branding & Socials",
+        "default": 1.00,
+        "description": "Exact Telegram username or invite link reused by team."
+    },
+    {
+        "id": "x_handle",
+        "name": "Twitter / X Profile Handle",
+        "phase": "POST_LAUNCH",
+        "category": "Branding & Socials",
+        "default": 1.00,
+        "description": "Exact X / Twitter profile handle linked to project."
+    },
+    {
+        "id": "website_domain",
+        "name": "Website Root Domain",
+        "phase": "POST_LAUNCH",
+        "category": "Branding & Socials",
+        "default": 0.85,
+        "description": "Base domain name hosting the token's landing page."
+    },
+    {
+        "id": "website_host_type",
+        "name": "Website Hosting Infrastructure",
+        "phase": "POST_LAUNCH",
+        "category": "Branding & Socials",
+        "default": 0.22,
+        "description": "Hosting provider signature (Vercel, Carrd, Netlify, Cloudflare Pages)."
+    },
+    {
+        "id": "tg_naming_pattern",
+        "name": "Telegram Naming Regex Pattern",
+        "phase": "POST_LAUNCH",
+        "category": "Branding & Socials",
+        "default": 0.22,
+        "description": "Syntax habits in TG handle construction (e.g. _portal, _sol, _erc20)."
+    },
+    {
+        "id": "x_naming_pattern",
+        "name": "Twitter / X Naming Pattern",
+        "phase": "POST_LAUNCH",
+        "category": "Branding & Socials",
+        "default": 0.22,
+        "description": "Syntax habits in X handle naming conventions (e.g. _coin, real_token)."
+    },
+    {
+        "id": "description_length_bucket",
+        "name": "Description Length Bucket",
+        "phase": "POST_LAUNCH",
+        "category": "Branding & Socials",
+        "default": 0.22,
+        "description": "50-character binned length of token description copy."
+    },
+    {
+        "id": "description_hashtag_count",
+        "name": "Description Hashtag Count",
+        "phase": "POST_LAUNCH",
+        "category": "Branding & Socials",
+        "default": 0.22,
+        "description": "Number of '#' hashtags included in description."
+    },
+    {
+        "id": "description_mention_count",
+        "name": "Description Mention Count",
+        "phase": "POST_LAUNCH",
+        "category": "Branding & Socials",
+        "default": 0.22,
+        "description": "Number of '@' handles tagged in description."
     }
 ]
 
@@ -534,7 +591,7 @@ html_content = f"""<!DOCTYPE html>
         }}
         .stats-grid {{
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 16px;
             margin-bottom: 24px;
         }}
@@ -612,7 +669,7 @@ html_content = f"""<!DOCTYPE html>
             border-color: var(--border-active);
         }}
         .search-input {{
-            min-width: 260px;
+            min-width: 250px;
         }}
         .btn {{
             border: none;
@@ -693,6 +750,11 @@ html_content = f"""<!DOCTYPE html>
             font-size: 11px;
             letter-spacing: 0.6px;
             white-space: nowrap;
+            user-select: none;
+        }}
+        th.sortable:hover {{
+            color: #ffffff;
+            background-color: #1a2233;
         }}
         td {{
             padding: 14px 16px;
@@ -701,6 +763,13 @@ html_content = f"""<!DOCTYPE html>
         }}
         tr:hover td {{
             background-color: rgba(255, 255, 255, 0.02);
+        }}
+        /* 40% Red Opacity for Rug Tokens */
+        tr.rug-row {{
+            background-color: rgba(239, 68, 68, 0.40) !important;
+        }}
+        tr.rug-row:hover td {{
+            background-color: rgba(239, 68, 68, 0.50) !important;
         }}
         .badge {{
             padding: 4px 9px;
@@ -731,6 +800,16 @@ html_content = f"""<!DOCTYPE html>
             color: #94a3b8;
             border: 1px solid rgba(100, 116, 139, 0.4);
         }}
+        .badge.rug-badge {{
+            background: #ef4444;
+            color: #ffffff;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 800;
+            margin-left: 6px;
+            vertical-align: middle;
+        }}
         .score-val {{
             font-size: 15px;
             font-weight: 800;
@@ -753,7 +832,7 @@ html_content = f"""<!DOCTYPE html>
             font-size: 14px;
         }}
         .token-cell {{
-            min-width: 180px;
+            min-width: 170px;
         }}
         .token-symbol {{
             font-size: 15px;
@@ -803,11 +882,17 @@ html_content = f"""<!DOCTYPE html>
             font-weight: 700;
             display: inline-block;
         }}
+        .date-cell {{
+            font-family: monospace;
+            font-size: 12px;
+            color: #cbd5e1;
+            white-space: nowrap;
+        }}
         .evidence-tags {{
             display: flex;
             flex-wrap: wrap;
             gap: 4px;
-            max-width: 380px;
+            max-width: 360px;
         }}
         .ev-tag {{
             background: #0f172a;
@@ -838,6 +923,26 @@ html_content = f"""<!DOCTYPE html>
             justify-content: space-between;
             font-size: 13px;
             font-weight: 600;
+        }}
+        .phase-pill {{
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-block;
+            margin-right: 6px;
+        }}
+        .phase-pill.pre {{
+            background: rgba(6, 182, 212, 0.2);
+            color: #22d3ee;
+            border: 1px solid rgba(6, 182, 212, 0.4);
+        }}
+        .phase-pill.post {{
+            background: rgba(168, 85, 247, 0.2);
+            color: #c084fc;
+            border: 1px solid rgba(168, 85, 247, 0.4);
         }}
         .category-chip {{
             background: #1e293b;
@@ -931,7 +1036,7 @@ html_content = f"""<!DOCTYPE html>
             <span class="logo-icon">⚡</span>
             <div>
                 <div class="brand-title">Robinhood Meme Coin Forensics</div>
-                <div class="brand-subtitle">Chain ID: 4663 • Nearest Duplicate Sibling Matching & Dev Clustering</div>
+                <div class="brand-subtitle">Chain ID: 4663 • Pre-Launch Sniping vs Post-Launch Holding Intelligence</div>
             </div>
         </div>
 
@@ -977,6 +1082,11 @@ html_content = f"""<!DOCTYPE html>
                 <div class="val" id="stat-watch-leads" style="color: #fbbf24;">69</div>
                 <div class="subtext">Shared habit & bytecode traces</div>
             </div>
+            <div class="stat-card" style="--stat-accent: #ef4444;">
+                <div class="title">Flagged Rugs (ATH ≤ $5k)</div>
+                <div class="val" id="stat-rug-leads" style="color: #ef4444;">2</div>
+                <div class="subtext">Highlighted in 40% red</div>
+            </div>
             <div class="stat-card" style="--stat-accent: #10b981;">
                 <div class="title">Top Runner Peak ATH</div>
                 <div class="val" style="color: #34d399;">$18,099,822</div>
@@ -1005,6 +1115,11 @@ html_content = f"""<!DOCTYPE html>
                         <option value="team robinary">team robinary</option>
                         <option value="unclustered">unclustered</option>
                     </select>
+                    <select id="leads-rug-filter" class="select-input" onchange="filterLeadsTable()">
+                        <option value="ALL">Show All (Including Rugs)</option>
+                        <option value="HIDE_RUGS">Hide Rug Tokens</option>
+                        <option value="RUGS_ONLY">Rugs Only (Red Rows)</option>
+                    </select>
                 </div>
                 <div class="filter-group">
                     <span id="filtered-count-display" style="font-size: 12px; color: var(--text-secondary);">Showing {len(candidates_data)} of {len(candidates_data)} candidate leads</span>
@@ -1016,12 +1131,13 @@ html_content = f"""<!DOCTYPE html>
                 <table id="leads-table">
                     <thead>
                         <tr>
-                            <th onclick="sortLeads('confidence')" style="cursor: pointer;">Confidence ↕</th>
-                            <th onclick="sortLeads('score')" style="cursor: pointer;">Score ↕</th>
-                            <th>Token / Contract Address</th>
-                            <th>Inferred Team</th>
-                            <th onclick="sortLeads('best_match_symbol')" style="cursor: pointer;">Nearest Sibling Token ↕</th>
-                            <th onclick="sortLeads('ath')" style="cursor: pointer;">Peak ATH ↕</th>
+                            <th class="sortable" onclick="sortLeads('confidence')" style="cursor: pointer;">Confidence ↕</th>
+                            <th class="sortable" onclick="sortLeads('score')" style="cursor: pointer;">Score ↕</th>
+                            <th class="sortable" onclick="sortLeads('token')" style="cursor: pointer;">Token / Contract ↕</th>
+                            <th class="sortable" onclick="sortLeads('team')" style="cursor: pointer;">Inferred Team ↕</th>
+                            <th class="sortable" onclick="sortLeads('best_match_symbol')" style="cursor: pointer;">Nearest Sibling Token ↕</th>
+                            <th class="sortable" onclick="sortLeads('ath')" style="cursor: pointer;">Peak ATH ↕</th>
+                            <th class="sortable" onclick="sortLeads('date')" style="cursor: pointer;">Launch Date (UTC) ↕</th>
                             <th>Top Matching Evidence (Proximity)</th>
                             <th>Live Charts / Exploration</th>
                         </tr>
@@ -1043,7 +1159,7 @@ html_content = f"""<!DOCTYPE html>
                         🎯 Numerical Habit Tolerance Buffer: <span id="buffer-val-disp" style="color: #10b981; font-family: monospace;">±15%</span>
                     </div>
                     <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
-                        Tolerance applied to continuous numerical parameters (snipe value, fund amount, gas gwei, priority tip, setup duration, gas units). Values within this relative threshold receive proximity credit rather than dropping to 0 immediately.
+                        Relative tolerance applied to continuous numerical parameters (snipe value, fund amount, gas gwei, priority tip, setup duration, gas units). Values within this relative threshold receive proximity credit rather than dropping to 0 immediately.
                     </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 12px;">
@@ -1066,8 +1182,13 @@ html_content = f"""<!DOCTYPE html>
                 </div>
                 <div class="filter-group">
                     <input type="text" id="params-search" class="search-input" placeholder="Search parameters..." oninput="filterParamsTable()">
+                    <select id="params-phase-filter" class="select-input" onchange="filterParamsTable()">
+                        <option value="ALL">All Phases (50 Parameters)</option>
+                        <option value="PRE_LAUNCH">⚡ Pre-Launch Only (Sniping Decisions)</option>
+                        <option value="POST_LAUNCH">🛡️ Post-Launch Only (Holding Decisions)</option>
+                    </select>
                     <select id="params-cat-filter" class="select-input" onchange="filterParamsTable()">
-                        <option value="ALL">All Categories ({len(PARAMETERS)})</option>
+                        <option value="ALL">All Categories</option>
                         <option value="Wallets & Lineage">Wallets & Lineage</option>
                         <option value="Bytecode & Architecture">Bytecode & Architecture</option>
                         <option value="Branding & Socials">Branding & Socials</option>
@@ -1082,7 +1203,7 @@ html_content = f"""<!DOCTYPE html>
                 <table id="params-table">
                     <thead>
                         <tr>
-                            <th style="width: 45%;">1. Parameter / Forensic Habit</th>
+                            <th style="width: 45%;">1. Parameter / Forensic Habit & Phase</th>
                             <th style="width: 20%; text-align: center;">2. Weighted (Active)</th>
                             <th style="width: 35%;">3. Customize Weight (Overwrite On Apply)</th>
                         </tr>
@@ -1193,12 +1314,14 @@ html_content = f"""<!DOCTYPE html>
             let highCount = 0;
             let probCount = 0;
             let watchCount = 0;
+            let rugCount = 0;
 
             currentCandidates.forEach(cand => {{
                 const res = calculateTokenScore(cand, activeWeights, activeBufferPct);
                 cand.score = res.score;
                 cand.confidence = res.confidence;
 
+                if (cand.is_rug) rugCount++;
                 if (cand.confidence === 'HIGH_LEAD') highCount++;
                 else if (cand.confidence === 'PROBABLE_LEAD') probCount++;
                 else if (cand.confidence === 'WATCH') watchCount++;
@@ -1208,6 +1331,7 @@ html_content = f"""<!DOCTYPE html>
             if (document.getElementById('stat-high-leads')) document.getElementById('stat-high-leads').textContent = highCount;
             if (document.getElementById('stat-prob-leads')) document.getElementById('stat-prob-leads').textContent = probCount;
             if (document.getElementById('stat-watch-leads')) document.getElementById('stat-watch-leads').textContent = watchCount;
+            if (document.getElementById('stat-rug-leads')) document.getElementById('stat-rug-leads').textContent = rugCount;
 
             renderLeadsTable();
         }}
@@ -1221,11 +1345,14 @@ html_content = f"""<!DOCTYPE html>
             const searchTerm = (document.getElementById('leads-search') ? document.getElementById('leads-search').value.toLowerCase().trim() : '');
             const tierFilter = (document.getElementById('leads-tier-filter') ? document.getElementById('leads-tier-filter').value : 'ALL');
             const teamFilter = (document.getElementById('leads-team-filter') ? document.getElementById('leads-team-filter').value.toLowerCase() : 'all');
+            const rugFilter = (document.getElementById('leads-rug-filter') ? document.getElementById('leads-rug-filter').value : 'ALL');
 
             // Filter
             let filtered = currentCandidates.filter(c => {{
                 if (tierFilter !== 'ALL' && c.confidence !== tierFilter) return false;
                 if (teamFilter !== 'all' && c.team.toLowerCase() !== teamFilter) return false;
+                if (rugFilter === 'HIDE_RUGS' && c.is_rug) return false;
+                if (rugFilter === 'RUGS_ONLY' && !c.is_rug) return false;
                 if (searchTerm) {{
                     const symMatch = c.symbol.toLowerCase().includes(searchTerm);
                     const nameMatch = c.name.toLowerCase().includes(searchTerm);
@@ -1244,6 +1371,15 @@ html_content = f"""<!DOCTYPE html>
                     const order = {{ 'HIGH_LEAD': 4, 'PROBABLE_LEAD': 3, 'WATCH': 2, 'WEAK': 1 }};
                     valA = order[valA] || 0;
                     valB = order[valB] || 0;
+                }} else if (sortCol === 'date') {{
+                    valA = a.token_live ? new Date(a.token_live.replace(' ', 'T') + ':00Z').getTime() : 0;
+                    valB = b.token_live ? new Date(b.token_live.replace(' ', 'T') + ':00Z').getTime() : 0;
+                }} else if (sortCol === 'token') {{
+                    valA = a.symbol.toLowerCase();
+                    valB = b.symbol.toLowerCase();
+                }} else if (sortCol === 'team') {{
+                    valA = a.team.toLowerCase();
+                    valB = b.team.toLowerCase();
                 }}
                 if (valA < valB) return sortAsc ? -1 : 1;
                 if (valA > valB) return sortAsc ? 1 : -1;
@@ -1256,6 +1392,9 @@ html_content = f"""<!DOCTYPE html>
 
             filtered.forEach(c => {{
                 const tr = document.createElement('tr');
+                if (c.is_rug) {{
+                    tr.classList.add('rug-row');
+                }}
                 
                 // Format evidence chips with proximity display
                 let evHtml = '';
@@ -1279,9 +1418,13 @@ html_content = f"""<!DOCTYPE html>
 
                 const sibSymbol = c.best_match_symbol ? `$${{c.best_match_symbol}}` : 'N/A';
                 const sibCaShort = c.best_match_ca ? `${{c.best_match_ca.substring(0, 6)}}...${{c.best_match_ca.substring(c.best_match_ca.length - 4)}}` : '';
+                const dateDisplay = c.token_live ? c.token_live : 'N/A';
 
                 tr.innerHTML = `
-                    <td><span class="badge ${{c.confidence.toLowerCase()}}">${{c.confidence.replace('_', ' ')}}</span></td>
+                    <td>
+                        <span class="badge ${{c.confidence.toLowerCase()}}">${{c.confidence.replace('_', ' ')}}</span>
+                        ${{c.is_rug ? '<span class="badge rug-badge">🚨 RUG</span>' : ''}}
+                    </td>
                     <td><span class="score-val" style="color: ${{c.score >= 65 ? '#2ecc71' : c.score >= 45 ? '#60a5fa' : '#fbbf24'}}">${{c.score.toFixed(1)}}%</span></td>
                     <td class="token-cell">
                         <div>
@@ -1299,6 +1442,7 @@ html_content = f"""<!DOCTYPE html>
                         ${{sibCaShort ? `<div style="font-size: 10px; color: var(--text-muted); font-family: monospace; margin-top: 2px;"><code>${{sibCaShort}}</code></div>` : ''}}
                     </td>
                     <td><span class="${{athClass}}">${{athFormatted}}</span></td>
+                    <td class="date-cell">${{dateDisplay}}</td>
                     <td>${{evHtml}}</td>
                     <td class="actions-cell">
                         <a href="${{gmgnUrl}}" target="_blank" class="btn btn-gmgn">GMGN</a>
@@ -1317,9 +1461,11 @@ html_content = f"""<!DOCTYPE html>
             tbody.innerHTML = '';
 
             const searchTerm = (document.getElementById('params-search') ? document.getElementById('params-search').value.toLowerCase().trim() : '');
+            const phaseFilter = (document.getElementById('params-phase-filter') ? document.getElementById('params-phase-filter').value : 'ALL');
             const catFilter = (document.getElementById('params-cat-filter') ? document.getElementById('params-cat-filter').value : 'ALL');
 
             PARAMETERS.forEach(p => {{
+                if (phaseFilter !== 'ALL' && p.phase !== phaseFilter) return;
                 if (catFilter !== 'ALL' && p.category !== catFilter) return;
                 if (searchTerm) {{
                     const matchName = p.name.toLowerCase().includes(searchTerm);
@@ -1329,13 +1475,20 @@ html_content = f"""<!DOCTYPE html>
                 }}
 
                 const curWeight = activeWeights[p.id] !== undefined ? activeWeights[p.id] : p.default;
+                const isPre = p.phase === 'PRE_LAUNCH';
+                const phaseBadge = isPre 
+                    ? '<span class="phase-pill pre">⚡ PRE-LAUNCH (SNIPE)</span>' 
+                    : '<span class="phase-pill post">🛡️ POST-LAUNCH (HOLD)</span>';
 
                 const tr = document.createElement('tr');
                 tr.id = `param-row-${{p.id}}`;
 
                 tr.innerHTML = `
                     <td>
-                        <span class="category-chip">${{p.category}}</span>
+                        <div style="margin-bottom: 4px;">
+                            ${{phaseBadge}}
+                            <span class="category-chip">${{p.category}}</span>
+                        </div>
                         <div style="font-weight: 700; font-size: 14px; color: #ffffff; margin-bottom: 2px;">
                             ${{p.name}}
                         </div>
@@ -1441,7 +1594,7 @@ html_content = f"""<!DOCTYPE html>
             rescoreAllCandidates();
 
             // Show confirmation toast
-            showToast(`✓ Successfully applied customized weights across ${{updatedCount}} parameters with ±${{Math.round(activeBufferPct*100)}}% buffer! Rescored all ${{currentCandidates.length}} candidate leads.`);
+            showToast(`✓ Successfully applied custom weights across ${{updatedCount}} parameters with ±${{Math.round(activeBufferPct*100)}}% buffer! Rescored all ${{currentCandidates.length}} candidate leads.`);
         }}
 
         // Action: Reset to Defaults
@@ -1505,6 +1658,7 @@ html_content = f"""<!DOCTYPE html>
             if (document.getElementById('leads-search')) document.getElementById('leads-search').value = '';
             if (document.getElementById('leads-tier-filter')) document.getElementById('leads-tier-filter').value = 'ALL';
             if (document.getElementById('leads-team-filter')) document.getElementById('leads-team-filter').value = 'ALL';
+            if (document.getElementById('leads-rug-filter')) document.getElementById('leads-rug-filter').value = 'ALL';
             renderLeadsTable();
         }}
         function filterParamsTable() {{

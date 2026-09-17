@@ -106,7 +106,7 @@ def backfill_historical_tokens(days: int = 10) -> List[Dict[str, Any]]:
         except Exception as e:
             print(f"[Backfill Warning] Search query '{q}' failed: {e}")
 
-    print(f"[✓] Historical backfill discovered {len(discovered)} unique Robinhood token CAs.")
+    print(f"[+] Historical backfill discovered {len(discovered)} unique Robinhood token CAs.")
     return discovered
 
 
@@ -136,7 +136,7 @@ def ingest_and_enrich_token(db: ForensicDatabase, ca: str, chain_id: int = 4663,
         })
         db.upsert_execution_profile(profile)
         db.upsert_bytecode_profile(profile)
-        print(f"[✓] Successfully enriched {profile.get('token_symbol', ca)} ({ca})")
+        print(f"[+] Successfully enriched {profile.get('token_symbol', ca)} ({ca})")
         return True
     except Exception as e:
         print(f"[Enrich Error] Failed for {ca}: {e}")
@@ -164,7 +164,7 @@ def run_streamer(interval_seconds: int = 30, chain_id: int = 4663):
                 write_report_artifacts(report, "phase1_fingerprint_report.json")
                 import subprocess
                 subprocess.run(["python", "generate_html_dashboard.py"], check=False)
-                print("[✓] Dashboard updated live!")
+                print("[+] Dashboard updated live!")
 
         except Exception as e:
             print(f"[Streamer Loop Error]: {e}")
@@ -188,7 +188,7 @@ if __name__ == "__main__":
         for t in tokens:
             if ingest_and_enrich_token(db, t["ca"], chain_id=args.chain_id, source="backfill"):
                 count += 1
-        print(f"[✓] Backfill complete: enriched {count} new tokens into forensics.db")
+        print(f"[+] Backfill complete: enriched {count} new tokens into forensics.db")
         report = build_report(db, qualified_only=True)
         write_report_artifacts(report, "phase1_fingerprint_report.json")
         import subprocess
