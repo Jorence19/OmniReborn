@@ -1,0 +1,7 @@
+[Unit]
+Description=Check OmniReborn candidate API liveness and restart on failure
+After=omnireborn-api.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c '/usr/bin/curl --fail --silent --show-error --max-time 10 http://127.0.0.1:8000/api/live || /bin/systemctl restart omnireborn-api.service'

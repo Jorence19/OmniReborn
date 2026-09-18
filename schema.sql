@@ -169,6 +169,60 @@ CREATE TABLE IF NOT EXISTS snipe_watchlists (
     created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Durable ingestion queue. Jobs survive crashes and are retried with backoff.
+CREATE TABLE IF NOT EXISTS ingestion_jobs (
+    ca TEXT NOT NULL,
+    chain_id INTEGER NOT NULL DEFAULT 4663,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','running','retry','succeeded','dead')),
+    source TEXT NOT NULL,
+    source_payload TEXT,
+    priority INTEGER NOT NULL DEFAULT 100,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    max_attempts INTEGER NOT NULL DEFAULT 8,
+    next_attempt_at TEXT NOT NULL DEFAULT (datetime('now')),
+    lease_until TEXT,
+    worker_id TEXT,
+    last_error TEXT,
+    discovered_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at TEXT,
+    PRIMARY KEY (ca, chain_id)
+);
+
+-- Resumable block cursors and other collector checkpoints.
+CREATE TABLE IF NOT EXISTS stream_state (
+    state_key TEXT PRIMARY KEY,
+    state_value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Event provenance makes overlapping/reorg-safe scans idempotent.
+CREATE TABLE IF NOT EXISTS chain_events (
+    chain_id INTEGER NOT NULL,
+    tx_hash TEXT NOT NULL,
+    log_index INTEGER NOT NULL,
+    block_number INTEGER NOT NULL,
+    contract_address TEXT NOT NULL,
+    topic0 TEXT,
+    token_ca TEXT,
+    source TEXT NOT NULL,
+    payload_json TEXT,
+    observed_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (chain_id, tx_hash, log_index)
+);
+
+CREATE TABLE IF NOT EXISTS ingestion_runs (
+    run_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mode TEXT NOT NULL,
+    started_at TEXT NOT NULL DEFAULT (datetime('now')),
+    finished_at TEXT,
+    status TEXT NOT NULL DEFAULT 'running',
+    discovered_count INTEGER NOT NULL DEFAULT 0,
+    succeeded_count INTEGER NOT NULL DEFAULT 0,
+    failed_count INTEGER NOT NULL DEFAULT 0,
+    error TEXT
+);
+
 -- High Performance Indexes
 CREATE INDEX IF NOT EXISTS idx_exec_dev ON execution_profiles(dev_wallet);
 CREATE INDEX IF NOT EXISTS idx_exec_funder1 ON execution_profiles(funder_1hop);
@@ -181,6 +235,8 @@ CREATE INDEX IF NOT EXISTS idx_bundle_bundler ON bundle_analytics(bundler_wallet
 CREATE INDEX IF NOT EXISTS idx_branding_favicon ON branding_profiles(favicon_hash);
 CREATE INDEX IF NOT EXISTS idx_tokens_migrated ON tokens(is_migrated);
 CREATE INDEX IF NOT EXISTS idx_watchlist_target ON snipe_watchlists(target_value);
+CREATE INDEX IF NOT EXISTS idx_ingestion_due ON ingestion_jobs(status, next_attempt_at, priority);
+CREATE INDEX IF NOT EXISTS idx_chain_events_block ON chain_events(chain_id, block_number);
 
 -- Unified Master Profile View
 DROP VIEW IF EXISTS v_full_forensic_profile;

@@ -1,12 +1,34 @@
 import json
-import pandas as pd
+import os
+import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 
-# Load candidates and tgscan data
-df_cand = pd.read_csv('phase1_fingerprint_report_candidates.csv')
-df_tg = pd.read_csv('tgscan_rbh_1789559702282.csv')
+import pandas as pd
+
+# Load private source data from the application directory, never the public web root.
+APP_DIR = Path(__file__).resolve().parent
+DATA_DIR = Path(os.getenv("DASHBOARD_DATA_DIR", APP_DIR)).resolve()
+OUTPUT_DIR = Path(os.getenv("DASHBOARD_OUTPUT_DIR", APP_DIR)).resolve()
+SNAPSHOT_PATH = Path(os.getenv(
+    "API_SNAPSHOT_PATH", APP_DIR / "runtime" / "dashboard_candidates.json"
+)).resolve()
+DASHBOARD_API_URL = os.getenv("DASHBOARD_API_URL", "").strip()
+if DASHBOARD_API_URL and (
+    not DASHBOARD_API_URL.startswith("https://")
+    or not DASHBOARD_API_URL.endswith("/api/candidates")
+):
+    raise ValueError("DASHBOARD_API_URL must be an HTTPS /api/candidates endpoint")
+df_cand = pd.read_csv(DATA_DIR / "phase1_fingerprint_report_candidates.csv")
+df_tg = pd.read_csv(APP_DIR / "tgscan_rbh_1789559702282.csv")
 df_tg['ca_lower'] = df_tg['ca'].astype(str).str.lower()
 df_cand['ca_lower'] = df_cand['ca'].astype(str).str.lower()
+df_tg['_ath_numeric'] = pd.to_numeric(df_tg['ath'], errors='coerce').fillna(0.0)
+df_tg = (
+    df_tg.sort_values('_ath_numeric')
+    .drop_duplicates(subset=['ca_lower'], keep='last')
+    .drop(columns=['_ath_numeric'])
+)
 
 merged = pd.merge(
     df_cand,
@@ -15,19 +37,53 @@ merged = pd.merge(
     how='left'
 )
 
+# Prefer the live token registry; the historical Telegram export remains a fallback.
+db_path = Path(os.getenv("FORENSICS_DB_PATH", APP_DIR / "forensics.db")).resolve()
+if db_path.exists():
+    with sqlite3.connect(db_path) as connection:
+        df_live = pd.read_sql_query(
+            '''SELECT LOWER(ca) AS ca_lower, name AS live_name,
+                      token_live_at AS live_token_live, ath_usd AS live_ath,
+                      website AS live_website, x_handle AS live_x
+               FROM tokens''',
+            connection,
+        )
+    df_live['live_ath'] = pd.to_numeric(df_live['live_ath'], errors='coerce').fillna(0.0)
+    df_live = (
+        df_live.sort_values('live_ath')
+        .drop_duplicates(subset=['ca_lower'], keep='last')
+    )
+    merged = pd.merge(merged, df_live, on='ca_lower', how='left')
+else:
+    for column in ('live_name', 'live_token_live', 'live_ath', 'live_website', 'live_x'):
+        merged[column] = None
+
+
+# One public candidate per case-insensitive EVM contract address.
+merged = merged.drop_duplicates(subset=['ca_lower'], keep='last')
+
+
+def first_present(*values):
+    for value in values:
+        if pd.notna(value) and str(value).strip() not in ('', 'nan', 'None'):
+            return value
+    return None
+
 # Prepare candidates JSON structure for client-side JavaScript
 candidates_data = []
 for idx, r in merged.iterrows():
     ca = str(r['ca'])
     symbol = str(r['symbol'])
-    name = str(r['name']) if pd.notna(r.get('name')) and str(r.get('name')).strip() != '' else symbol
+    name = str(first_present(r.get('live_name'), r.get('name'), symbol))
     conf = str(r['confidence'])
     score = float(r['candidate_score'])
     team = str(r['inferred_team']) if pd.notna(r.get('inferred_team')) else 'unclustered'
     best_match_symbol = str(r['best_match_symbol']) if pd.notna(r.get('best_match_symbol')) else ''
     best_match_ca = str(r['best_match_ca']) if pd.notna(r.get('best_match_ca')) else ''
-    ath = float(r['ath']) if pd.notna(r.get('ath')) and float(r['ath']) > 0 else 0.0
-    token_live = str(r.get('token_live')) if pd.notna(r.get('token_live')) else ''
+    live_ath = float(r.get('live_ath') or 0) if pd.notna(r.get('live_ath')) else 0.0
+    historical_ath = float(r.get('ath') or 0) if pd.notna(r.get('ath')) else 0.0
+    ath = max(live_ath, historical_ath, 0.0)
+    token_live = str(first_present(r.get('live_token_live'), r.get('token_live')) or '')
     
     # Rug identification: peak ATH <= $5,000 or zero volume/failed launch
     is_rug = (ath <= 5000.0)
@@ -52,8 +108,8 @@ for idx, r in merged.iterrows():
         "is_rug": is_rug,
         "evidence": ev_list,
         "token_live": token_live,
-        "website": str(r.get('website')) if pd.notna(r.get('website')) else '',
-        "x": str(r.get('x')) if pd.notna(r.get('x')) else '',
+        "website": str(first_present(r.get('live_website'), r.get('website')) or ''),
+        "x": str(first_present(r.get('live_x'), r.get('x')) or ''),
     })
 
 # Define the 50 parameters with Pre-Launch vs Post-Launch phase tags and default weights
@@ -473,8 +529,23 @@ PARAMETERS = [
     }
 ]
 
-candidates_json = json.dumps(candidates_data)
-parameters_json = json.dumps(PARAMETERS)
+def script_json(value):
+    # Prevent user-controlled token metadata from terminating the inline script.
+    return json.dumps(value, separators=(",", ":")).replace("<", "\u003c").replace(
+        ">", "\u003e"
+    ).replace("&", "\u0026").replace(" ", "\u2028").replace(" ", "\u2029")
+
+
+candidates_json = script_json(candidates_data)
+parameters_json = script_json(PARAMETERS)
+api_url_json = script_json(DASHBOARD_API_URL)
+try:
+    report_meta = json.loads((DATA_DIR / "phase1_fingerprint_report.json").read_text(encoding="utf-8"))
+    generated_at = str(report_meta.get("generated_at") or "")
+except (OSError, json.JSONDecodeError):
+    generated_at = ""
+if not generated_at:
+    generated_at = datetime.now(timezone.utc).isoformat()
 
 html_content = f"""<!DOCTYPE html>
 <html lang="en">
@@ -1122,6 +1193,7 @@ html_content = f"""<!DOCTYPE html>
                     </select>
                 </div>
                 <div class="filter-group">
+                    <span id="data-source-status" style="font-size: 12px; color: var(--text-muted);">Embedded safe snapshot</span>
                     <span id="filtered-count-display" style="font-size: 12px; color: var(--text-secondary);">Showing {len(candidates_data)} of {len(candidates_data)} candidate leads</span>
                     <button class="btn btn-secondary" onclick="resetLeadsFilters()">Reset Filters</button>
                 </div>
@@ -1226,6 +1298,7 @@ html_content = f"""<!DOCTYPE html>
         // Initial Dataset injected from Python
         const CANDIDATES = {candidates_json};
         const PARAMETERS = {parameters_json};
+        const CANDIDATES_API_URL = {api_url_json};
 
         // Active weights and numerical buffer
         let activeWeights = {{}};
@@ -1260,10 +1333,84 @@ html_content = f"""<!DOCTYPE html>
         }}
         initWeights();
 
-        // Active candidates state
-        let currentCandidates = JSON.parse(JSON.stringify(CANDIDATES));
+        function escapeHtml(value) {{
+            return String(value).replace(/[&<>"']/g, ch => ({{
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }}[ch]));
+        }}
+
+        function normalizeCandidate(raw) {{
+            if (!raw || typeof raw !== 'object') return null;
+            const ca = String(raw.ca || '');
+            if (!/^0x[0-9a-fA-F]{{40}}$/.test(ca)) return null;
+            const bestCa = String(raw.best_match_ca || '');
+            const confidence = ['HIGH_LEAD', 'PROBABLE_LEAD', 'WATCH', 'WEAK'].includes(raw.confidence)
+                ? raw.confidence : 'WEAK';
+            const number = (value, fallback = 0) => {{
+                const parsed = Number(value);
+                return Number.isFinite(parsed) ? parsed : fallback;
+            }};
+            const clean = (value, limit) => escapeHtml(String(value || '').slice(0, limit));
+            const evidence = Array.isArray(raw.evidence) ? raw.evidence.slice(0, 50)
+                .filter(item => item && typeof item === 'object')
+                .map(item => ({{
+                    feature: clean(item.feature, 80),
+                    value: clean(item.value, 500),
+                    type: ['numeric', 'categorical', 'feature'].includes(item.type) ? item.type : 'feature',
+                    reliability: Math.max(0, Math.min(1, number(item.reliability))),
+                    proximity: Math.max(0, Math.min(1, number(item.proximity, 1)))
+                }})) : [];
+            const ath = Math.max(0, number(raw.ath));
+            return {{
+                ca, symbol: clean(raw.symbol, 80), name: clean(raw.name, 200),
+                confidence, score: Math.max(0, Math.min(100, number(raw.score))),
+                team: clean(raw.team || 'unclustered', 120),
+                best_match_symbol: clean(raw.best_match_symbol, 80),
+                best_match_ca: /^0x[0-9a-fA-F]{{40}}$/.test(bestCa) ? bestCa : '',
+                ath, is_rug: Boolean(raw.is_rug), evidence,
+                token_live: clean(raw.token_live, 64),
+                website: '', x: ''
+            }};
+        }}
+
+        // Active candidates state. Embedded data remains a fail-safe if Vultr is unavailable.
+        let currentCandidates = CANDIDATES.map(normalizeCandidate).filter(Boolean);
         let sortCol = 'score';
         let sortAsc = false;
+
+        async function loadRemoteCandidates() {{
+            if (!CANDIDATES_API_URL) return;
+            const status = document.getElementById('data-source-status');
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 8000);
+            try {{
+                if (status) status.textContent = 'Loading Vultr API...';
+                const response = await fetch(CANDIDATES_API_URL, {{
+                    method: 'GET',
+                    headers: {{'Accept': 'application/json'}},
+                    cache: 'no-store',
+                    mode: 'cors',
+                    signal: controller.signal
+                }});
+                if (!response.ok) throw new Error('API returned ' + response.status);
+                const payload = await response.json();
+                if (!payload || !Array.isArray(payload.candidates) || payload.candidates.length > 20000) {{
+                    throw new Error('invalid candidate payload');
+                }}
+                const validated = payload.candidates.map(normalizeCandidate).filter(Boolean);
+                if (!validated.length && payload.candidates.length) throw new Error('no valid candidates');
+                currentCandidates = validated;
+                const badge = document.getElementById('badge-leads-count');
+                if (badge) badge.textContent = currentCandidates.length;
+                if (status) status.textContent = 'Live API • ' + (payload.generated_at || 'current snapshot');
+                rescoreAllCandidates();
+            }} catch (error) {{
+                if (status) status.textContent = 'API unavailable • embedded snapshot active';
+                console.warn('Candidate API unavailable; using embedded snapshot.', error);
+            }} finally {{
+                clearTimeout(timeout);
+            }}
+        }}
 
         // Recalculate token score against its nearest duplicate using custom weights & buffer
         function calculateTokenScore(candidate, weights, bufferPct) {{
@@ -1703,17 +1850,30 @@ html_content = f"""<!DOCTYPE html>
         window.addEventListener('DOMContentLoaded', () => {{
             rescoreAllCandidates();
             renderParamsTable();
+            loadRemoteCandidates();
         }});
     </script>
 </body>
 </html>
 """
 
-# Write out the generated HTML file (both team_leads_dashboard.html and index.html for Hostinger)
-with open("team_leads_dashboard.html", "w", encoding="utf-8") as f:
-    f.write(html_content)
+# Atomic publication: readers see either the old or the complete new artifact.
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+SNAPSHOT_PATH.parent.mkdir(parents=True, exist_ok=True)
+snapshot_temp = SNAPSHOT_PATH.with_name(SNAPSHOT_PATH.name + f".{os.getpid()}.tmp")
+snapshot_temp.write_text(json.dumps({
+    "schema_version": 1,
+    "generated_at": generated_at,
+    "count": len(candidates_data),
+    "candidates": candidates_data,
+}, indent=2, sort_keys=True), encoding="utf-8")
+os.replace(snapshot_temp, SNAPSHOT_PATH)
 
-with open("index.html", "w", encoding="utf-8") as f:
-    f.write(html_content)
+for filename in ("team_leads_dashboard.html", "index.html"):
+    target = OUTPUT_DIR / filename
+    temporary = target.with_name(target.name + f".{os.getpid()}.tmp")
+    temporary.write_text(html_content, encoding="utf-8")
+    os.replace(temporary, target)
 
-print("Generated both team_leads_dashboard.html and index.html successfully for Hostinger deployment!")
+print(f"Generated dashboard atomically in {OUTPUT_DIR}")
+print(f"Generated API snapshot atomically at {SNAPSHOT_PATH}")

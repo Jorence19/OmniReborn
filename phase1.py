@@ -4,6 +4,7 @@ import argparse
 import csv
 import json
 import math
+import os
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -450,20 +451,24 @@ def build_report(db: ForensicDatabase, qualified_only: bool = True) -> Dict[str,
 
 
 def write_report_artifacts(report: Dict[str, Any], output_path: str) -> List[str]:
-    """Write JSON plus analyst-friendly CSVs next to it."""
+    """Write JSON and CSVs atomically so readers never observe partial files."""
     output = Path(output_path)
-    output.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
+    output.parent.mkdir(parents=True, exist_ok=True)
     stem = output.with_suffix("")
     fingerprint_path = Path(str(stem) + "_fingerprints.csv")
     candidate_path = Path(str(stem) + "_candidates.csv")
     habits_path = Path(str(stem) + "_team_habits.csv")
+    targets = [output, fingerprint_path, candidate_path, habits_path]
+    temps = [path.with_name(path.name + f".{os.getpid()}.tmp") for path in targets]
+    json_tmp, fingerprint_tmp, candidate_tmp, habits_tmp = temps
+    json_tmp.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
 
     fingerprint_fields = [
         "feature", "value", "qualified_token_count", "global_token_count",
         "unqualified_token_count", "global_prevalence_pct", "qualified_precision_pct",
         "leading_team", "team_purity_pct", "fingerprint_strength", "symbols", "tokens",
     ]
-    with fingerprint_path.open("w", newline="", encoding="utf-8-sig") as handle:
+    with fingerprint_tmp.open("w", newline="", encoding="utf-8-sig") as handle:
         writer = csv.DictWriter(handle, fieldnames=fingerprint_fields)
         writer.writeheader()
         for item in report["fingerprint_catalog"]:
@@ -474,9 +479,9 @@ def write_report_artifacts(report: Dict[str, Any], output_path: str) -> List[str
 
     candidate_fields = [
         "candidate_score", "confidence", "inferred_team", "symbol", "ca",
-        "best_match_symbol", "best_match_ca", "evidence"
+        "best_match_symbol", "best_match_ca", "evidence",
     ]
-    with candidate_path.open("w", newline="", encoding="utf-8-sig") as handle:
+    with candidate_tmp.open("w", newline="", encoding="utf-8-sig") as handle:
         writer = csv.DictWriter(handle, fieldnames=candidate_fields)
         writer.writeheader()
         for item in report["candidate_tokens"]:
@@ -485,15 +490,21 @@ def write_report_artifacts(report: Dict[str, Any], output_path: str) -> List[str
             writer.writerow({key: row.get(key) for key in candidate_fields})
 
     habit_fields = ["team", "team_token_count", "feature", "value", "count", "coverage_pct"]
-    with habits_path.open("w", newline="", encoding="utf-8-sig") as handle:
+    with habits_tmp.open("w", newline="", encoding="utf-8-sig") as handle:
         writer = csv.DictWriter(handle, fieldnames=habit_fields)
         writer.writeheader()
         for team in report["team_habits"]:
             for habit in team["recurring_habits"]:
-                writer.writerow({
-                    "team": team["team"], "team_token_count": team["token_count"], **habit,
-                })
-    return [str(output), str(fingerprint_path), str(candidate_path), str(habits_path)]
+                writer.writerow({"team": team["team"], "team_token_count": team["token_count"], **habit})
+
+    try:
+        for temp, target in zip(temps, targets):
+            os.replace(temp, target)
+    finally:
+        for temp in temps:
+            if temp.exists():
+                temp.unlink()
+    return [str(path) for path in targets]
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

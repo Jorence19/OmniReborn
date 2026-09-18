@@ -1,0 +1,10 @@
+[Unit]
+Description=Create verified OmniReborn SQLite backup
+
+[Service]
+Type=oneshot
+User=omnireborn
+Group=omnireborn
+WorkingDirectory=/opt/omnireborn
+EnvironmentFile=/etc/omnireborn.env
+ExecStart=/opt/omnireborn/.venv/bin/python /opt/omnireborn/backup_database.py --backup-dir /var/backups/omnireborn --retention-days 14

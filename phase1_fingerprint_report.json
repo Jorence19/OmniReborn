@@ -5625,13 +5625,33 @@
       ],
       "inferred_team": "team astro",
       "symbol": "HDLT"
+    },
+    {
+      "best_match_ca": "0xdFEFF46129b666A6Fbf76e6ACE3b6218cd23f183",
+      "best_match_symbol": "CRIF",
+      "ca": "0x0e0d2c89a5a019fe1cf762e5e33187631dacc21b",
+      "candidate_score": 16.23,
+      "confidence": "WEAK",
+      "evidence": [
+        {
+          "anchor_value": "0.0287",
+          "contribution": 0.1623,
+          "feature": "priority_gwei",
+          "proximity": 0.13,
+          "reliability": 0.22,
+          "type": "numeric",
+          "value": "0.0249 (ref: 0.0287)"
+        }
+      ],
+      "inferred_team": "team intel",
+      "symbol": "CHUMP"
     }
   ],
   "fingerprint_catalog": [
     {
       "feature": "funder_1hop",
       "fingerprint_strength": 93.51,
-      "global_prevalence_pct": 2.02,
+      "global_prevalence_pct": 2.01,
       "global_token_count": 5,
       "leading_team": "team robinary",
       "qualified_precision_pct": 100.0,
@@ -5657,7 +5677,7 @@
     {
       "feature": "template_hash",
       "fingerprint_strength": 93.51,
-      "global_prevalence_pct": 2.02,
+      "global_prevalence_pct": 2.01,
       "global_token_count": 5,
       "leading_team": "team robinary",
       "qualified_precision_pct": 100.0,
@@ -5706,8 +5726,8 @@
     },
     {
       "feature": "funder_1hop",
-      "fingerprint_strength": 88.97,
-      "global_prevalence_pct": 1.21,
+      "fingerprint_strength": 88.98,
+      "global_prevalence_pct": 1.2,
       "global_token_count": 3,
       "leading_team": "team nchip",
       "qualified_precision_pct": 100.0,
@@ -5728,8 +5748,8 @@
     },
     {
       "feature": "method_selector",
-      "fingerprint_strength": 88.97,
-      "global_prevalence_pct": 1.21,
+      "fingerprint_strength": 88.98,
+      "global_prevalence_pct": 1.2,
       "global_token_count": 3,
       "leading_team": "team intel",
       "qualified_precision_pct": 100.0,
@@ -5750,8 +5770,8 @@
     },
     {
       "feature": "template_hash",
-      "fingerprint_strength": 88.97,
-      "global_prevalence_pct": 1.21,
+      "fingerprint_strength": 88.98,
+      "global_prevalence_pct": 1.2,
       "global_token_count": 3,
       "leading_team": "team intel",
       "qualified_precision_pct": 100.0,
@@ -5773,7 +5793,7 @@
     {
       "feature": "dev_wallet",
       "fingerprint_strength": 87.02,
-      "global_prevalence_pct": 0.81,
+      "global_prevalence_pct": 0.8,
       "global_token_count": 2,
       "leading_team": "team astro",
       "qualified_precision_pct": 100.0,
@@ -5793,7 +5813,7 @@
     {
       "feature": "fund_amount",
       "fingerprint_strength": 87.02,
-      "global_prevalence_pct": 0.81,
+      "global_prevalence_pct": 0.8,
       "global_token_count": 2,
       "leading_team": "team nchip",
       "qualified_precision_pct": 100.0,
@@ -5813,7 +5833,7 @@
     {
       "feature": "fund_amount",
       "fingerprint_strength": 87.02,
-      "global_prevalence_pct": 0.81,
+      "global_prevalence_pct": 0.8,
       "global_token_count": 2,
       "leading_team": "team astro",
       "qualified_precision_pct": 100.0,
@@ -5833,7 +5853,7 @@
     {
       "feature": "funder_1hop",
       "fingerprint_strength": 87.02,
-      "global_prevalence_pct": 0.81,
+      "global_prevalence_pct": 0.8,
       "global_token_count": 2,
       "leading_team": "team astro",
       "qualified_precision_pct": 100.0,
@@ -5853,7 +5873,7 @@
     {
       "feature": "gwei",
       "fingerprint_strength": 87.02,
-      "global_prevalence_pct": 0.81,
+      "global_prevalence_pct": 0.8,
       "global_token_count": 2,
       "leading_team": "team astro",
       "qualified_precision_pct": 100.0,
@@ -5873,7 +5893,7 @@
     {
       "feature": "nonce",
       "fingerprint_strength": 87.02,
-      "global_prevalence_pct": 0.81,
+      "global_prevalence_pct": 0.8,
       "global_token_count": 2,
       "leading_team": "team astro",
       "qualified_precision_pct": 100.0,
@@ -5893,7 +5913,7 @@
     {
       "feature": "value_eth",
       "fingerprint_strength": 87.02,
-      "global_prevalence_pct": 0.81,
+      "global_prevalence_pct": 0.8,
       "global_token_count": 2,
       "leading_team": "team astro",
       "qualified_precision_pct": 100.0,
@@ -5913,7 +5933,7 @@
     {
       "feature": "method_selector",
       "fingerprint_strength": 85.51,
-      "global_prevalence_pct": 2.02,
+      "global_prevalence_pct": 2.01,
       "global_token_count": 5,
       "leading_team": "team nchip",
       "qualified_precision_pct": 80.0,
@@ -5937,7 +5957,7 @@
     {
       "feature": "value_eth",
       "fingerprint_strength": 74.45,
-      "global_prevalence_pct": 2.42,
+      "global_prevalence_pct": 2.41,
       "global_token_count": 6,
       "leading_team": "team nchip",
       "qualified_precision_pct": 50.0,
@@ -5958,8 +5978,8 @@
     },
     {
       "feature": "template_hash",
-      "fingerprint_strength": 73.26,
-      "global_prevalence_pct": 12.9,
+      "fingerprint_strength": 73.27,
+      "global_prevalence_pct": 12.85,
       "global_token_count": 32,
       "leading_team": "team gigalon",
       "qualified_precision_pct": 43.75,
@@ -6042,8 +6062,8 @@
     },
     {
       "feature": "nonce",
-      "fingerprint_strength": 71.61,
-      "global_prevalence_pct": 2.42,
+      "fingerprint_strength": 71.62,
+      "global_prevalence_pct": 2.41,
       "global_token_count": 6,
       "leading_team": "team astro",
       "qualified_precision_pct": 66.67,
@@ -6066,8 +6086,8 @@
     },
     {
       "feature": "value_eth",
-      "fingerprint_strength": 69.15,
-      "global_prevalence_pct": 14.11,
+      "fingerprint_strength": 69.16,
+      "global_prevalence_pct": 14.06,
       "global_token_count": 35,
       "leading_team": "team astro",
       "qualified_precision_pct": 28.57,
@@ -6103,7 +6123,7 @@
     {
       "feature": "priority_gwei",
       "fingerprint_strength": 67.81,
-      "global_prevalence_pct": 4.03,
+      "global_prevalence_pct": 4.02,
       "global_token_count": 10,
       "leading_team": "team astro",
       "qualified_precision_pct": 30.0,
@@ -6125,7 +6145,7 @@
     {
       "feature": "method_selector",
       "fingerprint_strength": 67.02,
-      "global_prevalence_pct": 0.81,
+      "global_prevalence_pct": 0.8,
       "global_token_count": 2,
       "leading_team": "team data",
       "qualified_precision_pct": 100.0,
@@ -6144,8 +6164,8 @@
     },
     {
       "feature": "method_selector",
-      "fingerprint_strength": 64.75,
-      "global_prevalence_pct": 44.35,
+      "fingerprint_strength": 64.76,
+      "global_prevalence_pct": 44.18,
       "global_token_count": 110,
       "leading_team": "team astro",
       "qualified_precision_pct": 27.27,
@@ -6220,8 +6240,8 @@
     },
     {
       "feature": "nonce",
-      "fingerprint_strength": 64.17,
-      "global_prevalence_pct": 2.02,
+      "fingerprint_strength": 64.18,
+      "global_prevalence_pct": 2.01,
       "global_token_count": 5,
       "leading_team": "team astro",
       "qualified_precision_pct": 60.0,
@@ -6242,8 +6262,8 @@
     },
     {
       "feature": "method_selector",
-      "fingerprint_strength": 63.69,
-      "global_prevalence_pct": 15.32,
+      "fingerprint_strength": 63.7,
+      "global_prevalence_pct": 15.26,
       "global_token_count": 38,
       "leading_team": "team gigalon",
       "qualified_precision_pct": 50.0,
@@ -6296,8 +6316,8 @@
     },
     {
       "feature": "funder_1hop",
-      "fingerprint_strength": 62.93,
-      "global_prevalence_pct": 6.85,
+      "fingerprint_strength": 62.94,
+      "global_prevalence_pct": 6.83,
       "global_token_count": 17,
       "leading_team": "team astro",
       "qualified_precision_pct": 17.65,
@@ -6319,7 +6339,7 @@
     {
       "feature": "nonce",
       "fingerprint_strength": 61.04,
-      "global_prevalence_pct": 4.84,
+      "global_prevalence_pct": 4.82,
       "global_token_count": 12,
       "leading_team": "team astro",
       "qualified_precision_pct": 33.33,
@@ -6342,8 +6362,8 @@
     },
     {
       "feature": "funder_label",
-      "fingerprint_strength": 60.53,
-      "global_prevalence_pct": 27.42,
+      "fingerprint_strength": 60.55,
+      "global_prevalence_pct": 27.31,
       "global_token_count": 68,
       "leading_team": "team astro",
       "qualified_precision_pct": 100.0,
@@ -6494,8 +6514,8 @@
     },
     {
       "feature": "funder_1hop",
-      "fingerprint_strength": 58.77,
-      "global_prevalence_pct": 13.31,
+      "fingerprint_strength": 58.78,
+      "global_prevalence_pct": 13.25,
       "global_token_count": 33,
       "leading_team": "team astro",
       "qualified_precision_pct": 69.7,
@@ -6556,8 +6576,8 @@
     },
     {
       "feature": "nonce",
-      "fingerprint_strength": 50.33,
-      "global_prevalence_pct": 10.89,
+      "fingerprint_strength": 50.34,
+      "global_prevalence_pct": 10.84,
       "global_token_count": 27,
       "leading_team": "team astro",
       "qualified_precision_pct": 29.63,
@@ -6588,8 +6608,8 @@
     },
     {
       "feature": "launchpad",
-      "fingerprint_strength": 40.38,
-      "global_prevalence_pct": 89.52,
+      "fingerprint_strength": 40.39,
+      "global_prevalence_pct": 89.16,
       "global_token_count": 222,
       "leading_team": "team astro",
       "qualified_precision_pct": 33.78,
@@ -6754,8 +6774,8 @@
     },
     {
       "feature": "template_hash",
-      "fingerprint_strength": 20.87,
-      "global_prevalence_pct": 4.84,
+      "fingerprint_strength": 20.88,
+      "global_prevalence_pct": 4.82,
       "global_token_count": 12,
       "leading_team": null,
       "qualified_precision_pct": 16.67,
@@ -6773,7 +6793,7 @@
       "value": "f10f86b05965a827a332e6c73086f18026fbe3917f4bffbec3f938b3b5397b56"
     }
   ],
-  "generated_at": "2026-09-17T19:53:03.112740+00:00",
+  "generated_at": "2026-09-17T21:40:52.061801+00:00",
   "scope": "qualified_tokens_to_all_tokens",
   "team_habits": [
     {
@@ -7326,5 +7346,5 @@
     }
   ],
   "token_count": 75,
-  "universe_token_count": 248
+  "universe_token_count": 249
 }

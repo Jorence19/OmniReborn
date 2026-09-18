@@ -1,0 +1,31 @@
+[Unit]
+Description=OmniReborn read-only candidate API
+Wants=network-online.target
+After=network-online.target omnireborn.service
+StartLimitIntervalSec=600
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=omnireborn
+Group=omnireborn
+WorkingDirectory=/opt/omnireborn
+EnvironmentFile=/etc/omnireborn.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStartPre=/opt/omnireborn/.venv/bin/python /opt/omnireborn/api_server.py --check
+ExecStart=/opt/omnireborn/.venv/bin/uvicorn api_server:app --host 127.0.0.1 --port 8000 --workers 2 --proxy-headers --forwarded-allow-ips=127.0.0.1
+Restart=always
+RestartSec=10
+TimeoutStartSec=60
+TimeoutStopSec=30
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/opt/omnireborn
+ReadWritePaths=/opt/omnireborn/runtime
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

@@ -10,14 +10,18 @@ SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "schema.sql")
 
 class ForensicDatabase:
     def __init__(self, db_path: str = DEFAULT_DB_PATH):
-        self.db_path = db_path
+        self.db_path = os.path.abspath(db_path)
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self.init_db()
 
     @contextmanager
     def get_connection(self):
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON;")
+        conn.execute("PRAGMA busy_timeout = 30000;")
+        conn.execute("PRAGMA journal_mode = WAL;")
+        conn.execute("PRAGMA synchronous = NORMAL;")
         try:
             yield conn
             conn.commit()
@@ -113,7 +117,11 @@ class ForensicDatabase:
             is_migrated = MAX(tokens.is_migrated, excluded.is_migrated),
             is_dex_paid = MAX(tokens.is_dex_paid, excluded.is_dex_paid),
             is_qualified = MAX(tokens.is_qualified, excluded.is_qualified),
-            qualification_reasons = COALESCE(excluded.qualification_reasons, tokens.qualification_reasons),
+            qualification_reasons = CASE
+                WHEN tokens.is_qualified = 1 AND excluded.is_qualified = 0
+                THEN tokens.qualification_reasons
+                ELSE COALESCE(excluded.qualification_reasons, tokens.qualification_reasons)
+            END,
             ath_usd = MAX(COALESCE(tokens.ath_usd, 0), COALESCE(excluded.ath_usd, 0)),
             peak_liquidity_usd = MAX(COALESCE(tokens.peak_liquidity_usd, 0), COALESCE(excluded.peak_liquidity_usd, 0)),
             x_handle = COALESCE(excluded.x_handle, tokens.x_handle),

@@ -62,7 +62,7 @@ $$\Delta = \frac{|V_{\text{cand}} - V_{\text{ref}}|}{\max(|V_{\text{ref}}|, 10^{
 ├── index.html                           # Root dashboard (ready for Hostinger deployment)
 ├── team_leads_dashboard.html            # Standalone forensic leads dashboard
 ├── generate_html_dashboard.py           # Dashboard generator & data serializer
-├── streamer.py                          # Live DexScreener poller & 10-day backfill CLI
+├── streamer.py                          # Durable queue, v4 event scanner, live market collector
 ├── phase1.py                            # Phase 1 audit & Nearest Duplicate scoring engine
 ├── forensics.py                         # Master on-chain reverse engineering & opcode extractor
 ├── database.py                          # SQLite WAL-mode database layer
@@ -71,8 +71,8 @@ $$\Delta = \frac{|V_{\text{cand}} - V_{\text{ref}}|}{\max(|V_{\text{ref}}|, 10^{
 ├── schema.sql                           # Normalized relational database schema
 ├── config.py                            # Chain RPCs & explorer API keys
 ├── test_phase1.py                       # Regression test suite
-├── forensics.db                         # Pre-populated SQLite database with 248 tokens
-├── phase1_fingerprint_report_candidates.csv # 140 candidate leads with nearest sibling tokens
+├── forensics.db                         # Seed database; production copy lives outside web root
+├── phase1_fingerprint_report_candidates.csv # Current candidate leads with nearest sibling tokens
 ├── phase1_fingerprint_report.json       # Full audit JSON report
 └── README.md                            # Documentation
 ```
@@ -105,43 +105,28 @@ python streamer.py --backfill 10
 
 ---
 
-## 🌐 Deploying to Hostinger (Web Hosting & VPS)
+## 🌐 Deploying to Hostinger
 
-### Method 1: Hostinger Shared Web Hosting (2-Minute Setup)
-Because `index.html` is a self-contained Single-Page Application (SPA) with zero runtime dependencies:
+The dashboard is static, but the collector is Python. Hostinger currently supports Python on **VPS hosting only**. The production deployment now includes a durable SQLite queue, resumable Uniswap v4 event scanner, retries/backoff, health heartbeat, systemd restart policy, stale-worker watchdog, atomic publication, and verified daily backups.
 
-1. Log into your **Hostinger hPanel**.
-2. Select your website domain or create a subdomain (e.g. `rh-tracker.yourdomain.com`).
-3. **Using Hostinger Git Deployment** (Automatic):
-   - In hPanel, go to **Git**.
-   - Repository URL: `https://github.com/Jorence19/OmniReborn.git`
-   - Branch: `main`
-   - Install Path: `public_html`
-   - Click **Create**. Every time you push to GitHub, Hostinger automatically updates your live site!
-4. **Using File Manager** (Manual):
-   - Open **File Manager** $\rightarrow$ `public_html/`.
-   - Upload `index.html`.
-   - Your site is immediately live with free SSL!
+Do not deploy this entire repository into `public_html`. For static Web/Cloud hosting, upload only `index.html` plus `.htaccess`. For live collection, use the isolated VPS layout in [HOSTINGER_DEPLOYMENT.md](HOSTINGER_DEPLOYMENT.md).
 
-### Method 2: Hostinger VPS (24/7 Automated Streaming & Live Updates)
-To run the continuous streaming listener and auto-refresh the dashboard around the clock:
+```bash
+# Must pass before enabling the service
+python streamer.py --preflight
 
-1. SSH into your Hostinger Ubuntu VPS:
-   ```bash
-   git clone https://github.com/Jorence19/OmniReborn.git
-   cd OmniReborn
-   pip install requests pandas
-   ```
-2. Copy `index.html` to your Nginx/Apache web root:
-   ```bash
-   cp index.html /var/www/html/
-   ```
-3. Run the streamer in background using `systemd` or `tmux`:
-   ```bash
-   python streamer.py --stream --interval 30
-   ```
+# True on-chain + market ten-day discovery; queued work resumes after interruption
+python streamer.py --backfill 10 --max-jobs 5
 
----
+# Continuous collector
+python streamer.py --stream --interval 60 --max-jobs 5
+
+# Operational state
+python streamer.py --status
+python streamer.py --health-check
+```
+
+A private/archive-capable Robinhood RPC is required in production. The public RPC remains useful for testing but is officially rate-limited and is rejected by the deployment preflight.
 
 ## 🧪 Testing
 

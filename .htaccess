@@ -1,0 +1,11 @@
+Options -Indexes
+<FilesMatch "(^\.|\.(?:db|sqlite|sqlite3|csv|json|py|pyc|sql|env|md|log|toml|ya?ml|ini|sh|service|timer)$)">
+    Require all denied
+</FilesMatch>
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set Referrer-Policy "no-referrer"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'none'"
+</IfModule>

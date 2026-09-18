@@ -1,4 +1,11 @@
 import os
+from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
+except ImportError:
+    pass
 
 # Blockchain API Keys
 ETHERSCAN_API_KEY = os.getenv("ETHERSCAN_API_KEY", "")
