@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniReborn - Complete Step-by-Step Deployment Guide & Resource Hub</title>
+    <title>OmniReborn - Complete Step-by-Step Spoon-Fed Deployment Guide</title>
     <style>
         :root {
             --bg-primary: #0b0f19;
@@ -37,7 +37,7 @@
         }
 
         .container {
-            max-width: 1050px;
+            max-width: 1080px;
             margin: 0 auto;
         }
 
@@ -93,6 +93,10 @@
             align-items: center;
             justify-content: space-between;
             gap: 20px;
+            position: sticky;
+            top: 16px;
+            z-index: 100;
+            backdrop-filter: blur(8px);
         }
 
         .progress-track {
@@ -114,13 +118,13 @@
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 16px;
-            margin-bottom: 28px;
+            margin-bottom: 32px;
             overflow: hidden;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
         .step-header {
-            padding: 20px 24px;
+            padding: 22px 26px;
             background: rgba(255, 255, 255, 0.02);
             border-bottom: 1px solid var(--border);
             display: flex;
@@ -135,8 +139,8 @@
         }
 
         .step-num {
-            width: 36px;
-            height: 36px;
+            width: 38px;
+            height: 38px;
             background: var(--accent);
             color: #ffffff;
             border-radius: 10px;
@@ -145,6 +149,7 @@
             justify-content: center;
             font-weight: 800;
             font-size: 16px;
+            flex-shrink: 0;
         }
 
         .step-title {
@@ -154,13 +159,13 @@
         }
 
         .step-body {
-            padding: 24px;
+            padding: 26px;
         }
 
         .sub-step {
-            margin-bottom: 24px;
-            padding-bottom: 24px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 28px;
+            padding-bottom: 28px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
         .sub-step:last-child {
             margin-bottom: 0;
@@ -169,19 +174,27 @@
         }
 
         h3 {
-            font-size: 16px;
+            font-size: 17px;
             font-weight: 700;
             color: #60a5fa;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
+        h4 {
+            font-size: 14.5px;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin: 14px 0 6px 0;
+        }
+
         .explanation {
             font-size: 14px;
             color: var(--text-muted);
-            margin-bottom: 12px;
+            margin-bottom: 14px;
+            line-height: 1.6;
         }
 
         .code-box {
@@ -190,7 +203,7 @@
             border: 1px solid #1e293b;
             border-radius: 8px;
             padding: 16px;
-            margin: 10px 0;
+            margin: 12px 0;
             font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
             font-size: 13px;
             color: #38bdf8;
@@ -211,8 +224,9 @@
             color: #94a3b8;
             border: 1px solid #334155;
             border-radius: 6px;
-            padding: 4px 8px;
+            padding: 5px 10px;
             font-size: 11px;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -223,12 +237,13 @@
 
         .callout {
             border-radius: 8px;
-            padding: 14px 16px;
+            padding: 14px 18px;
             margin: 14px 0;
             font-size: 13.5px;
             display: flex;
             gap: 12px;
             align-items: flex-start;
+            line-height: 1.5;
         }
         .callout-info { background: rgba(59, 130, 246, 0.1); border-left: 4px solid var(--accent); color: #bfdbfe; }
         .callout-warning { background: rgba(245, 158, 11, 0.1); border-left: 4px solid var(--warning); color: #fde68a; }
@@ -245,8 +260,8 @@
             user-select: none;
         }
         .checkbox-container input {
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             cursor: pointer;
             accent-color: var(--success);
         }
@@ -254,20 +269,47 @@
         .diagram {
             background: #0d1322;
             border: 1px solid #1e293b;
-            border-radius: 8px;
-            padding: 16px;
+            border-radius: 10px;
+            padding: 18px;
             margin: 16px 0;
             text-align: center;
             font-family: monospace;
             font-size: 13px;
             color: #93c5fd;
-            line-height: 1.4;
+            line-height: 1.5;
         }
 
-        /* RESOURCE DIRECTORY STYLES */
+        /* TABLE STYLING */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+            margin: 14px 0;
+            background: #0d1424;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .info-table th {
+            background: rgba(255, 255, 255, 0.04);
+            padding: 12px 14px;
+            text-align: left;
+            color: #93c5fd;
+            font-weight: 700;
+            border-bottom: 1px solid var(--border);
+        }
+        .info-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #cbd5e1;
+        }
+        .info-table tr:last-child td {
+            border-bottom: none;
+        }
+
         .resource-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
             gap: 16px;
             margin: 16px 0;
         }
@@ -351,6 +393,28 @@
             font-family: monospace;
         }
 
+        .ui-path {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 12.5px;
+            color: #93c5fd;
+            font-family: monospace;
+            margin: 4px 0;
+        }
+
+        ol.spoon-list {
+            margin-left: 22px;
+            font-size: 14px;
+            color: #cbd5e1;
+            line-height: 1.8;
+        }
+        ol.spoon-list li {
+            margin-bottom: 10px;
+        }
+
         footer {
             text-align: center;
             padding: 32px 0;
@@ -369,8 +433,8 @@
             <span class="badge badge-purple">Dual-Chain: RBH (4663) + ARC (5042)</span>
             <span class="badge badge-green">Split Architecture: Hostinger + Vultr</span>
         </div>
-        <h1>Deployment Playbook: Step-by-Step Spoon-Fed Guide & Resource Hub</h1>
-        <p class="lead">Complete, spoon-fed instructions with direct official portal links where to obtain all RPC endpoints, API keys, and server tools.</p>
+        <h1>Deployment Playbook: Complete Spoon-Fed Guide</h1>
+        <p class="lead">Every click, command, and setting explained in granular detail with zero guesswork.</p>
     </header>
 
     <div class="progress-bar-container">
@@ -385,11 +449,11 @@
         <div class="step-header" style="background: rgba(59, 130, 246, 0.1);">
             <div class="step-title-group">
                 <div class="step-num" style="background: #2563eb;">🔗</div>
-                <div class="step-title">Resource Directory: Where To Get Every Piece of Info</div>
+                <div class="step-title">Official Resource Directory: Where To Get Every Credential & Link</div>
             </div>
         </div>
         <div class="step-body">
-            <p class="explanation">All official portals, node providers, and API dashboards you need are cataloged below. Click any button to open the service in a new tab:</p>
+            <p class="explanation">All official portals, RPC providers, and API dashboards you need:</p>
 
             <div class="resource-grid">
 
@@ -400,7 +464,7 @@
                             <span>Robinhood Chain RPC</span>
                             <span class="tag-pill">Chain 4663</span>
                         </div>
-                        <p class="resource-desc">A private/archive RPC is required because the public endpoint rate-limits and blocks historical block-range logs.</p>
+                        <p class="resource-desc">Private archive endpoint needed to index block-0 contracts without rate limits.</p>
                     </div>
                     <div class="link-group">
                         <a href="https://www.quicknode.com/" target="_blank" class="resource-link">QuickNode ↗</a>
@@ -416,7 +480,7 @@
                             <span>Arc Chain RPC</span>
                             <span class="tag-pill">Chain 5042</span>
                         </div>
-                        <p class="resource-desc">Circle's Layer-1. Public RPC is available for testing, but private node providers provide higher throughput for backfills.</p>
+                        <p class="resource-desc">Circle's EVM Layer-1. Public RPC works for testing; private provider recommended for high throughput.</p>
                     </div>
                     <div class="link-group">
                         <a href="https://docs.arc.io/arc/tools/node-providers" target="_blank" class="resource-link">Arc Node Providers ↗</a>
@@ -432,11 +496,11 @@
                             <span>Etherscan V2 API Key</span>
                             <span class="tag-pill">Free Tier Works</span>
                         </div>
-                        <p class="resource-desc">One unified Etherscan key covers Ethereum, Base, Robinhood, and ArcScan (5042) natively via Etherscan V2 endpoints.</p>
+                        <p class="resource-desc">One key covers Ethereum (1), Base (8453), Robinhood (4663), and ArcScan (5042) natively.</p>
                     </div>
                     <div class="link-group">
                         <a href="https://etherscan.io/myapikey" target="_blank" class="resource-link">Get Etherscan Key ↗</a>
-                        <a href="https://docs.etherscan.io/v/v2-multichain/" target="_blank" class="resource-link secondary">V2 API Docs ↗</a>
+                        <a href="https://docs.etherscan.io/v/v2-multichain/" target="_blank" class="resource-link secondary">V2 Multichain Docs ↗</a>
                     </div>
                 </div>
 
@@ -445,9 +509,9 @@
                     <div>
                         <div class="resource-title">
                             <span>Official Block Explorers</span>
-                            <span class="tag-pill">Inspect Contracts</span>
+                            <span class="tag-pill">Verify Contracts</span>
                         </div>
-                        <p class="resource-desc">Search deployers, verify token contracts, and review creation transaction hashes directly on-chain.</p>
+                        <p class="resource-desc">Check deployers, transactions, and verified contracts directly on-chain.</p>
                     </div>
                     <div class="link-group">
                         <a href="https://robinhoodchain.blockscout.com" target="_blank" class="resource-link">RobinScan (RBH) ↗</a>
@@ -463,7 +527,7 @@
                             <span>DexScreener Feeds</span>
                             <span class="tag-pill">Live Pairs</span>
                         </div>
-                        <p class="resource-desc">Where newly paid boosts, token profiles, and advertisements are queried in real-time by the streamer.</p>
+                        <p class="resource-desc">Where live boosted meme coins, profile updates, and pools are detected in real time.</p>
                     </div>
                     <div class="link-group">
                         <a href="https://dexscreener.com/robinhood" target="_blank" class="resource-link">Robinhood Dex ↗</a>
@@ -479,12 +543,12 @@
                             <span>Hostinger & Vultr Portals</span>
                             <span class="tag-pill">Infrastructure</span>
                         </div>
-                        <p class="resource-desc">Manage your domain DNS records, upload your static frontend, and SSH into your backend Ubuntu VPS.</p>
+                        <p class="resource-desc">Manage domain names, DNS records, File Manager, and VPS server commands.</p>
                     </div>
                     <div class="link-group">
                         <a href="https://hpanel.hostinger.com/" target="_blank" class="resource-link">Hostinger hPanel ↗</a>
                         <a href="https://my.vultr.com/" target="_blank" class="resource-link">Vultr Dashboard ↗</a>
-                        <a href="https://docs.vultr.com/firewall-quickstart-for-vultr-cloud-servers" target="_blank" class="resource-link secondary">Vultr Firewall ↗</a>
+                        <a href="https://dnschecker.org" target="_blank" class="resource-link secondary">DNSChecker ↗</a>
                     </div>
                 </div>
 
@@ -501,7 +565,7 @@
             </div>
         </div>
         <div class="step-body">
-            <p class="explanation">You are connecting two servers to work together seamlessly:</p>
+            <p class="explanation">You are connecting two servers together:</p>
             <div class="diagram">
 [ 🌐 HOSTINGER (Web Hosting) ]                  [ ⚡ VULTR (Cloud VPS) ]
   • Serves index.html + .htaccess                 • Runs streamer.py (Dual-chain: Robinhood + Arc)
@@ -517,85 +581,207 @@
         </div>
     </div>
 
-    <!-- STEP 1: PREREQUISITES -->
+    <!-- STEP 1: ACQUIRING HOSTINGER DOMAIN -->
     <div class="step-card">
         <div class="step-header">
             <div class="step-title-group">
                 <div class="step-num">1</div>
-                <div class="step-title">Prepare Your 3 Required Values (Before Touching Servers)</div>
+                <div class="step-title">How to Acquire & Set Up Your Domain on Hostinger</div>
             </div>
             <label class="checkbox-container">
                 <input type="checkbox" onchange="updateProgress()"> Done
             </label>
         </div>
         <div class="step-body">
+            <p class="explanation">Since you have a Hostinger plan (supporting up to 50 websites), you have three simple options to get your domain ready. Pick the one that applies to you:</p>
+
             <div class="sub-step">
-                <h3>1.1 Get Your Private RPC URLs</h3>
-                <p class="explanation">Public RPCs throttle and reject deep historical block logs. Obtain archive endpoints for both chains:</p>
-                <ul style="margin-left: 20px; font-size: 14px; color: #cbd5e1; margin-bottom: 12px; line-height: 1.8;">
-                    <li><strong>Robinhood Chain (4663):</strong> Log into <a href="https://www.quicknode.com/" target="_blank" style="color: #60a5fa;">QuickNode</a> or <a href="https://chainstack.com/" target="_blank" style="color: #60a5fa;">Chainstack</a> &rarr; create an endpoint for Robinhood Chain &rarr; copy the HTTPS URL.</li>
-                    <li><strong>Arc Chain (5042):</strong> Check the <a href="https://docs.arc.io/arc/tools/node-providers" target="_blank" style="color: #60a5fa;">Arc Node Providers Directory</a> or use your dedicated node endpoint &rarr; copy the HTTPS URL.</li>
-                </ul>
+                <h3>Option A: Claim the Free Domain Included in Your Hostinger Plan (Recommended)</h3>
+                <p class="explanation">Most Hostinger plans include 1 free domain registration for the first year (.com, .net, etc.):</p>
+                <ol class="spoon-list">
+                    <li>Log into your <a href="https://hpanel.hostinger.com/" target="_blank" style="color: #60a5fa; font-weight: 600;">Hostinger hPanel ↗</a>.</li>
+                    <li>Look at the top of your dashboard. If you haven't claimed it yet, you will see a banner: <strong>"Claim your free domain"</strong>. Click <strong>Claim Domain</strong>.</li>
+                    <li>Enter your desired domain name (e.g., <code>cryptofindertools.com</code>, <code>solarcforensics.com</code>, or <code>rh-sniper.com</code>) and pick <code>.com</code>.</li>
+                    <li>Click <strong>Check Availability</strong>. If it's available, click <strong>Claim Domain</strong>.</li>
+                    <li>Fill in your basic registration contact details and click <strong>Finish Registration</strong>. Hostinger will automatically attach it to your hosting account!</li>
+                </ol>
             </div>
 
             <div class="sub-step">
-                <h3>1.2 Choose Your 2 Domain Names</h3>
-                <p class="explanation">Decide which domain addresses you will use for the frontend and backend:</p>
-                <ul style="margin-left: 20px; font-size: 14px; color: #cbd5e1; line-height: 1.8;">
-                    <li><strong>Frontend (Hostinger):</strong> e.g., <code>https://tracker.yourdomain.com</code> (or <code>https://yourdomain.com</code>)</li>
-                    <li><strong>Backend API (Vultr):</strong> e.g., <code>https://api.yourdomain.com</code></li>
-                </ul>
+                <h3>Option B: Use an Existing Domain & Create a Subdomain (Zero Cost)</h3>
+                <p class="explanation">If you already have a domain active on Hostinger (e.g., <code>mytradingbrand.com</code>), you can create a free subdomain like <code>tracker.mytradingbrand.com</code>:</p>
+                <ol class="spoon-list">
+                    <li>In Hostinger hPanel, click <strong>Websites</strong> in the top menu &rarr; click <strong>Manage</strong> next to your website.</li>
+                    <li>In the left sidebar, navigate to: <div class="ui-path">Domains &rarr; Subdomains</div></li>
+                    <li>In the <strong>"Create a Subdomain"</strong> box:
+                        <ul style="margin-top: 6px; margin-left: 18px;">
+                            <li>Enter: <code>tracker</code></li>
+                            <li>Leave the checkbox <em>"Custom folder for subdomain"</em> unchecked (it will auto-create <code>public_html/tracker/</code> or create a new site).</li>
+                        </ul>
+                    </li>
+                    <li>Click the purple <strong>Create</strong> button. You now have a clean, isolated frontend URL!</li>
+                </ol>
             </div>
 
             <div class="sub-step">
-                <h3>1.3 Create Your DNS A Record</h3>
-                <p class="explanation">In your domain registrar (Namecheap, Cloudflare, GoDaddy, or Hostinger DNS):</p>
-                <div class="code-box">
-                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                    <pre>Type: A
-Host / Name: api
-Points To / Value: [YOUR_VULTR_IPV4_ADDRESS]
-TTL: Automatic (or 300 seconds)</pre>
-                </div>
-                <div class="callout callout-warning">
-                    <span>⚠️</span>
-                    <div>Make sure the DNS record has propagated (takes 2–10 minutes) before requesting SSL certificates with Certbot in Step 3. You can verify it using <a href="https://dnschecker.org" target="_blank" style="color: #fde68a; font-weight: 700;">DNSChecker.org ↗</a>.</div>
-                </div>
+                <h3>Option C: Purchase a New Cheap Domain ($0.99 – $9.99)</h3>
+                <p class="explanation">If you want a brand-new custom domain:</p>
+                <ol class="spoon-list">
+                    <li>In hPanel, click <strong>Domains</strong> in the top menu &rarr; click <strong>Get a new domain</strong>.</li>
+                    <li>Search for your domain (e.g., <code>.xyz</code>, <code>.online</code>, or <code>.com</code>).</li>
+                    <li>Complete the checkout. Hostinger will immediately activate it inside your hPanel.</li>
+                </ol>
             </div>
         </div>
     </div>
 
-    <!-- STEP 2: CLEAR LOCAL QUEUE -->
+    <!-- STEP 2: CONFIGURE DNS -->
     <div class="step-card">
         <div class="step-header">
             <div class="step-title-group">
                 <div class="step-num">2</div>
-                <div class="step-title">Clear Existing Local Work Queue</div>
+                <div class="step-title">How to Configure DNS in Hostinger for Vultr (Click-by-Click)</div>
             </div>
             <label class="checkbox-container">
                 <input type="checkbox" onchange="updateProgress()"> Done
             </label>
         </div>
         <div class="step-body">
-            <p class="explanation">Before deploying, drain the 39 pending token discovery jobs currently queued in your local SQLite database:</p>
-            <div class="code-box">
-                <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                <pre>python streamer.py --drain --max-jobs 10
-python streamer.py --status</pre>
+            <p class="explanation">This step connects your domain to both servers: Hostinger serves the frontend website, while Vultr serves the background API. Here is exactly how to set up the DNS:</p>
+
+            <div class="sub-step">
+                <h3>2.1 Locate Your Vultr VPS IPv4 Address</h3>
+                <ol class="spoon-list">
+                    <li>Log into your <a href="https://my.vultr.com/" target="_blank" style="color: #60a5fa; font-weight: 600;">Vultr Dashboard ↗</a>.</li>
+                    <li>Click on <strong>Products</strong> &rarr; <strong>Compute</strong> &rarr; click on your Ubuntu VPS instance.</li>
+                    <li>Under the server details, copy the <strong>IP Address</strong> (e.g. <code>149.28.123.45</code>). You will need this in the next step.</li>
+                </ol>
             </div>
-            <div class="callout callout-success">
-                <span>✓</span>
-                <div>Expected output: <code>"pending": 0</code> and <code>"succeeded": 40</code> (confirming zero queue backlog).</div>
+
+            <div class="sub-step">
+                <h3>2.2 Open the DNS Zone Editor in Hostinger hPanel</h3>
+                <ol class="spoon-list">
+                    <li>In Hostinger hPanel, click <strong>Domains</strong> in the top navigation bar.</li>
+                    <li>Click directly on your domain name (e.g., <code>yourdomain.com</code>).</li>
+                    <li>In the left sidebar menu, click: <div class="ui-path">DNS / Nameservers</div></li>
+                    <li>Scroll down to the <strong>"Manage DNS records"</strong> box.</li>
+                </ol>
+            </div>
+
+            <div class="sub-step">
+                <h3>2.3 Add the "A" Record for the Vultr API</h3>
+                <p class="explanation">Fill in the fields exactly as shown in this table:</p>
+                <table class="info-table">
+                    <thead>
+                        <tr>
+                            <th>Field</th>
+                            <th>Value to Enter</th>
+                            <th>Explanation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Type</strong></td>
+                            <td><span class="tag-pill" style="color: #60a5fa; font-size: 13px;">A</span></td>
+                            <td>Select "A" from the dropdown.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Name</strong></td>
+                            <td><code>api</code></td>
+                            <td>Just type <code>api</code>. Hostinger automatically appends your domain to make <code>api.yourdomain.com</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Points to</strong></td>
+                            <td><code>[YOUR_VULTR_IPV4]</code></td>
+                            <td>Paste your Vultr IP address (e.g. <code>149.28.123.45</code>).</td>
+                        </tr>
+                        <tr>
+                            <td><strong>TTL</strong></td>
+                            <td><code>300</code></td>
+                            <td>300 seconds (5 minutes). This ensures fast propagation.</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <ol class="spoon-list" style="margin-top: 10px;">
+                    <li>Click the purple <strong>Add Record</strong> button. Hostinger will show a green confirmation toast: <em>"DNS record created successfully"</em>.</li>
+                </ol>
+            </div>
+
+            <div class="sub-step">
+                <h3>2.4 Verify DNS Propagation Worldwide</h3>
+                <p class="explanation">Before requesting free SSL on Vultr in Step 4, verify that the internet can see your new <code>api</code> address:</p>
+                <ol class="spoon-list">
+                    <li>Open <a href="https://dnschecker.org" target="_blank" style="color: #60a5fa; font-weight: 600;">DNSChecker.org ↗</a> in your browser.</li>
+                    <li>In the search box, enter: <code>api.yourdomain.com</code>.</li>
+                    <li>Leave the dropdown on <strong>A</strong>, and click <strong>Search</strong>.</li>
+                    <li>Once you see green checkmarks showing your Vultr IP address across the map (usually takes 2–10 minutes), your DNS is 100% ready!</li>
+                </ol>
             </div>
         </div>
     </div>
 
-    <!-- STEP 3: VULTR BACKEND SETUP -->
+    <!-- STEP 3: CLEAR LOCAL WORK QUEUE -->
     <div class="step-card">
         <div class="step-header">
             <div class="step-title-group">
                 <div class="step-num">3</div>
-                <div class="step-title">Deploy The Vultr Backend Engine (Full Copy-Paste Commands)</div>
+                <div class="step-title">How to Clear or Drain the Existing Local Work Queue</div>
+            </div>
+            <label class="checkbox-container">
+                <input type="checkbox" onchange="updateProgress()"> Done
+            </label>
+        </div>
+        <div class="step-body">
+            <p class="explanation">Inside <code>forensics.db</code>, there is an <code>ingestion_jobs</code> table. When our stream tests ran, 39 tokens were placed in the queue waiting for forensic enrichment. You have two choices:</p>
+
+            <div class="sub-step">
+                <h3>Choice A: Drain the Queue Gracefully (Enrich the Tokens)</h3>
+                <p class="explanation">This command claims jobs from SQLite, fetches their contract creation and funder lineage, computes nearest duplicate scores, and saves them into the dashboard:</p>
+                <div class="code-box">
+                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    <pre>python streamer.py --drain --max-jobs 10</pre>
+                </div>
+                <p class="explanation"><strong>What you will see in the terminal:</strong></p>
+                <div class="code-box" style="color: #a7f3d0;">
+                    <pre>2026-09-20T... INFO enriching 0xa249... on RBH from uniswap_v4_initialize (attempt 1)
+Generated dashboard atomically in c:\...\Robinhood
+Generated API snapshot atomically at c:\...\runtime\dashboard_candidates.json
+{
+  "claimed": 10,
+  "failed": 0,
+  "succeeded": 10
+}</pre>
+                </div>
+                <p class="explanation">Check the remaining count with:</p>
+                <div class="code-box">
+                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    <pre>python streamer.py --status</pre>
+                </div>
+                <p class="explanation">Repeat <code>python streamer.py --drain --max-jobs 10</code> until <code>"pending": 0</code>.</p>
+            </div>
+
+            <div class="sub-step">
+                <h3>Choice B: Instant Reset (Wipe Pending Queue for Fresh Production Start)</h3>
+                <p class="explanation">If you want to clear the pending queue instantly without waiting for all tokens to enrich locally, run this 1-line command in PowerShell:</p>
+                <div class="code-box">
+                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    <pre>python -c "from database import ForensicDatabase; db = ForensicDatabase('forensics.db'); db.execute_write('DELETE FROM ingestion_jobs WHERE status=\"pending\"'); print('Pending queue reset successfully!')"
+python streamer.py --status</pre>
+                </div>
+                <div class="callout callout-success">
+                    <span>✓</span>
+                    <div><strong>Why Choice B is completely safe:</strong> It only deletes un-enriched pending queue items. It does <strong>not</strong> delete any of your qualified anchor tokens, dev habits, fingerprints, or historical records! Output will immediately show <code>"pending": 0</code>.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STEP 4: VULTR BACKEND SETUP -->
+    <div class="step-card">
+        <div class="step-header">
+            <div class="step-title-group">
+                <div class="step-num">4</div>
+                <div class="step-title">Deploy The Vultr Backend Engine (Full Step-by-Step Commands)</div>
             </div>
             <label class="checkbox-container">
                 <input type="checkbox" onchange="updateProgress()"> Done
@@ -603,17 +789,18 @@ python streamer.py --status</pre>
         </div>
         <div class="step-body">
             <div class="sub-step">
-                <h3>3.1 Connect to Vultr via SSH</h3>
-                <p class="explanation">Log into your <a href="https://my.vultr.com/" target="_blank" style="color: #60a5fa;">Vultr Dashboard</a>, find your VPS IP, and run in PowerShell or Terminal:</p>
+                <h3>4.1 Connect to Your Vultr Server via SSH</h3>
+                <p class="explanation">Open PowerShell (Windows) or Terminal (Mac/Linux) and run:</p>
                 <div class="code-box">
                     <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                     <pre>ssh root@YOUR_VULTR_IP</pre>
                 </div>
+                <p class="explanation">Type <code>yes</code> if prompted about host authenticity, then paste your Vultr root password (characters won't show on screen as you type—just press Enter).</p>
             </div>
 
             <div class="sub-step">
-                <h3>3.2 Install System Packages & Clone Repo</h3>
-                <p class="explanation">Run this single block on your Vultr server:</p>
+                <h3>4.2 Install System Packages & Clone the Repository</h3>
+                <p class="explanation">Copy and paste this entire block into your Vultr terminal:</p>
                 <div class="code-box">
                     <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                     <pre>sudo apt update && sudo apt install -y git python3 python3-venv nginx curl certbot python3-certbot-nginx
@@ -623,18 +810,18 @@ sudo bash deploy/install_vultr_backend.sh</pre>
                 </div>
                 <div class="callout callout-info">
                     <span>ℹ️</span>
-                    <div><strong>Note:</strong> The installer script will create <code>/etc/omnireborn.env</code> and pause so you can enter your real RPCs.</div>
+                    <div><strong>What happens here:</strong> The installer sets up an isolated system user (<code>omnireborn</code>), creates Python virtual environment <code>.venv</code>, installs all requirements, copies the database, and creates <code>/etc/omnireborn.env</code>. It pauses so you can enter your keys.</div>
                 </div>
             </div>
 
             <div class="sub-step">
-                <h3>3.3 Edit Your Environment File</h3>
-                <p class="explanation">Open the configuration file:</p>
+                <h3>4.3 Edit Your Production Environment File</h3>
+                <p class="explanation">Open the configuration file with the nano editor:</p>
                 <div class="code-box">
                     <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                     <pre>sudo nano /etc/omnireborn.env</pre>
                 </div>
-                <p class="explanation">Update these exact lines with your real RPCs, Etherscan API key, and domains:</p>
+                <p class="explanation">Replace with your real RPC URLs and domain names:</p>
                 <div class="code-box">
                     <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                     <pre>ENABLED_CHAIN_IDS=4663,5042
@@ -647,35 +834,36 @@ DASHBOARD_API_URL=https://api.yourdomain.com/api/candidates</pre>
                 </div>
                 <div class="callout callout-warning">
                     <span>💡</span>
-                    <div>In nano editor: Press <strong>Ctrl + O</strong>, then <strong>Enter</strong> to save. Press <strong>Ctrl + X</strong> to exit.</div>
+                    <div><strong>How to save in Nano:</strong> Press <strong>Ctrl + O</strong> &rarr; press <strong>Enter</strong> to confirm filename &rarr; press <strong>Ctrl + X</strong> to exit.</div>
                 </div>
             </div>
 
             <div class="sub-step">
-                <h3>3.4 Re-run the Installer & Setup Nginx with SSL</h3>
-                <p class="explanation">Run the installer to configure systemd services, then obtain your free SSL certificate:</p>
+                <h3>4.4 Finalize Installer & Set Up Nginx Reverse Proxy with Free SSL</h3>
+                <p class="explanation">Now run the installer to register the systemd services, configure Nginx, and request your free Let's Encrypt SSL certificate:</p>
                 <div class="code-box">
                     <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                     <pre>cd /opt/omnireborn
 sudo bash deploy/install_vultr_backend.sh
 
-# Configure Nginx Reverse Proxy
+# Configure Nginx for your api domain
 sudo cp deploy/nginx-omnireborn-api.conf /etc/nginx/sites-available/omnireborn-api
 sudo sed -i 's/api.example.com/api.yourdomain.com/g' /etc/nginx/sites-available/omnireborn-api
 sudo ln -s /etc/nginx/sites-available/omnireborn-api /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 
-# Request Free SSL Certificate (replace with your real domain)
+# Request Free SSL Certificate from Let's Encrypt
 sudo certbot --nginx -d api.yourdomain.com</pre>
                 </div>
+                <p class="explanation">Certbot will ask for an email address and to agree to Terms of Service. Type <code>Y</code> and press Enter. It will automatically install the SSL certificate into Nginx!</p>
             </div>
 
             <div class="sub-step">
-                <h3>3.5 Run Deployment Health Preflight Checks</h3>
-                <p class="explanation">Run the automated sanity checks:</p>
+                <h3>4.5 Run Deployment Health Preflight Checks</h3>
+                <p class="explanation">Verify that all green checks pass on your Vultr server:</p>
                 <div class="code-box">
                     <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                    <pre># Check Streamer Collector preflight (both 4663 and 5042)
+                    <pre># Check Streamer Collector preflight (both Robinhood 4663 and Arc 5042)
 sudo -u omnireborn /opt/omnireborn/.venv/bin/python /opt/omnireborn/streamer.py --preflight
 
 # Check API Server readiness
@@ -688,8 +876,8 @@ sudo -u omnireborn /opt/omnireborn/.venv/bin/python /opt/omnireborn/api_server.p
             </div>
 
             <div class="sub-step">
-                <h3>3.6 Start the 24/7 Background Daemons</h3>
-                <p class="explanation">Activate your systemd services and watchdogs:</p>
+                <h3>4.6 Start the 24/7 Background Daemons</h3>
+                <p class="explanation">Enable and start the background services, automated watchdogs, and daily database backup timer:</p>
                 <div class="code-box">
                     <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                     <pre>sudo systemctl enable --now omnireborn.service omnireborn-api.service omnireborn-watchdog.timer omnireborn-api-watchdog.timer omnireborn-backup.timer
@@ -699,11 +887,11 @@ sudo systemctl status omnireborn omnireborn-api</pre>
         </div>
     </div>
 
-    <!-- STEP 4: HOSTINGER FRONTEND SETUP -->
+    <!-- STEP 5: HOSTINGER FRONTEND SETUP -->
     <div class="step-card">
         <div class="step-header">
             <div class="step-title-group">
-                <div class="step-num">4</div>
+                <div class="step-num">5</div>
                 <div class="step-title">Deploy The Hostinger Frontend (2 Minutes)</div>
             </div>
             <label class="checkbox-container">
@@ -712,7 +900,7 @@ sudo systemctl status omnireborn omnireborn-api</pre>
         </div>
         <div class="step-body">
             <div class="sub-step">
-                <h3>4.1 Compile Dashboard with Your Live Vultr API</h3>
+                <h3>5.1 Compile Dashboard with Your Live Vultr API</h3>
                 <p class="explanation">On your local Windows computer in PowerShell, run:</p>
                 <div class="code-box">
                     <button class="copy-btn" onclick="copyCode(this)">Copy</button>
@@ -723,14 +911,13 @@ python generate_html_dashboard.py</pre>
             </div>
 
             <div class="sub-step">
-                <h3>4.2 Upload to Hostinger File Manager</h3>
-                <p class="explanation">Follow these simple clicks in Hostinger:</p>
-                <ol style="margin-left: 20px; font-size: 14px; color: #cbd5e1; line-height: 1.8;">
-                    <li>Log into your <a href="https://hpanel.hostinger.com/" target="_blank" style="color: #60a5fa;">Hostinger hPanel</a>.</li>
-                    <li>Go to <strong>Websites</strong> &rarr; click <strong>Manage</strong> next to your site.</li>
-                    <li>Click <strong>File Manager</strong> &rarr; Navigate inside <code>public_html/</code>.</li>
-                    <li>Upload <strong>ONLY these TWO files</strong>:
-                        <ul style="margin-top: 6px;">
+                <h3>5.2 Upload to Hostinger File Manager</h3>
+                <ol class="spoon-list">
+                    <li>Log into your <a href="https://hpanel.hostinger.com/" target="_blank" style="color: #60a5fa; font-weight: 600;">Hostinger hPanel ↗</a>.</li>
+                    <li>Go to <strong>Websites</strong> &rarr; click <strong>Manage</strong> next to your site (or subdomain).</li>
+                    <li>Click <strong>File Manager</strong> &rarr; Navigate inside <code>public_html/</code> (or <code>public_html/tracker/</code>).</li>
+                    <li>Click the <strong>Upload</strong> icon in the top toolbar &rarr; select <strong>File</strong> &rarr; upload <strong>ONLY these TWO files</strong> from your project directory:
+                        <ul style="margin-top: 6px; margin-left: 18px;">
                             <li><code>index.html</code></li>
                             <li><code>.htaccess</code></li>
                         </ul>
@@ -744,11 +931,11 @@ python generate_html_dashboard.py</pre>
         </div>
     </div>
 
-    <!-- STEP 5: VERIFICATION -->
+    <!-- STEP 6: VERIFICATION -->
     <div class="step-card">
         <div class="step-header">
             <div class="step-title-group">
-                <div class="step-num">5</div>
+                <div class="step-num">6</div>
                 <div class="step-title">Live Verification & Smoke Testing</div>
             </div>
             <label class="checkbox-container">
@@ -757,7 +944,7 @@ python generate_html_dashboard.py</pre>
         </div>
         <div class="step-body">
             <div class="sub-step">
-                <h3>5.1 Test Your Vultr API in Terminal or Browser</h3>
+                <h3>6.1 Test Your Vultr API in Terminal or Browser</h3>
                 <p class="explanation">Run this curl test from your terminal or open in browser:</p>
                 <div class="code-box">
                     <button class="copy-btn" onclick="copyCode(this)">Copy</button>
@@ -771,13 +958,13 @@ curl -I https://api.yourdomain.com/api/health</pre>
             </div>
 
             <div class="sub-step">
-                <h3>5.2 Open Your Hostinger Dashboard in Chrome/Edge</h3>
-                <p class="explanation">Visit <code>https://tracker.yourdomain.com</code> in your browser:</p>
-                <ul style="margin-left: 20px; font-size: 14px; color: #cbd5e1; line-height: 1.8;">
+                <h3>6.2 Open Your Hostinger Dashboard in Chrome/Edge</h3>
+                <p class="explanation">Visit <code>https://tracker.yourdomain.com</code> (or your chosen URL) in your browser:</p>
+                <ol class="spoon-list">
                     <li>Look at the top-right header badge: It should say <strong><code>● Live API (Vultr) [RBH + ARC]</code></strong> in green.</li>
                     <li>Test the <strong>Chain Filter</strong> dropdown: Select <strong>Robinhood (RBH)</strong> or <strong>Arc (ARC)</strong> to verify dual-chain filtering.</li>
                     <li>Click on an Arc token: Verify the explorer link points to <code>explorer.arc.io</code> and the DexScreener link points to <code>dexscreener.com/arc/...</code>.</li>
-                </ul>
+                </ol>
             </div>
         </div>
     </div>
@@ -791,33 +978,33 @@ curl -I https://api.yourdomain.com/api/health</pre>
             </div>
         </div>
         <div class="step-body">
-            <table style="width: 100%; border-collapse: collapse; font-size: 13.5px;">
+            <table class="info-table">
                 <thead>
-                    <tr style="border-bottom: 1px solid var(--border); text-align: left; color: #93c5fd;">
-                        <th style="padding: 10px;">Action</th>
-                        <th style="padding: 10px;">Command (on Vultr)</th>
+                    <tr>
+                        <th>Action</th>
+                        <th>Command (Run on Vultr)</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                        <td style="padding: 10px; font-weight: 600;">View live collector logs</td>
-                        <td style="padding: 10px; font-family: monospace; color: #38bdf8;">sudo journalctl -u omnireborn -f</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                        <td style="padding: 10px; font-weight: 600;">View live API logs</td>
-                        <td style="padding: 10px; font-family: monospace; color: #38bdf8;">sudo journalctl -u omnireborn-api -f</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                        <td style="padding: 10px; font-weight: 600;">Check queue stats</td>
-                        <td style="padding: 10px; font-family: monospace; color: #38bdf8;">sudo -u omnireborn /opt/omnireborn/.venv/bin/python /opt/omnireborn/streamer.py --status</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                        <td style="padding: 10px; font-weight: 600;">Create verified database backup</td>
-                        <td style="padding: 10px; font-family: monospace; color: #38bdf8;">sudo -u omnireborn /opt/omnireborn/.venv/bin/python /opt/omnireborn/backup_database.py</td>
+                    <tr>
+                        <td><strong>View live collector logs</strong></td>
+                        <td><code>sudo journalctl -u omnireborn -f</code></td>
                     </tr>
                     <tr>
-                        <td style="padding: 10px; font-weight: 600;">Update code from GitHub</td>
-                        <td style="padding: 10px; font-family: monospace; color: #38bdf8;">cd /opt/omnireborn && git pull && sudo systemctl restart omnireborn omnireborn-api</td>
+                        <td><strong>View live API logs</strong></td>
+                        <td><code>sudo journalctl -u omnireborn-api -f</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Check queue stats</strong></td>
+                        <td><code>sudo -u omnireborn /opt/omnireborn/.venv/bin/python /opt/omnireborn/streamer.py --status</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Create verified database backup</strong></td>
+                        <td><code>sudo -u omnireborn /opt/omnireborn/.venv/bin/python /opt/omnireborn/backup_database.py</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Update code from GitHub</strong></td>
+                        <td><code>cd /opt/omnireborn && git pull && sudo systemctl restart omnireborn omnireborn-api</code></td>
                     </tr>
                 </tbody>
             </table>
