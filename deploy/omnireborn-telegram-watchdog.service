@@ -1,0 +1,8 @@
+[Unit]
+Description=Restart OmniReborn Telegram bot when its heartbeat is stale
+After=omnireborn-telegram.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/omnireborn.env
+ExecStart=/bin/bash -c '/opt/omnireborn/.venv/bin/python /opt/omnireborn/telegram_bot.py --health-check || /bin/systemctl restart omnireborn-telegram.service'

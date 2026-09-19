@@ -9,11 +9,10 @@ StartLimitBurst=10
 Type=simple
 User=omnireborn
 Group=omnireborn
-SupplementaryGroups=www-data
 WorkingDirectory=/opt/omnireborn
 EnvironmentFile=/etc/omnireborn.env
 ExecStartPre=/opt/omnireborn/.venv/bin/python /opt/omnireborn/streamer.py --preflight
-ExecStart=/opt/omnireborn/.venv/bin/python /opt/omnireborn/streamer.py --stream --interval 60 --max-jobs 5
+ExecStart=/opt/omnireborn/.venv/bin/python /opt/omnireborn/streamer.py --stream --max-jobs 25
 ExecStopPost=/opt/omnireborn/.venv/bin/python /opt/omnireborn/backup_database.py --retention-days 14
 Restart=always
 RestartSec=15
@@ -24,7 +23,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/omnireborn /var/www/omnireborn /var/backups/omnireborn
+ReadWritePaths=/opt/omnireborn/data /opt/omnireborn/runtime /var/backups/omnireborn
 UMask=0027
 
 [Install]

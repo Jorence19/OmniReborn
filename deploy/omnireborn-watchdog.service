@@ -4,4 +4,5 @@ After=omnireborn.service
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -c '/opt/omnireborn/.venv/bin/python /opt/omnireborn/streamer.py --health-check --interval 60 || /bin/systemctl restart omnireborn.service'
+EnvironmentFile=/etc/omnireborn.env
+ExecStart=/bin/bash -c '/opt/omnireborn/.venv/bin/python /opt/omnireborn/streamer.py --health-check --interval "${COLLECTION_INTERVAL_SECONDS:-600}" || /bin/systemctl restart omnireborn.service'

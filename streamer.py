@@ -714,7 +714,7 @@ def main() -> int:
     mode.add_argument("--preflight", action="store_true")
     mode.add_argument("--status", action="store_true")
     mode.add_argument("--health-check", action="store_true")
-    parser.add_argument("--interval", type=int, default=60)
+    parser.add_argument("--interval", type=int, default=int(os.getenv("COLLECTION_INTERVAL_SECONDS", "600")))
     parser.add_argument("--max-jobs", type=int, default=10)
     parser.add_argument("--from-block", type=int)
     parser.add_argument("--retry-dead", action="store_true")

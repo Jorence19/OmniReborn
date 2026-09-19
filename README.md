@@ -3,6 +3,13 @@
 > **Chain IDs: 4663 (Robinhood Chain) + 5042 (Arc)** • Also supports **Base (8453)** & **Ethereum Mainnet (1)**
 > Autonomous forensic clustering, developer team identification, and live candidate leads dashboard for meme coin snipers.
 
+## Primary architecture: Pure Vultr + Telegram (Phase 1)
+
+Phase 1 is a **10-minute forensic collection and team-identification pipeline**, not a real-time sniper. The collector, durable SQLite queue, Telegram command bot, watchdogs, and backups run on Vultr; no public web server is required. Telegram push alerts are disabled by default and reserved for the later Phase 2 monitoring/anticipation system. See [VULTR_TELEGRAM_DEPLOYMENT.md](VULTR_TELEGRAM_DEPLOYMENT.md).
+
+Commands: /leads, /dashboard, /dbxlsx, /dbcsv, and /status.
+
+
 ---
 
 ## 🚀 Overview
@@ -95,7 +102,7 @@ python phase1.py audit --db forensics.db --output phase1_fingerprint_report.json
 
 ### 4. Run the Live Streamer (DexScreener Boosts & Profiles)
 ```bash
-python streamer.py --stream --interval 30
+python streamer.py --stream --interval 600 --max-jobs 25
 ```
 
 ### 5. Backfill Historical Tokens (e.g. 10 Days)
@@ -105,7 +112,7 @@ python streamer.py --backfill 10
 
 ---
 
-## 🌐 Deploying to Hostinger
+## Legacy alternative: Hostinger / Method B
 
 The dashboard is static, but the collector is Python. Hostinger currently supports Python on **VPS hosting only**. The production deployment now includes a durable SQLite queue, resumable Uniswap v4 event scanner, retries/backoff, health heartbeat, systemd restart policy, stale-worker watchdog, atomic publication, and verified daily backups.
 
@@ -119,7 +126,7 @@ python streamer.py --preflight
 python streamer.py --backfill 10 --max-jobs 5
 
 # Continuous collector
-python streamer.py --stream --interval 60 --max-jobs 5
+python streamer.py --stream --interval 600 --max-jobs 25
 
 # Operational state
 python streamer.py --status

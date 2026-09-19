@@ -3,21 +3,21 @@ team astro,31,launchpad,pons,31,100.0
 team astro,31,method_selector,434d13e2,30,96.77
 team astro,31,funder_label,fresh wallet,27,87.1
 team astro,31,funder_1hop,0xf70da97812cb96acdf810712aa562db8dfa3dbef,11,35.48
-team astro,31,value_eth,0.0005,10,32.26
+team astro,31,value_eth,4663:0.0005,10,32.26
 team astro,31,nonce,1,4,12.9
 team astro,31,funder_1hop,0x88d25c861938a91af4ad57ad964a8fcc6c6351d3,3,9.68
 team astro,31,nonce,5,3,9.68
 team astro,31,nonce,2,3,9.68
-team astro,31,priority_gwei,0.1,3,9.68
+team astro,31,priority_gwei,4663:0.1,3,9.68
 team astro,31,dev_wallet,0xdeaa8c051053074b61f5d09b6543feabdf3f605a,2,6.45
-team astro,31,fund_amount,1.9998,2,6.45
+team astro,31,fund_amount,4663:1.9998,2,6.45
 team astro,31,funder_1hop,0xfd3cc7c8a2f26c13a9862f89a57833d63c9f10ff,2,6.45
-team astro,31,gwei,0.098014,2,6.45
+team astro,31,gwei,4663:0.098014,2,6.45
 team astro,31,nonce,3,2,6.45
 team astro,31,nonce,9,2,6.45
 team astro,31,nonce,8,2,6.45
-team astro,31,priority_gwei,0.00000001,2,6.45
-team astro,31,value_eth,0.5005,2,6.45
+team astro,31,priority_gwei,4663:0.00000001,2,6.45
+team astro,31,value_eth,4663:0.5005,2,6.45
 team gigalon,14,funder_label,fresh wallet,14,100.0
 team gigalon,14,launchpad,pons,14,100.0
 team gigalon,14,method_selector,ca20cf82,14,100.0
@@ -28,13 +28,13 @@ team robinary,5,funder_label,fresh wallet,5,100.0
 team robinary,5,launchpad,pons,5,100.0
 team robinary,5,method_selector,ca20cf82,5,100.0
 team robinary,5,template_hash,418a367a5fe8bcba93244ad9c916ad01bb215db93166980204e0b46ac1b9356d,5,100.0
-team robinary,5,fund_amount,1.9994,4,80.0
+team robinary,5,fund_amount,4663:1.9994,4,80.0
 team nchip,4,funder_label,fresh wallet,4,100.0
 team nchip,4,launchpad,pons,4,100.0
 team nchip,4,method_selector,c1d28584,4,100.0
 team nchip,4,funder_1hop,0x8ba0ef7431e7ed6b82f8fd0d18a2a5632cf0aa01,3,75.0
-team nchip,4,value_eth,1,3,75.0
-team nchip,4,fund_amount,1.0501,2,50.0
+team nchip,4,value_eth,4663:1,3,75.0
+team nchip,4,fund_amount,4663:1.0501,2,50.0
 team intel,3,funder_1hop,0xf70da97812cb96acdf810712aa562db8dfa3dbef,3,100.0
 team intel,3,funder_label,fresh wallet,3,100.0
 team intel,3,launchpad,pons,3,100.0

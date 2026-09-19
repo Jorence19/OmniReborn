@@ -224,6 +224,21 @@ CREATE TABLE IF NOT EXISTS ingestion_runs (
     error TEXT
 );
 
+-- Telegram delivery deduplication and one-time historical baseline.
+CREATE TABLE IF NOT EXISTS telegram_alerts (
+    chat_id INTEGER NOT NULL,
+    chain_id INTEGER NOT NULL,
+    ca TEXT NOT NULL,
+    score REAL NOT NULL,
+    sent_at TEXT NOT NULL,
+    PRIMARY KEY (chat_id, chain_id, ca)
+);
+
+CREATE TABLE IF NOT EXISTS telegram_alert_baselines (
+    chat_id INTEGER PRIMARY KEY,
+    initialized_at TEXT NOT NULL
+);
+
 -- High Performance Indexes
 CREATE INDEX IF NOT EXISTS idx_exec_dev ON execution_profiles(dev_wallet);
 CREATE INDEX IF NOT EXISTS idx_exec_funder1 ON execution_profiles(funder_1hop);
@@ -239,6 +254,7 @@ CREATE INDEX IF NOT EXISTS idx_tokens_migrated ON tokens(is_migrated);
 CREATE INDEX IF NOT EXISTS idx_watchlist_target ON snipe_watchlists(target_value);
 CREATE INDEX IF NOT EXISTS idx_ingestion_due ON ingestion_jobs(status, next_attempt_at, priority);
 CREATE INDEX IF NOT EXISTS idx_chain_events_block ON chain_events(chain_id, block_number);
+CREATE INDEX IF NOT EXISTS idx_telegram_alerts_sent ON telegram_alerts(sent_at);
 
 -- Unified Master Profile View
 DROP VIEW IF EXISTS v_full_forensic_profile;

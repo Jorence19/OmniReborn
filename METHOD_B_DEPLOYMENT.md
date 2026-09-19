@@ -33,7 +33,7 @@ sudo apt update
 sudo apt install -y git python3 python3-venv nginx curl certbot python3-certbot-nginx
 sudo git clone https://github.com/Jorence19/OmniReborn.git /opt/omnireborn
 cd /opt/omnireborn
-sudo bash deploy/install_vultr_backend.sh
+sudo bash deploy/install_vultr_method_b.sh
 ```
 
 The first run creates `/etc/omnireborn.env` and exits. Edit it:
@@ -67,7 +67,7 @@ Rerun the installer:
 
 ```bash
 cd /opt/omnireborn
-sudo bash deploy/install_vultr_backend.sh
+sudo bash deploy/install_vultr_method_b.sh
 ```
 
 ## 2. Put Nginx and TLS in front of the API
@@ -125,7 +125,7 @@ If the API fails, the page stays usable from its embedded snapshot. Failed colle
 ```bash
 cd /opt/omnireborn
 sudo git pull --ff-only
-sudo bash deploy/install_vultr_backend.sh
+sudo bash deploy/install_vultr_method_b.sh
 sudo nginx -t
 sudo systemctl restart omnireborn omnireborn-api
 ```
