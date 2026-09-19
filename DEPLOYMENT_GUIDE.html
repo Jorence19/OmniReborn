@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniReborn - Complete Step-by-Step Deployment Guide</title>
+    <title>OmniReborn - Complete Step-by-Step Deployment Guide & Resource Hub</title>
     <style>
         :root {
             --bg-primary: #0b0f19;
             --bg-card: #131b2e;
+            --bg-card-sub: #0d1424;
             --bg-code: #070a12;
             --border: #1f2a44;
+            --border-hover: #3b82f6;
             --text-main: #f3f4f6;
             --text-muted: #9ca3af;
             --accent: #3b82f6;
@@ -35,7 +37,7 @@
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 1050px;
             margin: 0 auto;
         }
 
@@ -262,6 +264,93 @@
             line-height: 1.4;
         }
 
+        /* RESOURCE DIRECTORY STYLES */
+        .resource-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin: 16px 0;
+        }
+
+        .resource-card {
+            background: var(--bg-card-sub);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.2s ease;
+        }
+        .resource-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        .resource-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .resource-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            line-height: 1.5;
+        }
+
+        .link-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .resource-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #60a5fa;
+            text-decoration: none;
+            padding: 6px 12px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .resource-link:hover {
+            background: rgba(59, 130, 246, 0.25);
+            color: #93c5fd;
+            border-color: #3b82f6;
+        }
+
+        .resource-link.secondary {
+            color: #9ca3af;
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        .resource-link.secondary:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .tag-pill {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+            font-family: monospace;
+        }
+
         footer {
             text-align: center;
             padding: 32px 0;
@@ -280,14 +369,126 @@
             <span class="badge badge-purple">Dual-Chain: RBH (4663) + ARC (5042)</span>
             <span class="badge badge-green">Split Architecture: Hostinger + Vultr</span>
         </div>
-        <h1>Deployment Playbook: Step-by-Step Spoon-Fed Guide</h1>
-        <p class="lead">Follow each numbered step in order. Check off the box as you finish each task to track your progress.</p>
+        <h1>Deployment Playbook: Step-by-Step Spoon-Fed Guide & Resource Hub</h1>
+        <p class="lead">Complete, spoon-fed instructions with direct official portal links where to obtain all RPC endpoints, API keys, and server tools.</p>
     </header>
 
     <div class="progress-bar-container">
         <span style="font-weight: 700; font-size: 14px;">Progress: <span id="progress-text">0% Completed</span></span>
         <div class="progress-track">
             <div class="progress-fill" id="progress-fill"></div>
+        </div>
+    </div>
+
+    <!-- DATA & RESOURCE DIRECTORY -->
+    <div class="step-card" style="border: 1px solid #3b82f6; background: #0e172e;">
+        <div class="step-header" style="background: rgba(59, 130, 246, 0.1);">
+            <div class="step-title-group">
+                <div class="step-num" style="background: #2563eb;">🔗</div>
+                <div class="step-title">Resource Directory: Where To Get Every Piece of Info</div>
+            </div>
+        </div>
+        <div class="step-body">
+            <p class="explanation">All official portals, node providers, and API dashboards you need are cataloged below. Click any button to open the service in a new tab:</p>
+
+            <div class="resource-grid">
+
+                <!-- Robinhood RPC -->
+                <div class="resource-card">
+                    <div>
+                        <div class="resource-title">
+                            <span>Robinhood Chain RPC</span>
+                            <span class="tag-pill">Chain 4663</span>
+                        </div>
+                        <p class="resource-desc">A private/archive RPC is required because the public endpoint rate-limits and blocks historical block-range logs.</p>
+                    </div>
+                    <div class="link-group">
+                        <a href="https://www.quicknode.com/" target="_blank" class="resource-link">QuickNode ↗</a>
+                        <a href="https://chainstack.com/" target="_blank" class="resource-link">Chainstack ↗</a>
+                        <a href="https://docs.robinhood.com/chain/connecting/" target="_blank" class="resource-link secondary">Robinhood Docs ↗</a>
+                    </div>
+                </div>
+
+                <!-- Arc RPC -->
+                <div class="resource-card">
+                    <div>
+                        <div class="resource-title">
+                            <span>Arc Chain RPC</span>
+                            <span class="tag-pill">Chain 5042</span>
+                        </div>
+                        <p class="resource-desc">Circle's Layer-1. Public RPC is available for testing, but private node providers provide higher throughput for backfills.</p>
+                    </div>
+                    <div class="link-group">
+                        <a href="https://docs.arc.io/arc/tools/node-providers" target="_blank" class="resource-link">Arc Node Providers ↗</a>
+                        <a href="https://docs.arc.io/arc/references/connect-to-arc" target="_blank" class="resource-link secondary">Arc Connect Docs ↗</a>
+                        <a href="https://chainlist.org/?search=arc" target="_blank" class="resource-link secondary">Chainlist ↗</a>
+                    </div>
+                </div>
+
+                <!-- Etherscan V2 API -->
+                <div class="resource-card">
+                    <div>
+                        <div class="resource-title">
+                            <span>Etherscan V2 API Key</span>
+                            <span class="tag-pill">Free Tier Works</span>
+                        </div>
+                        <p class="resource-desc">One unified Etherscan key covers Ethereum, Base, Robinhood, and ArcScan (5042) natively via Etherscan V2 endpoints.</p>
+                    </div>
+                    <div class="link-group">
+                        <a href="https://etherscan.io/myapikey" target="_blank" class="resource-link">Get Etherscan Key ↗</a>
+                        <a href="https://docs.etherscan.io/v/v2-multichain/" target="_blank" class="resource-link secondary">V2 API Docs ↗</a>
+                    </div>
+                </div>
+
+                <!-- Block Explorers -->
+                <div class="resource-card">
+                    <div>
+                        <div class="resource-title">
+                            <span>Official Block Explorers</span>
+                            <span class="tag-pill">Inspect Contracts</span>
+                        </div>
+                        <p class="resource-desc">Search deployers, verify token contracts, and review creation transaction hashes directly on-chain.</p>
+                    </div>
+                    <div class="link-group">
+                        <a href="https://robinhoodchain.blockscout.com" target="_blank" class="resource-link">RobinScan (RBH) ↗</a>
+                        <a href="https://explorer.arc.io" target="_blank" class="resource-link">Arc Explorer ↗</a>
+                        <a href="https://arc.etherscan.io" target="_blank" class="resource-link secondary">ArcScan ↗</a>
+                    </div>
+                </div>
+
+                <!-- DexScreener Live Feeds -->
+                <div class="resource-card">
+                    <div>
+                        <div class="resource-title">
+                            <span>DexScreener Feeds</span>
+                            <span class="tag-pill">Live Pairs</span>
+                        </div>
+                        <p class="resource-desc">Where newly paid boosts, token profiles, and advertisements are queried in real-time by the streamer.</p>
+                    </div>
+                    <div class="link-group">
+                        <a href="https://dexscreener.com/robinhood" target="_blank" class="resource-link">Robinhood Dex ↗</a>
+                        <a href="https://dexscreener.com/arc" target="_blank" class="resource-link">Arc Dex ↗</a>
+                        <a href="https://docs.dexscreener.com/api/reference" target="_blank" class="resource-link secondary">API Specs ↗</a>
+                    </div>
+                </div>
+
+                <!-- Server & Hosting Dashboards -->
+                <div class="resource-card">
+                    <div>
+                        <div class="resource-title">
+                            <span>Hostinger & Vultr Portals</span>
+                            <span class="tag-pill">Infrastructure</span>
+                        </div>
+                        <p class="resource-desc">Manage your domain DNS records, upload your static frontend, and SSH into your backend Ubuntu VPS.</p>
+                    </div>
+                    <div class="link-group">
+                        <a href="https://hpanel.hostinger.com/" target="_blank" class="resource-link">Hostinger hPanel ↗</a>
+                        <a href="https://my.vultr.com/" target="_blank" class="resource-link">Vultr Dashboard ↗</a>
+                        <a href="https://docs.vultr.com/firewall-quickstart-for-vultr-cloud-servers" target="_blank" class="resource-link secondary">Vultr Firewall ↗</a>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
 
@@ -303,9 +504,9 @@
             <p class="explanation">You are connecting two servers to work together seamlessly:</p>
             <div class="diagram">
 [ 🌐 HOSTINGER (Web Hosting) ]                  [ ⚡ VULTR (Cloud VPS) ]
-  • Serves index.html + .htaccess                 • Runs streamer.py (Collects Uniswap v4 & Dex boosts)
+  • Serves index.html + .htaccess                 • Runs streamer.py (Dual-chain: Robinhood + Arc)
   • Lightning-fast CDN with free SSL              • Runs api_server.py (FastAPI on 127.0.0.1:8000)
-  • Zero Python needed on Hostinger               • Nginx SSL Proxy on Port 443 (api.yourdomain.com)
+  • Zero Python needed on Hostinger               • Nginx SSL Reverse Proxy on Port 443 (api.yourdomain.com)
             │                                               │
             └─────────── Fetches Live JSON via HTTPS ───────┘
             </div>
@@ -330,17 +531,17 @@
         <div class="step-body">
             <div class="sub-step">
                 <h3>1.1 Get Your Private RPC URLs</h3>
-                <p class="explanation">Public RPCs (like <code>rpc.robinhood.com</code>) throttle and reject deep historical block logs. You need archive-capable RPCs for both chains:</p>
-                <ul style="margin-left: 20px; font-size: 14px; color: #cbd5e1; margin-bottom: 12px;">
-                    <li><strong>Robinhood Chain (4663):</strong> Obtain an RPC endpoint from your node provider (e.g., QuickNode, Alchemy, or a private dedicated endpoint).</li>
-                    <li><strong>Arc Chain (5042):</strong> Obtain an Arc RPC URL (e.g. from Arc node providers like QuickNode or your private node).</li>
+                <p class="explanation">Public RPCs throttle and reject deep historical block logs. Obtain archive endpoints for both chains:</p>
+                <ul style="margin-left: 20px; font-size: 14px; color: #cbd5e1; margin-bottom: 12px; line-height: 1.8;">
+                    <li><strong>Robinhood Chain (4663):</strong> Log into <a href="https://www.quicknode.com/" target="_blank" style="color: #60a5fa;">QuickNode</a> or <a href="https://chainstack.com/" target="_blank" style="color: #60a5fa;">Chainstack</a> &rarr; create an endpoint for Robinhood Chain &rarr; copy the HTTPS URL.</li>
+                    <li><strong>Arc Chain (5042):</strong> Check the <a href="https://docs.arc.io/arc/tools/node-providers" target="_blank" style="color: #60a5fa;">Arc Node Providers Directory</a> or use your dedicated node endpoint &rarr; copy the HTTPS URL.</li>
                 </ul>
             </div>
 
             <div class="sub-step">
                 <h3>1.2 Choose Your 2 Domain Names</h3>
                 <p class="explanation">Decide which domain addresses you will use for the frontend and backend:</p>
-                <ul style="margin-left: 20px; font-size: 14px; color: #cbd5e1;">
+                <ul style="margin-left: 20px; font-size: 14px; color: #cbd5e1; line-height: 1.8;">
                     <li><strong>Frontend (Hostinger):</strong> e.g., <code>https://tracker.yourdomain.com</code> (or <code>https://yourdomain.com</code>)</li>
                     <li><strong>Backend API (Vultr):</strong> e.g., <code>https://api.yourdomain.com</code></li>
                 </ul>
@@ -358,7 +559,7 @@ TTL: Automatic (or 300 seconds)</pre>
                 </div>
                 <div class="callout callout-warning">
                     <span>⚠️</span>
-                    <div>Make sure the DNS record has propagated (takes 2–10 minutes) before requesting SSL certificates with Certbot in Step 3.</div>
+                    <div>Make sure the DNS record has propagated (takes 2–10 minutes) before requesting SSL certificates with Certbot in Step 3. You can verify it using <a href="https://dnschecker.org" target="_blank" style="color: #fde68a; font-weight: 700;">DNSChecker.org ↗</a>.</div>
                 </div>
             </div>
         </div>
@@ -384,7 +585,7 @@ python streamer.py --status</pre>
             </div>
             <div class="callout callout-success">
                 <span>✓</span>
-                <div>Expected output: <code>"pending": 0</code> and <code>"succeeded": 40</code> (or all jobs finished).</div>
+                <div>Expected output: <code>"pending": 0</code> and <code>"succeeded": 40</code> (confirming zero queue backlog).</div>
             </div>
         </div>
     </div>
@@ -403,7 +604,7 @@ python streamer.py --status</pre>
         <div class="step-body">
             <div class="sub-step">
                 <h3>3.1 Connect to Vultr via SSH</h3>
-                <p class="explanation">Open your Windows PowerShell or Mac/Linux Terminal and run:</p>
+                <p class="explanation">Log into your <a href="https://my.vultr.com/" target="_blank" style="color: #60a5fa;">Vultr Dashboard</a>, find your VPS IP, and run in PowerShell or Terminal:</p>
                 <div class="code-box">
                     <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                     <pre>ssh root@YOUR_VULTR_IP</pre>
@@ -422,7 +623,7 @@ sudo bash deploy/install_vultr_backend.sh</pre>
                 </div>
                 <div class="callout callout-info">
                     <span>ℹ️</span>
-                    <div><strong>Note:</strong> The script will create <code>/etc/omnireborn.env</code> and pause so you can enter your real keys.</div>
+                    <div><strong>Note:</strong> The installer script will create <code>/etc/omnireborn.env</code> and pause so you can enter your real RPCs.</div>
                 </div>
             </div>
 
@@ -433,7 +634,7 @@ sudo bash deploy/install_vultr_backend.sh</pre>
                     <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                     <pre>sudo nano /etc/omnireborn.env</pre>
                 </div>
-                <p class="explanation">Update these exact lines with your real RPCs and domains:</p>
+                <p class="explanation">Update these exact lines with your real RPCs, Etherscan API key, and domains:</p>
                 <div class="code-box">
                     <button class="copy-btn" onclick="copyCode(this)">Copy</button>
                     <pre>ENABLED_CHAIN_IDS=4663,5042
@@ -446,7 +647,7 @@ DASHBOARD_API_URL=https://api.yourdomain.com/api/candidates</pre>
                 </div>
                 <div class="callout callout-warning">
                     <span>💡</span>
-                    <div>In nano: Press <strong>Ctrl + O</strong>, then <strong>Enter</strong> to save. Press <strong>Ctrl + X</strong> to exit.</div>
+                    <div>In nano editor: Press <strong>Ctrl + O</strong>, then <strong>Enter</strong> to save. Press <strong>Ctrl + X</strong> to exit.</div>
                 </div>
             </div>
 
@@ -474,7 +675,7 @@ sudo certbot --nginx -d api.yourdomain.com</pre>
                 <p class="explanation">Run the automated sanity checks:</p>
                 <div class="code-box">
                     <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                    <pre># Check Streamer Collector preflight
+                    <pre># Check Streamer Collector preflight (both 4663 and 5042)
 sudo -u omnireborn /opt/omnireborn/.venv/bin/python /opt/omnireborn/streamer.py --preflight
 
 # Check API Server readiness
@@ -525,7 +726,7 @@ python generate_html_dashboard.py</pre>
                 <h3>4.2 Upload to Hostinger File Manager</h3>
                 <p class="explanation">Follow these simple clicks in Hostinger:</p>
                 <ol style="margin-left: 20px; font-size: 14px; color: #cbd5e1; line-height: 1.8;">
-                    <li>Log into your <strong>Hostinger hPanel</strong>.</li>
+                    <li>Log into your <a href="https://hpanel.hostinger.com/" target="_blank" style="color: #60a5fa;">Hostinger hPanel</a>.</li>
                     <li>Go to <strong>Websites</strong> &rarr; click <strong>Manage</strong> next to your site.</li>
                     <li>Click <strong>File Manager</strong> &rarr; Navigate inside <code>public_html/</code>.</li>
                     <li>Upload <strong>ONLY these TWO files</strong>:
