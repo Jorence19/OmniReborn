@@ -13,7 +13,7 @@ from forensics import (
     decode_creation_bytecode_args,
     strip_solidity_metadata,
 )
-from phase1 import build_report, discover_fingerprints
+from phase1 import build_report, calculate_nearest_duplicate, discover_fingerprints
 
 
 class BytecodeTests(unittest.TestCase):
@@ -66,6 +66,20 @@ class SimilarityTests(unittest.TestCase):
         score, reasons = calculate_pair_similarity(rows[0], rows[1], counts, len(rows))
         self.assertLessEqual(score, 3)
         self.assertFalse(reasons["identity_evidence"])
+
+
+class CrossChainScoringTests(unittest.TestCase):
+    def test_native_amounts_never_match_between_rbh_and_arc(self):
+        candidate = {
+            "chain_id": 5042, "value_eth": 0.005, "gwei": 1.0,
+            "creation_tx_fee_eth": 0.01, "nonce": 4,
+        }
+        anchor = {
+            "chain_id": 4663, "value_eth": 0.005, "gwei": 1.0,
+            "creation_tx_fee_eth": 0.01, "nonce": 4,
+        }
+        _, evidence = calculate_nearest_duplicate(candidate, anchor)
+        self.assertEqual([item["feature"] for item in evidence], ["nonce"])
 
 
 class Phase1ReportTests(unittest.TestCase):

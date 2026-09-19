@@ -33,6 +33,12 @@ NUMERIC_HABITS = (
     "dev_holding_ratio", "dev_sold_ratio", "top_10_ratio",
 )
 
+NATIVE_DENOMINATED_HABITS = {
+    "fund_amount", "value_eth", "gwei", "max_gwei", "priority_gwei",
+    "funding_total_eth_before_deploy", "creation_tx_fee_eth",
+    "bundle_eth", "dev_eth", "buyer_eth",
+}
+
 MISSING = {"", "none", "null", "nan", "unknown", "n/a", "0x", "00000000"}
 
 
@@ -108,7 +114,11 @@ def token_fingerprints(row: Dict[str, Any]) -> Dict[str, str]:
         if signature is not None:
             # Legacy imports used zero for missing values, so zero is not evidence.
             if signature != "0":
-                result[feature] = signature
+                if feature in NATIVE_DENOMINATED_HABITS:
+                    chain_id = int(row.get("chain_id") or 4663)
+                    result[feature] = f"{chain_id}:{signature}"
+                else:
+                    result[feature] = signature
     website = row.get("website_url") or row.get("token_website")
     if website and not result.get("website_domain"):
         candidate = str(website).strip()
@@ -240,8 +250,12 @@ def calculate_nearest_duplicate(
                 "contribution": round(reliability, 4),
             })
 
-    # 2. Numerical habits (with buffer_pct relative proximity)
+    # 2. Numerical habits (with buffer_pct relative proximity). Native-value
+    # fields are incomparable across ETH-gas Robinhood and USDC-gas Arc.
+    cross_chain = int(candidate.get("chain_id") or 4663) != int(anchor.get("chain_id") or 4663)
     for feature in NUMERIC_HABITS:
+        if cross_chain and feature in NATIVE_DENOMINATED_HABITS:
+            continue
         v1 = candidate.get(feature)
         v2 = anchor.get(feature)
         if v1 is not None and v2 is not None:
@@ -300,12 +314,16 @@ def scan_candidate_tokens(
     buffer_pct: float = 0.15,
 ) -> List[Dict[str, Any]]:
     """Cross-examine candidate tokens against qualified anchors to find their nearest duplicate."""
-    qualified_cas = {_text(row.get("ca")) for row in qualified_rows}
+    qualified_cas = {
+        (int(row.get("chain_id") or 4663), _text(row.get("ca")))
+        for row in qualified_rows
+    }
     candidates = []
 
     for row in universe_rows:
         ca = _text(row.get("ca"))
-        if ca in qualified_cas:
+        token_key = (int(row.get("chain_id") or 4663), ca)
+        if token_key in qualified_cas:
             continue
 
         best_score = 0.0
@@ -336,12 +354,16 @@ def scan_candidate_tokens(
 
         candidates.append({
             "ca": row.get("ca"),
+            "chain_id": int(row.get("chain_id") or 4663),
+            "chain": row.get("chain") or "RBH",
             "symbol": row.get("symbol"),
             "candidate_score": best_score,
             "confidence": confidence,
             "inferred_team": inferred_team,
             "best_match_symbol": best_anchor.get("symbol"),
             "best_match_ca": best_anchor.get("ca"),
+            "best_match_chain_id": int(best_anchor.get("chain_id") or 4663),
+            "best_match_chain": best_anchor.get("chain") or "RBH",
             "evidence": best_evidence,
         })
 
@@ -398,25 +420,32 @@ def evidence_quality(profile: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def persist_profile(db: ForensicDatabase, profile: Dict[str, Any], *, qualified: bool = False):
+def persist_profile(db: ForensicDatabase, profile: Dict[str, Any], *, qualified: bool = False) -> str:
     """Persist both indexed fields and a lossless Phase 1 fingerprint payload."""
-    db.upsert_token({
-        "ca": profile["ca"], "symbol": profile.get("token_symbol"),
+    chain_id = int(profile.get("chain_id") or 4663)
+    chain_tag = {4663: "RBH", 5042: "ARC", 8453: "BASE", 1: "ETH"}.get(
+        chain_id, str(chain_id)
+    )
+    canonical_ca = db.upsert_token({
+        "ca": profile["ca"], "chain_id": chain_id, "chain": chain_tag,
+        "symbol": profile.get("token_symbol"),
         "name": profile.get("token_name"), "is_qualified": qualified,
         "qualification_reasons": {"source": "phase1_enrich"} if qualified else None,
         "description": profile.get("description"), "website": profile.get("website_url"),
         "x_handle": profile.get("twitter_url"),
     })
-    db.upsert_execution_profile(profile)
-    db.upsert_bytecode_profile(profile)
+    stored = dict(profile)
+    stored["ca"] = canonical_ca
+    db.upsert_execution_profile(stored)
+    db.upsert_bytecode_profile(stored)
     db.upsert_fingerprint_profile({
-        "ca": profile["ca"],
+        "ca": canonical_ca,
         "wallet_lineage_json": profile.get("funding_lineage"),
         "funding_habits_json": {k: profile.get(k) for k in (
             "funder_address", "funder_hop2_address", "eth_received",
             "funding_count_before_deploy", "funding_total_eth_before_deploy",
             "setup_time_seconds", "wallet_age_at_deploy_seconds",
-        )},
+        )} | {"chain_id": chain_id, "native_symbol": "USDC" if chain_id == 5042 else "ETH"},
         "launch_habits_json": {k: profile.get(k) for k in (
             "creation_method", "creation_nonce", "gas_price_gwei", "max_fee_gwei",
             "priority_fee_gwei", "creation_gas_used", "creation_tx_fee",
@@ -433,6 +462,7 @@ def persist_profile(db: ForensicDatabase, profile: Dict[str, Any], *, qualified:
         )},
         "evidence_quality_json": evidence_quality(profile),
     })
+    return canonical_ca
 
 
 def build_report(db: ForensicDatabase, qualified_only: bool = True) -> Dict[str, Any]:
@@ -478,8 +508,9 @@ def write_report_artifacts(report: Dict[str, Any], output_path: str) -> List[str
             writer.writerow({key: row.get(key) for key in fingerprint_fields})
 
     candidate_fields = [
-        "candidate_score", "confidence", "inferred_team", "symbol", "ca",
-        "best_match_symbol", "best_match_ca", "evidence",
+        "candidate_score", "confidence", "inferred_team", "chain_id", "chain",
+        "symbol", "ca", "best_match_symbol", "best_match_ca",
+        "best_match_chain_id", "best_match_chain", "evidence",
     ]
     with candidate_tmp.open("w", newline="", encoding="utf-8-sig") as handle:
         writer = csv.DictWriter(handle, fieldnames=candidate_fields)

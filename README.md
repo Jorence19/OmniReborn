@@ -1,6 +1,6 @@
 # ⚡ OmniReborn: Robinhood Meme Coin Forensics & Developer Team Tracker
 
-> **Chain ID: 4663 (Robinhood Chain)** • Also supports **Base (8453)** & **Ethereum Mainnet (1)**  
+> **Chain IDs: 4663 (Robinhood Chain) + 5042 (Arc)** • Also supports **Base (8453)** & **Ethereum Mainnet (1)**
 > Autonomous forensic clustering, developer team identification, and live candidate leads dashboard for meme coin snipers.
 
 ---
@@ -62,7 +62,7 @@ $$\Delta = \frac{|V_{\text{cand}} - V_{\text{ref}}|}{\max(|V_{\text{ref}}|, 10^{
 ├── index.html                           # Root dashboard (ready for Hostinger deployment)
 ├── team_leads_dashboard.html            # Standalone forensic leads dashboard
 ├── generate_html_dashboard.py           # Dashboard generator & data serializer
-├── streamer.py                          # Durable queue, v4 event scanner, live market collector
+├── streamer.py                          # Durable dual-chain queue, RBH v4 scanner, live market collector
 ├── phase1.py                            # Phase 1 audit & Nearest Duplicate scoring engine
 ├── forensics.py                         # Master on-chain reverse engineering & opcode extractor
 ├── database.py                          # SQLite WAL-mode database layer
@@ -126,13 +126,13 @@ python streamer.py --status
 python streamer.py --health-check
 ```
 
-A private/archive-capable Robinhood RPC is required in production. The public RPC remains useful for testing but is officially rate-limited and is rejected by the deployment preflight.
+Private/archive-capable Robinhood and Arc RPCs are required when both chains are enabled. Public endpoints remain useful for smoke tests but are rejected by the deployment preflight. Arc market discovery is currently DexScreener-based rather than an exhaustive on-chain pool index; see [ARC_SUPPORT.md](ARC_SUPPORT.md).
 
 ## 🧪 Testing
 
 Run the full automated regression suite:
 ```bash
-python -m unittest test_phase1.py
+python -m unittest discover -v
 ```
 
 ---

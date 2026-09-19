@@ -21,19 +21,26 @@ if DASHBOARD_API_URL and (
     raise ValueError("DASHBOARD_API_URL must be an HTTPS /api/candidates endpoint")
 df_cand = pd.read_csv(DATA_DIR / "phase1_fingerprint_report_candidates.csv")
 df_tg = pd.read_csv(APP_DIR / "tgscan_rbh_1789559702282.csv")
+CHAIN_NAMES = {4663: "RBH", 5042: "ARC"}
+if 'chain_id' not in df_cand.columns:
+    df_cand['chain_id'] = 4663
+df_cand['chain_id'] = pd.to_numeric(df_cand['chain_id'], errors='coerce').fillna(4663).astype(int)
+# The Telegram export is Robinhood-specific; never attach it to an Arc address
+# just because the same 20-byte contract address happens to exist on both chains.
+df_tg['chain_id'] = 4663
 df_tg['ca_lower'] = df_tg['ca'].astype(str).str.lower()
 df_cand['ca_lower'] = df_cand['ca'].astype(str).str.lower()
 df_tg['_ath_numeric'] = pd.to_numeric(df_tg['ath'], errors='coerce').fillna(0.0)
 df_tg = (
     df_tg.sort_values('_ath_numeric')
-    .drop_duplicates(subset=['ca_lower'], keep='last')
+    .drop_duplicates(subset=['chain_id', 'ca_lower'], keep='last')
     .drop(columns=['_ath_numeric'])
 )
 
 merged = pd.merge(
     df_cand,
-    df_tg[['ca_lower', 'ath', 'name', 'token_live', 'x', 'website', 'gwei', 'max_gwei', 'priority_gwei', '1st_boost', 'ads']],
-    on='ca_lower',
+    df_tg[['chain_id', 'ca_lower', 'ath', 'name', 'token_live', 'x', 'website', 'gwei', 'max_gwei', 'priority_gwei', '1st_boost', 'ads']],
+    on=['chain_id', 'ca_lower'],
     how='left'
 )
 
@@ -42,7 +49,8 @@ db_path = Path(os.getenv("FORENSICS_DB_PATH", APP_DIR / "forensics.db")).resolve
 if db_path.exists():
     with sqlite3.connect(db_path) as connection:
         df_live = pd.read_sql_query(
-            '''SELECT LOWER(ca) AS ca_lower, name AS live_name,
+            '''SELECT LOWER(ca) AS ca_lower, COALESCE(chain_id, 4663) AS chain_id,
+                      chain AS live_chain, name AS live_name,
                       token_live_at AS live_token_live, ath_usd AS live_ath,
                       website AS live_website, x_handle AS live_x
                FROM tokens''',
@@ -51,16 +59,16 @@ if db_path.exists():
     df_live['live_ath'] = pd.to_numeric(df_live['live_ath'], errors='coerce').fillna(0.0)
     df_live = (
         df_live.sort_values('live_ath')
-        .drop_duplicates(subset=['ca_lower'], keep='last')
+        .drop_duplicates(subset=['chain_id', 'ca_lower'], keep='last')
     )
-    merged = pd.merge(merged, df_live, on='ca_lower', how='left')
+    merged = pd.merge(merged, df_live, on=['chain_id', 'ca_lower'], how='left')
 else:
-    for column in ('live_name', 'live_token_live', 'live_ath', 'live_website', 'live_x'):
+    for column in ('live_chain', 'live_name', 'live_token_live', 'live_ath', 'live_website', 'live_x'):
         merged[column] = None
 
 
-# One public candidate per case-insensitive EVM contract address.
-merged = merged.drop_duplicates(subset=['ca_lower'], keep='last')
+# One public candidate per chain and case-insensitive EVM contract address.
+merged = merged.drop_duplicates(subset=['chain_id', 'ca_lower'], keep='last')
 
 
 def first_present(*values):
@@ -69,10 +77,21 @@ def first_present(*values):
             return value
     return None
 
+
+def supported_chain_id(value, default=4663):
+    try:
+        chain_id = int(float(value))
+    except (TypeError, ValueError):
+        return default
+    return chain_id if chain_id in CHAIN_NAMES else default
+
+
 # Prepare candidates JSON structure for client-side JavaScript
 candidates_data = []
 for idx, r in merged.iterrows():
     ca = str(r['ca'])
+    chain_id = supported_chain_id(r.get('chain_id'))
+    chain = str(first_present(r.get('live_chain'), r.get('chain'), CHAIN_NAMES.get(chain_id)) or f"CHAIN-{chain_id}")
     symbol = str(r['symbol'])
     name = str(first_present(r.get('live_name'), r.get('name'), symbol))
     conf = str(r['confidence'])
@@ -80,6 +99,8 @@ for idx, r in merged.iterrows():
     team = str(r['inferred_team']) if pd.notna(r.get('inferred_team')) else 'unclustered'
     best_match_symbol = str(r['best_match_symbol']) if pd.notna(r.get('best_match_symbol')) else ''
     best_match_ca = str(r['best_match_ca']) if pd.notna(r.get('best_match_ca')) else ''
+    best_match_chain_id = supported_chain_id(r.get('best_match_chain_id'), chain_id)
+    best_match_chain = str(first_present(r.get('best_match_chain'), CHAIN_NAMES.get(best_match_chain_id)) or f"CHAIN-{best_match_chain_id}")
     live_ath = float(r.get('live_ath') or 0) if pd.notna(r.get('live_ath')) else 0.0
     historical_ath = float(r.get('ath') or 0) if pd.notna(r.get('ath')) else 0.0
     ath = max(live_ath, historical_ath, 0.0)
@@ -97,6 +118,8 @@ for idx, r in merged.iterrows():
         
     candidates_data.append({
         "ca": ca,
+        "chain_id": chain_id,
+        "chain": chain,
         "symbol": symbol,
         "name": name,
         "confidence": conf,
@@ -104,6 +127,8 @@ for idx, r in merged.iterrows():
         "team": team,
         "best_match_symbol": best_match_symbol,
         "best_match_ca": best_match_ca,
+        "best_match_chain_id": best_match_chain_id,
+        "best_match_chain": best_match_chain,
         "ath": ath,
         "is_rug": is_rug,
         "evidence": ev_list,
@@ -552,7 +577,7 @@ html_content = f"""<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robinhood Meme Coin Forensics & Team Leads Dashboard</title>
+    <title>Robinhood + Arc Meme Coin Forensics & Team Leads Dashboard</title>
     <style>
         :root {{
             --bg-main: #0b0e14;
@@ -896,6 +921,17 @@ html_content = f"""<!DOCTYPE html>
             border: 1px solid rgba(147, 197, 253, 0.2);
             white-space: nowrap;
         }}
+        .chain-pill {{
+            display: inline-block;
+            background: rgba(168, 85, 247, 0.16);
+            color: #d8b4fe;
+            border: 1px solid rgba(168, 85, 247, 0.4);
+            padding: 2px 6px;
+            margin-left: 6px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 800;
+        }}
         .ath-val {{
             color: #34d399;
             font-weight: 800;
@@ -1106,8 +1142,8 @@ html_content = f"""<!DOCTYPE html>
         <div class="navbar-brand">
             <span class="logo-icon">⚡</span>
             <div>
-                <div class="brand-title">Robinhood Meme Coin Forensics</div>
-                <div class="brand-subtitle">Chain ID: 4663 • Pre-Launch Sniping vs Post-Launch Holding Intelligence</div>
+                <div class="brand-title">Robinhood + Arc Meme Coin Forensics</div>
+                <div class="brand-subtitle">Chain IDs: 4663 (RBH) / 5042 (Arc) • Pre-Launch Sniping vs Post-Launch Holding Intelligence</div>
             </div>
         </div>
 
@@ -1170,6 +1206,11 @@ html_content = f"""<!DOCTYPE html>
             <div class="filter-bar">
                 <div class="filter-group">
                     <input type="text" id="leads-search" class="search-input" placeholder="Search Symbol, Name, CA, or Sibling Token..." oninput="filterLeadsTable()">
+                    <select id="leads-chain-filter" class="select-input" onchange="filterLeadsTable()">
+                        <option value="ALL">All Chains</option>
+                        <option value="4663">Robinhood (4663)</option>
+                        <option value="5042">Arc (5042)</option>
+                    </select>
                     <select id="leads-tier-filter" class="select-input" onchange="filterLeadsTable()">
                         <option value="ALL">All Confidence Tiers</option>
                         <option value="HIGH_LEAD">High Leads Only</option>
@@ -1288,7 +1329,7 @@ html_content = f"""<!DOCTYPE html>
         </div>
 
         <div class="footer">
-            Robinhood Chain (Chain ID: 4663) Forensic Tracking Engine • Data verified from RobinScan Multichain V2, Blockscout, and Telegram Scans
+            Robinhood + Arc (Chain IDs: 4663 / 5042) Forensic Tracking Engine • Data verified from RobinScan Multichain V2, Blockscout, and Telegram Scans
         </div>
 
     </div>
@@ -1344,6 +1385,12 @@ html_content = f"""<!DOCTYPE html>
             const ca = String(raw.ca || '');
             if (!/^0x[0-9a-fA-F]{{40}}$/.test(ca)) return null;
             const bestCa = String(raw.best_match_ca || '');
+            const parsedChainId = Number(raw.chain_id);
+            const chainId = [4663, 5042].includes(parsedChainId) ? parsedChainId : 4663;
+            const chainName = chainId === 5042 ? 'ARC' : 'RBH';
+            const parsedBestChainId = Number(raw.best_match_chain_id);
+            const bestMatchChainId = [4663, 5042].includes(parsedBestChainId) ? parsedBestChainId : chainId;
+            const bestMatchChainName = bestMatchChainId === 5042 ? 'ARC' : 'RBH';
             const confidence = ['HIGH_LEAD', 'PROBABLE_LEAD', 'WATCH', 'WEAK'].includes(raw.confidence)
                 ? raw.confidence : 'WEAK';
             const number = (value, fallback = 0) => {{
@@ -1362,11 +1409,13 @@ html_content = f"""<!DOCTYPE html>
                 }})) : [];
             const ath = Math.max(0, number(raw.ath));
             return {{
-                ca, symbol: clean(raw.symbol, 80), name: clean(raw.name, 200),
+                ca, chain_id: chainId, chain: chainName,
+                symbol: clean(raw.symbol, 80), name: clean(raw.name, 200),
                 confidence, score: Math.max(0, Math.min(100, number(raw.score))),
                 team: clean(raw.team || 'unclustered', 120),
                 best_match_symbol: clean(raw.best_match_symbol, 80),
                 best_match_ca: /^0x[0-9a-fA-F]{{40}}$/.test(bestCa) ? bestCa : '',
+                best_match_chain_id: bestMatchChainId, best_match_chain: bestMatchChainName,
                 ath, is_rug: Boolean(raw.is_rug), evidence,
                 token_live: clean(raw.token_live, 64),
                 website: '', x: ''
@@ -1490,12 +1539,14 @@ html_content = f"""<!DOCTYPE html>
             tbody.innerHTML = '';
 
             const searchTerm = (document.getElementById('leads-search') ? document.getElementById('leads-search').value.toLowerCase().trim() : '');
+            const chainFilter = (document.getElementById('leads-chain-filter') ? document.getElementById('leads-chain-filter').value : 'ALL');
             const tierFilter = (document.getElementById('leads-tier-filter') ? document.getElementById('leads-tier-filter').value : 'ALL');
             const teamFilter = (document.getElementById('leads-team-filter') ? document.getElementById('leads-team-filter').value.toLowerCase() : 'all');
             const rugFilter = (document.getElementById('leads-rug-filter') ? document.getElementById('leads-rug-filter').value : 'ALL');
 
             // Filter
             let filtered = currentCandidates.filter(c => {{
+                if (chainFilter !== 'ALL' && String(c.chain_id) !== chainFilter) return false;
                 if (tierFilter !== 'ALL' && c.confidence !== tierFilter) return false;
                 if (teamFilter !== 'all' && c.team.toLowerCase() !== teamFilter) return false;
                 if (rugFilter === 'HIDE_RUGS' && c.is_rug) return false;
@@ -1505,7 +1556,8 @@ html_content = f"""<!DOCTYPE html>
                     const nameMatch = c.name.toLowerCase().includes(searchTerm);
                     const caMatch = c.ca.toLowerCase().includes(searchTerm);
                     const sibMatch = (c.best_match_symbol || '').toLowerCase().includes(searchTerm);
-                    if (!symMatch && !nameMatch && !caMatch && !sibMatch) return false;
+                    const chainMatch = c.chain.toLowerCase().includes(searchTerm) || String(c.chain_id).includes(searchTerm);
+                    if (!symMatch && !nameMatch && !caMatch && !sibMatch && !chainMatch) return false;
                 }}
                 return true;
             }});
@@ -1559,9 +1611,11 @@ html_content = f"""<!DOCTYPE html>
                 const athFormatted = c.ath > 0 ? `$${{c.ath.toLocaleString('en-US', {{ minimumFractionDigits: 2, maximumFractionDigits: 2 }})}}` : '$0.00';
                 const athClass = c.ath > 0 ? 'ath-val' : 'text-muted';
 
-                const gmgnUrl = `https://gmgn.ai/robinhood/token/${{c.ca}}`;
-                const dexUrl = `https://dexscreener.com/robinhood/${{c.ca}}`;
-                const scanUrl = `https://robinhoodchain.blockscout.com/address/${{c.ca}}`;
+                const isArc = c.chain_id === 5042;
+                const gmgnUrl = isArc ? '' : `https://gmgn.ai/robinhood/token/${{c.ca}}`;
+                const dexUrl = `https://dexscreener.com/${{isArc ? 'arc' : 'robinhood'}}/${{c.ca}}`;
+                const scanUrl = `${{isArc ? 'https://explorer.arc.io/address/' : 'https://robinhoodchain.blockscout.com/address/'}}${{c.ca}}`;
+                const gmgnButton = gmgnUrl ? `<a href="${{gmgnUrl}}" target="_blank" rel="noopener noreferrer" class="btn btn-gmgn">GMGN</a>` : '';
 
                 const sibSymbol = c.best_match_symbol ? `$${{c.best_match_symbol}}` : 'N/A';
                 const sibCaShort = c.best_match_ca ? `${{c.best_match_ca.substring(0, 6)}}...${{c.best_match_ca.substring(c.best_match_ca.length - 4)}}` : '';
@@ -1576,6 +1630,7 @@ html_content = f"""<!DOCTYPE html>
                     <td class="token-cell">
                         <div>
                             <span class="token-symbol">$${{c.symbol}}</span>
+                            <span class="chain-pill">${{c.chain}} ${{c.chain_id}}</span>
                             <span class="token-name">${{c.name !== c.symbol ? c.name : ''}}</span>
                         </div>
                         <div class="token-ca">
@@ -1586,15 +1641,16 @@ html_content = f"""<!DOCTYPE html>
                     <td><span class="team-tag">${{c.team}}</span></td>
                     <td>
                         <span class="sibling-badge">${{sibSymbol}}</span>
+                        <span class="chain-pill">${{c.best_match_chain}}</span>
                         ${{sibCaShort ? `<div style="font-size: 10px; color: var(--text-muted); font-family: monospace; margin-top: 2px;"><code>${{sibCaShort}}</code></div>` : ''}}
                     </td>
                     <td><span class="${{athClass}}">${{athFormatted}}</span></td>
                     <td class="date-cell">${{dateDisplay}}</td>
                     <td>${{evHtml}}</td>
                     <td class="actions-cell">
-                        <a href="${{gmgnUrl}}" target="_blank" class="btn btn-gmgn">GMGN</a>
-                        <a href="${{dexUrl}}" target="_blank" class="btn btn-dex">DEX</a>
-                        <a href="${{scanUrl}}" target="_blank" class="btn btn-scan">SCAN</a>
+                        ${{gmgnButton}}
+                        <a href="${{dexUrl}}" target="_blank" rel="noopener noreferrer" class="btn btn-dex">DEX</a>
+                        <a href="${{scanUrl}}" target="_blank" rel="noopener noreferrer" class="btn btn-scan">SCAN</a>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1803,6 +1859,7 @@ html_content = f"""<!DOCTYPE html>
         }}
         function resetLeadsFilters() {{
             if (document.getElementById('leads-search')) document.getElementById('leads-search').value = '';
+            if (document.getElementById('leads-chain-filter')) document.getElementById('leads-chain-filter').value = 'ALL';
             if (document.getElementById('leads-tier-filter')) document.getElementById('leads-tier-filter').value = 'ALL';
             if (document.getElementById('leads-team-filter')) document.getElementById('leads-team-filter').value = 'ALL';
             if (document.getElementById('leads-rug-filter')) document.getElementById('leads-rug-filter').value = 'ALL';

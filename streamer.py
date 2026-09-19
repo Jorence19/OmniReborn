@@ -22,7 +22,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from branding_scraper import BrandingScraper
-from config import RPC_ENDPOINTS, ROBIN_ETHERSCAN_API_KEY
+from config import CHAIN_METADATA, ETHERSCAN_API_KEY, RPC_ENDPOINTS, ROBIN_ETHERSCAN_API_KEY
 from database import ForensicDatabase
 from forensics import extract_full_token_metadata
 from phase1 import build_report, persist_profile, write_report_artifacts
@@ -34,10 +34,23 @@ OUTPUT_DIR = Path(os.getenv("DASHBOARD_OUTPUT_DIR", APP_DIR)).resolve()
 REPORT_OUTPUT_PATH = Path(os.getenv(
     "REPORT_OUTPUT_PATH", APP_DIR / "phase1_fingerprint_report.json"
 )).resolve()
-CHAIN_ID = int(os.getenv("CHAIN_ID", "4663"))
+CHAIN_ID = 4663  # Robinhood PoolManager scanner; other chains use market discovery.
 POOL_MANAGER = os.getenv("ROBINHOOD_POOL_MANAGER", "0x8366a39cc670b4001a1121b8f6a443a643e40951").lower()
 INITIALIZE_TOPIC0 = "0xdd466e674ea557f56295e2d0218a125ea4b4f0f6f3307b95f85e6110838d6438"
-DEX_CHAIN_ID = "robinhood"
+try:
+    ENABLED_CHAIN_IDS = tuple(dict.fromkeys(
+        int(value.strip()) for value in os.getenv("ENABLED_CHAIN_IDS", "4663,5042").split(",")
+        if value.strip()
+    ))
+except ValueError as exc:
+    raise RuntimeError("ENABLED_CHAIN_IDS must be comma-separated integers") from exc
+unsupported_chains = [chain_id for chain_id in ENABLED_CHAIN_IDS if chain_id not in CHAIN_METADATA]
+if unsupported_chains:
+    raise RuntimeError(f"unsupported ENABLED_CHAIN_IDS: {unsupported_chains}")
+DEX_CHAIN_TO_ID = {
+    str(CHAIN_METADATA[chain_id]["dex_chain_id"]).lower(): chain_id
+    for chain_id in ENABLED_CHAIN_IDS
+}
 ADDRESS_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
 DEX_ENDPOINTS = {
     "dex_boost_latest": "https://api.dexscreener.com/token-boosts/latest/v1",
@@ -46,7 +59,7 @@ DEX_ENDPOINTS = {
     "dex_profile_recent": "https://api.dexscreener.com/token-profiles/recent-updates/v1",
     "dex_ads_latest": "https://api.dexscreener.com/ads/latest/v1",
 }
-SEARCH_QUERIES = ("robinhood", "pons", "inu", "doge", "cat", "ai", "pepe", "trump", "eth", "coin", "token", "moon", "chad", "elon")
+SEARCH_QUERIES = ("robinhood", "arc", "pons", "inu", "doge", "cat", "ai", "pepe", "trump", "eth", "coin", "token", "moon", "chad", "elon")
 LOG = logging.getLogger("omnireborn.streamer")
 STOP_REQUESTED = False
 
@@ -234,12 +247,13 @@ class QueueStore:
             conn.execute("""INSERT INTO stream_state(state_key, state_value) VALUES (?, ?)
                 ON CONFLICT(state_key) DO UPDATE SET state_value=excluded.state_value, updated_at=datetime('now')""",
                 (key, str(value)))
-    def record_event(self, log: Dict[str, Any], token_ca: Optional[str], source: str) -> bool:
+    def record_event(self, log: Dict[str, Any], token_ca: Optional[str], source: str,
+                         chain_id: int = CHAIN_ID) -> bool:
         with self.db.get_connection() as conn:
             cursor = conn.execute("""INSERT OR IGNORE INTO chain_events
                 (chain_id, tx_hash, log_index, block_number, contract_address, topic0, token_ca, source, payload_json)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (CHAIN_ID, str(log.get("transactionHash") or "").lower(),
+                (chain_id, str(log.get("transactionHash") or "").lower(),
                  int(log.get("logIndex") or "0x0", 16), int(log.get("blockNumber") or "0x0", 16),
                  str(log.get("address") or "").lower(), (log.get("topics") or [None])[0], token_ca,
                  source, json.dumps(log, sort_keys=True)))
@@ -247,18 +261,28 @@ class QueueStore:
 
 
 def merge_discovery(target: Dict[str, Dict[str, Any]], item: Dict[str, Any]):
+    dex_chain_id = str(item.get("dex_chain_id") or item.get("chainId") or "").lower()
+    chain_id = int(item.get("chain_id") or DEX_CHAIN_TO_ID.get(dex_chain_id) or 0)
+    if chain_id not in ENABLED_CHAIN_IDS:
+        return
     try:
         ca = validate_address(item.get("ca") or item.get("tokenAddress"))
     except ValueError:
         return
-    existing = target.setdefault(ca, {"ca": ca, "sources": [], "payloads": []})
+    key = f"{chain_id}:{ca}"
+    spec = CHAIN_METADATA[chain_id]
+    existing = target.setdefault(key, {
+        "ca": ca, "chain_id": chain_id, "chain": spec["tag"],
+        "dex_chain_id": spec["dex_chain_id"], "sources": [], "payloads": [],
+    })
     source = item.get("source") or "unknown"
     if source not in existing["sources"]:
         existing["sources"].append(source)
     existing["payloads"].append(item)
 
+
 def fetch_live_dexpaid_tokens() -> List[Dict[str, Any]]:
-    """Collect current paid surfaces; fail if every independent source fails."""
+    """Collect paid surfaces for every enabled DexScreener chain."""
     merged: Dict[str, Dict[str, Any]] = {}
     failures, successes = [], 0
     for source, url in DEX_ENDPOINTS.items():
@@ -266,8 +290,12 @@ def fetch_live_dexpaid_tokens() -> List[Dict[str, Any]]:
             payload = request_json(url)
             successes += 1
             for item in payload if isinstance(payload, list) else []:
-                if str(item.get("chainId") or "").lower() == DEX_CHAIN_ID:
-                    merge_discovery(merged, {**item, "source": source})
+                dex_chain_id = str(item.get("chainId") or "").lower()
+                if dex_chain_id in DEX_CHAIN_TO_ID:
+                    merge_discovery(merged, {
+                        **item, "chain_id": DEX_CHAIN_TO_ID[dex_chain_id],
+                        "dex_chain_id": dex_chain_id, "source": source,
+                    })
         except Exception as exc:
             failures.append(f"{source}: {exc}")
             LOG.warning("Dex discovery failed: %s", failures[-1])
@@ -275,8 +303,9 @@ def fetch_live_dexpaid_tokens() -> List[Dict[str, Any]]:
         raise CollectorError("all DexScreener discovery surfaces failed: " + "; ".join(failures))
     return list(merged.values())
 
+
 def backfill_historical_tokens(days: int = 10) -> List[Dict[str, Any]]:
-    """Date-filtered Dex search supplement; on-chain logs provide exhaustive pools."""
+    """Date-filtered Dex search supplement for all enabled chains."""
     cutoff_ms = int((utcnow() - timedelta(days=max(1, days))).timestamp() * 1000)
     merged: Dict[str, Dict[str, Any]] = {}
     failures = 0
@@ -284,16 +313,21 @@ def backfill_historical_tokens(days: int = 10) -> List[Dict[str, Any]]:
         try:
             payload = request_json(f"https://api.dexscreener.com/latest/dex/search?q={query}")
             for pair in payload.get("pairs") or []:
-                if str(pair.get("chainId") or "").lower() != DEX_CHAIN_ID:
+                dex_chain_id = str(pair.get("chainId") or "").lower()
+                chain_id = DEX_CHAIN_TO_ID.get(dex_chain_id)
+                if not chain_id:
                     continue
                 created = int(pair.get("pairCreatedAt") or 0)
                 if not created or created < cutoff_ms:
                     continue
                 token = pair.get("baseToken") or {}
                 merge_discovery(merged, {
-                    "ca": token.get("address"), "symbol": token.get("symbol"), "name": token.get("name"),
-                    "pairCreatedAt": created, "fdv": pair.get("fdv"), "marketCap": pair.get("marketCap"),
-                    "liquidity": pair.get("liquidity"), "source": "dex_search_backfill",
+                    "ca": token.get("address"), "chain_id": chain_id,
+                    "dex_chain_id": dex_chain_id,
+                    "symbol": token.get("symbol"), "name": token.get("name"),
+                    "pairCreatedAt": created, "fdv": pair.get("fdv"),
+                    "marketCap": pair.get("marketCap"), "liquidity": pair.get("liquidity"),
+                    "source": "dex_search_backfill",
                 })
             time.sleep(0.22)
         except Exception as exc:
@@ -378,10 +412,10 @@ def scan_uniswap_v4_initialize(store: QueueStore, *, days: Optional[int] = None,
                 continue
             tokens = [v for v in (topic_address(topics[2]), topic_address(topics[3])) if v]
             primary = tokens[0] if len(tokens) == 1 else None
-            if store.record_event(log, primary, "uniswap_v4_initialize"):
+            if store.record_event(log, primary, "uniswap_v4_initialize", chain_id=CHAIN_ID):
                 event_count += 1
             for token in tokens:
-                store.enqueue(token, "uniswap_v4_initialize", log, priority=20)
+                store.enqueue(token, "uniswap_v4_initialize", log, chain_id=CHAIN_ID, priority=20)
                 token_count += 1
         store.set_state(state_key, end + 1)
         current_minimum = store.get_state(minimum_key)
@@ -392,8 +426,11 @@ def scan_uniswap_v4_initialize(store: QueueStore, *, days: Optional[int] = None,
             current_chunk = min(chunk_size, current_chunk * 2)
     return {"from_block": original_start, "to_block": safe_head, "logs": event_count, "tokens": token_count}
 
-def fetch_market_profile(ca: str) -> Dict[str, Any]:
-    payload = request_json(f"https://api.dexscreener.com/tokens/v1/{DEX_CHAIN_ID}/{ca}")
+def fetch_market_profile(ca: str, chain_id: int) -> Dict[str, Any]:
+    spec = CHAIN_METADATA.get(chain_id)
+    if not spec:
+        raise CollectorError(f"unsupported market chain {chain_id}")
+    payload = request_json(f"https://api.dexscreener.com/tokens/v1/{spec['dex_chain_id']}/{ca}")
     pairs = payload if isinstance(payload, list) else []
     if not pairs:
         return {}
@@ -424,19 +461,24 @@ def required_profile_gaps(profile: Dict[str, Any]) -> List[str]:
 
 def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str, Any]:
     ca, chain_id = validate_address(job["ca"]), int(job["chain_id"])
+    if chain_id not in ENABLED_CHAIN_IDS:
+        raise CollectorError(f"job targets disabled or unsupported chain {chain_id}")
+    spec = CHAIN_METADATA[chain_id]
     source = str(job.get("source") or "stream")
-    LOG.info("enriching %s from %s (attempt %s)", ca, source, job.get("attempts"))
+    LOG.info("enriching %s on %s from %s (attempt %s)",
+             ca, spec["tag"], source, job.get("attempts"))
     profile = extract_full_token_metadata(ca, chain_id=chain_id)
     gaps = required_profile_gaps(profile)
     if gaps:
         raise IncompleteProfileError("explorer/RPC profile incomplete: " + ", ".join(gaps))
-    persist_profile(db, profile, qualified=False)
-    pair = fetch_market_profile(ca)
+    canonical_ca = persist_profile(db, profile, qualified=False)
+    pair = fetch_market_profile(ca, chain_id)
     market = market_fields(pair) if pair else {}
     dex_paid = "dex_" in source
-    migrated = "uniswap_v4_initialize" in source
-    db.upsert_token({
-        "ca": ca, "chain": "RBH", "launchpad": "Uniswap v4" if migrated else None,
+    migrated = chain_id == CHAIN_ID and "uniswap_v4_initialize" in source
+    canonical_ca = db.upsert_token({
+        "ca": canonical_ca, "chain_id": chain_id, "chain": spec["tag"],
+        "launchpad": "Uniswap v4" if migrated else None,
         "symbol": market.get("symbol") or profile.get("token_symbol"),
         "name": market.get("name") or profile.get("token_name"),
         "token_live_at": market.get("token_live_at"), "ath_usd": market.get("ath_usd"),
@@ -445,17 +487,26 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
         "x_handle": market.get("x_handle") or profile.get("twitter_url"),
         "description": profile.get("description"), "is_migrated": migrated,
         "is_dex_paid": dex_paid, "is_qualified": False,
-        "qualification_reasons": {"discovery_source": source, "not_training_anchor": True},
+        "qualification_reasons": {
+            "discovery_source": source, "not_training_anchor": True,
+            "chain_id": chain_id, "native_symbol": spec["native_symbol"],
+        },
     })
     if market:
         scraper = BrandingScraper()
-        tg, x_info = scraper.analyze_telegram(market.get("tg_url")), scraper.analyze_x(market.get("x_handle"))
+        tg = scraper.analyze_telegram(market.get("tg_url"))
+        x_info = scraper.analyze_x(market.get("x_handle"))
         db.upsert_branding_profile({
-            "ca": ca, "website_url": market.get("website"), "tg_url": market.get("tg_url"),
-            "tg_handle": tg.get("tg_handle"), "tg_naming_pattern": tg.get("tg_naming_pattern"),
-            "x_handle": x_info.get("x_handle"), "x_naming_pattern": x_info.get("x_naming_pattern"),
+            "ca": canonical_ca, "website_url": market.get("website"),
+            "tg_url": market.get("tg_url"), "tg_handle": tg.get("tg_handle"),
+            "tg_naming_pattern": tg.get("tg_naming_pattern"),
+            "x_handle": x_info.get("x_handle"),
+            "x_naming_pattern": x_info.get("x_naming_pattern"),
         })
-    return {"ca": ca, "symbol": profile.get("token_symbol"), "market_found": bool(pair)}
+    return {
+        "ca": canonical_ca, "chain_id": chain_id, "chain": spec["tag"],
+        "symbol": profile.get("token_symbol"), "market_found": bool(pair),
+    }
 
 def process_queue(db: ForensicDatabase, store: QueueStore, max_jobs: int = 10) -> Dict[str, int]:
     worker_id = f"{socket.gethostname()}:{os.getpid()}:{uuid.uuid4().hex[:8]}"
@@ -504,11 +555,19 @@ def regenerate_outputs(db: ForensicDatabase):
 
 def discover_once(store: QueueStore, include_chain: bool = True) -> Dict[str, Any]:
     dex = fetch_live_dexpaid_tokens()
+    dex_counts: Dict[str, int] = {}
     for item in dex:
         source = "+".join(sorted(item.get("sources") or ["dex_live"]))
-        store.enqueue(item["ca"], source, item, priority=50)
-    chain = scan_uniswap_v4_initialize(store) if include_chain else {"logs": 0, "tokens": 0}
-    return {"dex_tokens": len(dex), "chain": chain}
+        chain_id = int(item["chain_id"])
+        store.enqueue(item["ca"], source, item, chain_id=chain_id, priority=50)
+        tag = str(CHAIN_METADATA[chain_id]["tag"])
+        dex_counts[tag] = dex_counts.get(tag, 0) + 1
+    rbh_chain = (
+        scan_uniswap_v4_initialize(store)
+        if include_chain and CHAIN_ID in ENABLED_CHAIN_IDS
+        else {"logs": 0, "tokens": 0}
+    )
+    return {"dex_tokens": len(dex), "dex_by_chain": dex_counts, "robinhood_v4": rbh_chain}
 
 def run_cycle(db: ForensicDatabase, store: QueueStore, max_jobs: int, include_chain: bool = True) -> Dict[str, Any]:
     discovery = discover_once(store, include_chain=include_chain)
@@ -521,42 +580,69 @@ def run_cycle(db: ForensicDatabase, store: QueueStore, max_jobs: int, include_ch
 
 def backfill(db: ForensicDatabase, store: QueueStore, days: int, max_jobs: int,
              from_block: Optional[int] = None) -> Dict[str, Any]:
-    chain = scan_uniswap_v4_initialize(store, days=days, from_block=from_block)
+    rbh_chain = (
+        scan_uniswap_v4_initialize(store, days=days, from_block=from_block)
+        if CHAIN_ID in ENABLED_CHAIN_IDS else {"logs": 0, "tokens": 0}
+    )
     dex = backfill_historical_tokens(days)
     for item in dex:
-        store.enqueue(item["ca"], "dex_search_backfill", item, priority=80)
+        store.enqueue(
+            item["ca"], "dex_search_backfill", item,
+            chain_id=int(item["chain_id"]), priority=80,
+        )
     processing = process_queue(db, store, max_jobs=max_jobs)
     if processing["succeeded"]:
         regenerate_outputs(db)
-    result = {"chain": chain, "dex_tokens": len(dex), "processing": processing}
+    result = {"robinhood_v4": rbh_chain, "dex_tokens": len(dex), "processing": processing}
     write_health("ok", store, mode="backfill", **result)
     return result
 
 def preflight(db: ForensicDatabase, store: QueueStore) -> Tuple[bool, Dict[str, Any]]:
     checks: Dict[str, Dict[str, Any]] = {}
+
     def record(name: str, ok: bool, detail: Any):
         checks[name] = {"ok": bool(ok), "detail": detail}
+
     record("python", sys.version_info >= (3, 10), sys.version.split()[0])
-    record("explorer_key", bool(ROBIN_ETHERSCAN_API_KEY),
-           "configured" if ROBIN_ETHERSCAN_API_KEY else "ROBIN_ETHERSCAN_API_KEY missing")
-    rpc_url = RPC_ENDPOINTS.get(CHAIN_ID, "")
-    public_rpc = rpc_url.rstrip("/") == "https://rpc.mainnet.chain.robinhood.com"
-    record("production_rpc", bool(rpc_url) and not public_rpc,
-           "private/archive provider configured" if rpc_url and not public_rpc else "public rate-limited RPC is not production-safe")
-    try:
-        chain = int(rpc_call_strict(RPC_ENDPOINTS[CHAIN_ID], "eth_chainId", []), 16)
-        record("rpc_chain", chain == CHAIN_ID, chain)
-        code = rpc_call_strict(RPC_ENDPOINTS[CHAIN_ID], "eth_getCode", [POOL_MANAGER, "latest"])
-        record("pool_manager", bool(code and code != "0x"), POOL_MANAGER)
-    except Exception as exc:
-        record("rpc_chain", False, str(exc))
-        record("pool_manager", False, "not checked")
+    if 4663 in ENABLED_CHAIN_IDS:
+        record("explorer_key_4663", bool(ROBIN_ETHERSCAN_API_KEY),
+               "configured" if ROBIN_ETHERSCAN_API_KEY else "ROBIN_ETHERSCAN_API_KEY missing")
+    if 5042 in ENABLED_CHAIN_IDS:
+        arc_explorer_key = ETHERSCAN_API_KEY or ROBIN_ETHERSCAN_API_KEY
+        record("explorer_key_5042", bool(arc_explorer_key),
+               "configured" if arc_explorer_key else "ETHERSCAN_API_KEY or ROBIN_ETHERSCAN_API_KEY missing")
+
+    for chain_id in ENABLED_CHAIN_IDS:
+        spec = CHAIN_METADATA[chain_id]
+        rpc_url = RPC_ENDPOINTS.get(chain_id, "")
+        public_rpc = rpc_url.rstrip("/") == str(spec["public_rpc"]).rstrip("/")
+        private_ready = bool(rpc_url) and not public_rpc and "REPLACE_ME" not in rpc_url
+        record(
+            f"production_rpc_{chain_id}", private_ready,
+            "private/archive provider configured"
+            if private_ready else f"public or placeholder {spec['name']} RPC is not production-safe",
+        )
+        try:
+            actual_chain = int(rpc_call_strict(rpc_url, "eth_chainId", []), 16)
+            record(f"rpc_chain_{chain_id}", actual_chain == chain_id, actual_chain)
+        except Exception as exc:
+            record(f"rpc_chain_{chain_id}", False, f"{type(exc).__name__}: {exc}")
+
+    if CHAIN_ID in ENABLED_CHAIN_IDS:
+        try:
+            code = rpc_call_strict(RPC_ENDPOINTS[CHAIN_ID], "eth_getCode", [POOL_MANAGER, "latest"])
+            record("pool_manager_4663", bool(code and code != "0x"), POOL_MANAGER)
+        except Exception as exc:
+            record("pool_manager_4663", False, f"{type(exc).__name__}: {exc}")
+
     try:
         with db.get_connection() as conn:
             integrity = conn.execute("PRAGMA integrity_check").fetchone()[0]
-        record("database", integrity == "ok", integrity)
+            token_columns = {row[1] for row in conn.execute("PRAGMA table_info(tokens)").fetchall()}
+        record("database", integrity == "ok" and "chain_id" in token_columns,
+               integrity if "chain_id" in token_columns else "tokens.chain_id missing")
     except Exception as exc:
-        record("database", False, str(exc))
+        record("database", False, f"{type(exc).__name__}: {exc}")
     free = shutil.disk_usage(DB_PATH.parent).free
     record("disk_space", free >= 500 * 1024 * 1024, f"{free / 1024 / 1024:.0f} MiB free")
     try:
@@ -569,7 +655,10 @@ def preflight(db: ForensicDatabase, store: QueueStore) -> Tuple[bool, Dict[str, 
         record("output_directory", False, str(exc))
     record("queue", True, store.stats())
     ok = all(item["ok"] for item in checks.values())
-    result = {"ready": ok, "timestamp": iso_utc(), "checks": checks}
+    result = {
+        "ready": ok, "enabled_chain_ids": list(ENABLED_CHAIN_IDS),
+        "timestamp": iso_utc(), "checks": checks,
+    }
     atomic_write_json(RUNTIME_DIR / "preflight.json", result)
     return ok, result
 

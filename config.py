@@ -18,8 +18,34 @@ ROBIN_ETHERSCAN_API_KEY = os.getenv("ROBIN_ETHERSCAN_API_KEY", "")
 # 1: Ethereum Mainnet
 RPC_ENDPOINTS = {
     4663: os.getenv("ROBINHOOD_RPC_URL", "https://rpc.mainnet.chain.robinhood.com"),
+    5042: os.getenv("ARC_RPC_URL", "https://rpc.mainnet.arc.io"),
     8453: os.getenv("BASE_RPC_URL", "https://mainnet.base.org"),
-    1: os.getenv("ETH_RPC_URL", "https://cloudflare-eth.com")
+    1: os.getenv("ETH_RPC_URL", "https://cloudflare-eth.com"),
+}
+
+CHAIN_METADATA = {
+    4663: {
+        "name": "Robinhood Chain", "tag": "RBH", "dex_chain_id": "robinhood",
+        "explorer_url": "https://robinhoodchain.blockscout.com",
+        "native_symbol": "ETH",
+        "public_rpc": "https://rpc.mainnet.chain.robinhood.com",
+    },
+    5042: {
+        "name": "Arc", "tag": "ARC", "dex_chain_id": "arc",
+        "explorer_url": "https://explorer.arc.io",
+        "native_symbol": "USDC",
+        "public_rpc": "https://rpc.mainnet.arc.io",
+    },
+    8453: {
+        "name": "Base", "tag": "BASE", "dex_chain_id": "base",
+        "explorer_url": "https://basescan.org", "native_symbol": "ETH",
+        "public_rpc": "https://mainnet.base.org",
+    },
+    1: {
+        "name": "Ethereum", "tag": "ETH", "dex_chain_id": "ethereum",
+        "explorer_url": "https://etherscan.io", "native_symbol": "ETH",
+        "public_rpc": "https://cloudflare-eth.com",
+    },
 }
 
 DEFAULT_CHAIN_ID = 4663

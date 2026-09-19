@@ -16,6 +16,8 @@ class CandidateApiTests(unittest.TestCase):
             "generated_at": "2026-09-18T00:00:00+00:00",
             "candidates": [{
                 "ca": "0x" + "a" * 40,
+                "chain_id": 5042,
+                "chain": "malicious-client-value",
                 "symbol": "<script>alert(1)</script>",
                 "name": "Candidate",
                 "confidence": "HIGH_LEAD",
@@ -23,6 +25,8 @@ class CandidateApiTests(unittest.TestCase):
                 "team": "team astro",
                 "best_match_symbol": "ANCHOR",
                 "best_match_ca": "0x" + "b" * 40,
+                "best_match_chain_id": 4663,
+                "best_match_chain": "untrusted",
                 "ath": 10000,
                 "is_rug": False,
                 "evidence": [{"feature": "funder_1hop", "value": "0xabc", "reliability": .85}],
@@ -43,6 +47,9 @@ class CandidateApiTests(unittest.TestCase):
         response = self.client.get("/api/candidates", headers={"Origin": "https://tracker.example.org"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["count"], 1)
+        candidate = response.json()["candidates"][0]
+        self.assertEqual((candidate["chain_id"], candidate["chain"]), (5042, "ARC"))
+        self.assertEqual((candidate["best_match_chain_id"], candidate["best_match_chain"]), (4663, "RBH"))
         self.assertEqual(response.headers["access-control-allow-origin"], "https://tracker.example.org")
         self.assertIn("etag", response.headers)
 

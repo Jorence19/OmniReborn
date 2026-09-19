@@ -85,8 +85,24 @@ def sanitize_candidate(raw: Any) -> dict[str, Any]:
                 "contribution": _finite_number(item.get("contribution"), 0.0, 0.0, 1.0),
             })
     ath = _finite_number(raw.get("ath"), 0.0, 0.0)
+    try:
+        chain_id = int(raw.get("chain_id", 4663))
+    except (TypeError, ValueError):
+        chain_id = 4663
+    if chain_id not in {4663, 5042}:
+        chain_id = 4663
+    chain = "ARC" if chain_id == 5042 else "RBH"
+    try:
+        best_match_chain_id = int(raw.get("best_match_chain_id", chain_id))
+    except (TypeError, ValueError):
+        best_match_chain_id = chain_id
+    if best_match_chain_id not in {4663, 5042}:
+        best_match_chain_id = chain_id
+    best_match_chain = "ARC" if best_match_chain_id == 5042 else "RBH"
     return {
         "ca": _address(raw.get("ca"), required=True),
+        "chain_id": chain_id,
+        "chain": chain,
         "symbol": _text(raw.get("symbol"), 80),
         "name": _text(raw.get("name"), 200),
         "confidence": confidence,
@@ -94,6 +110,8 @@ def sanitize_candidate(raw: Any) -> dict[str, Any]:
         "team": _text(raw.get("team"), 120) or "unclustered",
         "best_match_symbol": _text(raw.get("best_match_symbol"), 80),
         "best_match_ca": _address(raw.get("best_match_ca")),
+        "best_match_chain_id": best_match_chain_id,
+        "best_match_chain": best_match_chain,
         "ath": ath,
         "is_rug": bool(raw.get("is_rug", ath <= 5000.0)),
         "evidence": evidence,

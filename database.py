@@ -45,6 +45,7 @@ class ForensicDatabase:
         """Add Phase 1 columns to existing databases before views are rebuilt."""
         migrations = {
             "tokens": {
+                "chain_id": "INTEGER NOT NULL DEFAULT 4663",
                 "is_qualified": "INTEGER DEFAULT 0",
                 "qualification_reasons": "TEXT",
             },
@@ -96,17 +97,18 @@ class ForensicDatabase:
     def upsert_token(self, data: Dict[str, Any]):
         sql = """
         INSERT INTO tokens (
-            ca, chain, symbol, name, launchpad, token_live_at, migrated_at,
+            ca, chain_id, chain, symbol, name, launchpad, token_live_at, migrated_at,
             time_to_graduate_sec, is_migrated, is_dex_paid, is_qualified,
             qualification_reasons, ath_usd, peak_liquidity_usd, x_handle,
             website, description
         ) VALUES (
-            :ca, :chain, :symbol, :name, :launchpad, :token_live_at, :migrated_at,
+            :ca, :chain_id, :chain, :symbol, :name, :launchpad, :token_live_at, :migrated_at,
             :time_to_graduate_sec, :is_migrated, :is_dex_paid, :is_qualified,
             :qualification_reasons, :ath_usd, :peak_liquidity_usd, :x_handle,
             :website, :description
         )
         ON CONFLICT(ca) DO UPDATE SET
+            chain_id = excluded.chain_id,
             chain = COALESCE(excluded.chain, tokens.chain),
             symbol = COALESCE(excluded.symbol, tokens.symbol),
             name = COALESCE(excluded.name, tokens.name),
@@ -131,8 +133,14 @@ class ForensicDatabase:
         reasons = data.get("qualification_reasons")
         if reasons is not None and not isinstance(reasons, str):
             reasons = json.dumps(reasons, sort_keys=True)
+        chain_id = int(data.get("chain_id") or 4663)
+        default_chain = {4663: "RBH", 5042: "ARC", 8453: "BASE", 1: "ETH"}.get(
+            chain_id, str(chain_id)
+        )
         params = {
-            "ca": data.get("ca"), "chain": data.get("chain", "RBH"),
+            "ca": str(data.get("ca") or "").lower(),
+            "chain_id": chain_id,
+            "chain": data.get("chain") or default_chain,
             "symbol": data.get("symbol"), "name": data.get("name"),
             "launchpad": data.get("launchpad"),
             "token_live_at": data.get("token_live_at") or data.get("token_live"),
@@ -148,7 +156,23 @@ class ForensicDatabase:
             "website": data.get("website"), "description": data.get("description"),
         }
         with self.get_connection() as conn:
+            existing = conn.execute(
+                "SELECT ca, chain_id FROM tokens WHERE LOWER(ca)=LOWER(?) ORDER BY created_at",
+                (params["ca"],),
+            ).fetchall()
+            conflicting = {
+                int(row["chain_id"] or 4663) for row in existing
+                if int(row["chain_id"] or 4663) != chain_id
+            }
+            if conflicting:
+                raise ValueError(
+                    f"contract address {params['ca']} already belongs to chain(s) "
+                    f"{sorted(conflicting)}; this database blocks cross-chain address collisions"
+                )
+            if existing:
+                params["ca"] = existing[0]["ca"]
             conn.execute(sql, params)
+        return params["ca"]
 
     def upsert_execution_profile(self, data: Dict[str, Any]):
         columns = (

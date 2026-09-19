@@ -7,6 +7,7 @@ PRAGMA foreign_keys = ON;
 -- 1. Master Token Registry (With Graduation & Ingestion Filter Gates)
 CREATE TABLE IF NOT EXISTS tokens (
     ca TEXT PRIMARY KEY,
+    chain_id INTEGER NOT NULL DEFAULT 4663,
     chain TEXT DEFAULT 'RBH',
     symbol TEXT,
     name TEXT,
@@ -230,6 +231,7 @@ CREATE INDEX IF NOT EXISTS idx_exec_funder2 ON execution_profiles(funder_2hop);
 CREATE INDEX IF NOT EXISTS idx_bytecode_template ON bytecode_profiles(template_hash);
 CREATE INDEX IF NOT EXISTS idx_bytecode_normalized ON bytecode_profiles(normalized_bytecode_hash);
 CREATE INDEX IF NOT EXISTS idx_tokens_qualified ON tokens(is_qualified);
+CREATE INDEX IF NOT EXISTS idx_tokens_chain ON tokens(chain_id, token_live_at);
 CREATE INDEX IF NOT EXISTS idx_matches_team ON token_matches(candidate_team_id);
 CREATE INDEX IF NOT EXISTS idx_bundle_bundler ON bundle_analytics(bundler_wallet);
 CREATE INDEX IF NOT EXISTS idx_branding_favicon ON branding_profiles(favicon_hash);
@@ -243,6 +245,7 @@ DROP VIEW IF EXISTS v_full_forensic_profile;
 CREATE VIEW v_full_forensic_profile AS
 SELECT 
     t.ca,
+    t.chain_id,
     t.symbol,
     t.name,
     t.chain,

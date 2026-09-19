@@ -310,6 +310,10 @@ def _duration_text(seconds: Optional[int]) -> Optional[str]:
 def _api_key_for_chain(chain_id: int) -> str:
     if chain_id == 4663:
         return ROBIN_ETHERSCAN_API_KEY
+    if chain_id == 5042:
+        # Etherscan V2 keys are unified across supported chains. Keep a
+        # dedicated override, but reuse the configured Robinhood V2 key.
+        return ETHERSCAN_API_KEY or ROBIN_ETHERSCAN_API_KEY
     if chain_id == 8453:
         return BASESCAN_API_KEY or ETHERSCAN_API_KEY
     return ETHERSCAN_API_KEY
@@ -544,7 +548,9 @@ def extract_full_token_metadata(contract_address: str, chain_id: int = 4663) -> 
     Consolidated master function: Extracts the complete 35+ parameter forensic profile
     by combining RPC disassembly, Etherscan Multichain V2, and constructor decoders.
     """
-    rpc_url = RPC_ENDPOINTS.get(chain_id, RPC_ENDPOINTS[4663])
+    rpc_url = RPC_ENDPOINTS.get(chain_id)
+    if not rpc_url:
+        raise ValueError(f"no RPC endpoint configured for chain {chain_id}")
     clean_ca = contract_address.strip().lower()
 
     # 1. Bytecode Forensics

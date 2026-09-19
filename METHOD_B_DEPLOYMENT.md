@@ -2,13 +2,15 @@
 
 ## Current gate
 
-The code is ready for the split architecture after the required values below are supplied. Deployment is intentionally blocked while example domains or the public Robinhood RPC remain configured.
+The code is ready for the split architecture after the required values below are supplied. Deployment is intentionally blocked while example domains or public Robinhood/Arc RPCs remain configured.
 
 Required before launch:
 
 - A Hostinger HTTPS origin, such as `https://tracker.your-real-domain.com`.
 - A Vultr API hostname, such as `api.your-real-domain.com`, with an A record to the Vultr IPv4 address.
-- A private/archive-capable Robinhood Chain RPC and the explorer API key.
+- Private/archive-capable Robinhood Chain and Arc RPCs.
+- An Etherscan V2 key. Set `ETHERSCAN_API_KEY`; when it is empty, Arc can reuse `ROBIN_ETHERSCAN_API_KEY`.
+- `ENABLED_CHAIN_IDS=4663,5042`.
 - Ubuntu packages: `git python3 python3-venv nginx curl certbot python3-certbot-nginx`.
 - Vultr firewall rules exposing 22 only from your administration IP and 80/443 publicly. Never expose port 8000.
 
@@ -44,7 +46,10 @@ Set real values for:
 
 ```dotenv
 ROBIN_ETHERSCAN_API_KEY=...
-ROBINHOOD_RPC_URL=https://YOUR_PRIVATE_ARCHIVE_RPC
+ETHERSCAN_API_KEY=...
+ROBINHOOD_RPC_URL=https://YOUR_PRIVATE_ROBINHOOD_ARCHIVE_RPC
+ARC_RPC_URL=https://YOUR_PRIVATE_ARC_ARCHIVE_RPC
+ENABLED_CHAIN_IDS=4663,5042
 FORENSICS_DB_PATH=/opt/omnireborn/data/forensics.db
 RUNTIME_DIR=/opt/omnireborn/runtime
 REPORT_OUTPUT_PATH=/opt/omnireborn/runtime/phase1_fingerprint_report.json
@@ -111,7 +116,7 @@ curl --fail https://api.YOUR_REAL_DOMAIN/api/health
 curl --fail -H 'Origin: https://YOUR_HOSTINGER_FRONTEND_DOMAIN' -D - https://api.YOUR_REAL_DOMAIN/api/candidates
 ```
 
-The last response must contain the exact `Access-Control-Allow-Origin`, an `ETag`, and a JSON `candidates` array. Then open the Hostinger page and confirm its source label changes from “Embedded safe snapshot” to “Live API”.
+The preflight must report `rpc_chain_4663=4663`, `rpc_chain_5042=5042`, and both production RPC checks as true. The last response must contain the exact `Access-Control-Allow-Origin`, an `ETag`, and a JSON `candidates` array. Then open the Hostinger page and confirm its source label changes from “Embedded safe snapshot” to “Live API”.
 
 If the API fails, the page stays usable from its embedded snapshot. Failed collector jobs remain in the durable retry queue; stale snapshot state appears at `/api/health`; SQLite and snapshot writes are atomic; collector and API processes restart independently.
 
