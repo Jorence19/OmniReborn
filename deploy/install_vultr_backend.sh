@@ -50,6 +50,8 @@ for unit in "${units[@]}"; do
 done
 
 chown -R "$APP_USER:$APP_USER" "$APP_DIR/data" "$APP_DIR/runtime" "$BACKUP_DIR"
+chown root:"$APP_USER" /etc/omnireborn.env 2>/dev/null || true
+chmod 0640 /etc/omnireborn.env 2>/dev/null || true
 systemctl daemon-reload
 
 as_app() {
