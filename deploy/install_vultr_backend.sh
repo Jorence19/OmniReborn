@@ -17,6 +17,11 @@ fi
 id "$APP_USER" >/dev/null 2>&1 || useradd --system --home "$APP_DIR" --shell /usr/sbin/nologin "$APP_USER"
 install -d -o "$APP_USER" -g "$APP_USER" -m 0750 "$APP_DIR/data" "$APP_DIR/runtime" "$APP_DIR/runtime/site-build" "$BACKUP_DIR"
 
+command -v python3 >/dev/null 2>&1 && dpkg -s python3-venv >/dev/null 2>&1 || {
+  apt-get update -y
+  apt-get install -y python3-venv python3-pip git
+}
+
 python3 -m venv "$APP_DIR/.venv"
 "$APP_DIR/.venv/bin/pip" install --upgrade pip
 "$APP_DIR/.venv/bin/pip" install -r "$APP_DIR/requirements.txt"
