@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import streamer
 from database import ForensicDatabase
 from streamer import QueueStore, ingest_and_enrich_job, market_fields, topic_address, validate_address
 
@@ -193,6 +194,28 @@ class GuardrailTests(unittest.TestCase):
                     (ca,),
                 ).fetchone()
             self.assertEqual(tuple(row), (0, 0, 0))
+
+    def test_discover_once_does_not_crash_on_chain_scan_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = ForensicDatabase(str(Path(directory) / "collector.db"))
+            store = QueueStore(db)
+            mock_dex = [{"ca": "0x" + "3" * 40, "chain_id": 4663, "sources": ["dex_live"]}]
+            with patch("streamer.fetch_live_dexpaid_tokens", return_value=mock_dex), \
+                 patch("streamer.scan_uniswap_v4_initialize", side_effect=RuntimeError("RPC 413")):
+                res = streamer.discover_once(store, include_chain=True)
+            self.assertEqual(res["dex_tokens"], 1)
+            self.assertIn("error", res["robinhood_v4"])
+            self.assertEqual(store.stats()["pending"], 1)
+
+    def test_rpc_strict_includes_response_snippet(self):
+        class MockResp:
+            status_code = 413
+            text = "Payload Too Large: max limit 2MB"
+        with patch.object(streamer.HTTP, "post", return_value=MockResp()):
+            with self.assertRaises(streamer.CollectorError) as ctx:
+                streamer.rpc_call_strict("https://example.com", "eth_getLogs", [])
+            self.assertIn("413", str(ctx.exception))
+            self.assertIn("Payload Too Large", str(ctx.exception))
 
 
 if __name__ == "__main__":

@@ -116,7 +116,8 @@ def request_json(url: str, *, timeout: Tuple[float, float] = (5.0, 20.0)) -> Any
 def rpc_call_strict(rpc_url: str, method: str, params: list) -> Any:
     response = HTTP.post(rpc_url, json={"jsonrpc": "2.0", "id": 1, "method": method, "params": params}, timeout=(5.0, 30.0))
     if response.status_code >= 400:
-        raise CollectorError(f"RPC {method} returned HTTP {response.status_code}")
+        snippet = response.text[:200].strip().replace("\n", " ")
+        raise CollectorError(f"RPC {method} returned HTTP {response.status_code}: {snippet}")
     payload = response.json()
     if payload.get("error"):
         raise CollectorError(f"RPC {method}: {payload['error']}")
@@ -369,7 +370,21 @@ def scan_uniswap_v4_initialize(store: QueueStore, *, days: Optional[int] = None,
     rpc_url = RPC_ENDPOINTS.get(CHAIN_ID)
     if not rpc_url:
         raise CollectorError(f"no RPC configured for chain {CHAIN_ID}")
-    head = int(rpc_call_strict(rpc_url, "eth_blockNumber", []), 16)
+    rpc_urls = [rpc_url]
+    public_rpc = CHAIN_METADATA.get(CHAIN_ID, {}).get("public_rpc")
+    if public_rpc and public_rpc.rstrip("/") != rpc_url.rstrip("/"):
+        rpc_urls.append(public_rpc)
+
+    head = None
+    for endpoint in rpc_urls:
+        try:
+            head = int(rpc_call_strict(endpoint, "eth_blockNumber", []), 16)
+            break
+        except Exception as exc:
+            LOG.warning("eth_blockNumber failed on %s: %s", endpoint, exc)
+    if head is None:
+        raise CollectorError(f"no working RPC endpoint for chain {CHAIN_ID}")
+
     safe_head = max(0, head - max(1, confirmations))
     state_key = f"uniswap_v4:{CHAIN_ID}:{POOL_MANAGER}:next_block"
     minimum_key = f"uniswap_v4:{CHAIN_ID}:{POOL_MANAGER}:min_scanned_block"
@@ -389,6 +404,12 @@ def scan_uniswap_v4_initialize(store: QueueStore, *, days: Optional[int] = None,
             cursor = cutoff_block
     elif saved is not None:
         cursor = max(0, int(saved) - reorg_overlap)
+        # During live streaming, if saved cursor is deeply stale (> 10,000 blocks behind safe_head),
+        # fast-forward cursor to recent window so live polling doesn't hang or hit archive limits.
+        if safe_head - cursor > 10000:
+            LOG.info("Saved scan cursor %s is %s blocks behind head; advancing to safe window %s",
+                     cursor, safe_head - cursor, safe_head - 2000)
+            cursor = max(0, safe_head - 2000)
     else:
         cursor = max(0, safe_head - reorg_overlap)
     if cursor > safe_head:
@@ -397,17 +418,27 @@ def scan_uniswap_v4_initialize(store: QueueStore, *, days: Optional[int] = None,
     current_chunk = max(100, chunk_size)
     while cursor <= safe_head and not STOP_REQUESTED:
         end = min(safe_head, cursor + current_chunk - 1)
-        try:
-            logs = rpc_call_strict(rpc_url, "eth_getLogs", [{
-                "fromBlock": hex(cursor), "toBlock": hex(end), "address": POOL_MANAGER,
-                "topics": [INITIALIZE_TOPIC0],
-            }]) or []
-        except Exception:
-            if current_chunk > 100:
-                current_chunk = max(100, current_chunk // 2)
-                LOG.warning("eth_getLogs failed; reducing chunk to %s blocks", current_chunk)
-                continue
-            raise
+        logs = None
+        for endpoint in rpc_urls:
+            try:
+                logs = rpc_call_strict(endpoint, "eth_getLogs", [{
+                    "fromBlock": hex(cursor), "toBlock": hex(end), "address": POOL_MANAGER,
+                    "topics": [INITIALIZE_TOPIC0],
+                }]) or []
+                break
+            except Exception as exc:
+                if endpoint != rpc_urls[-1]:
+                    LOG.warning("eth_getLogs failed on %s (%s); trying fallback RPC", endpoint, exc)
+                    continue
+                if current_chunk > 20:
+                    current_chunk = max(20, current_chunk // 2)
+                    LOG.warning("eth_getLogs failed on all endpoints; reducing chunk to %s blocks", current_chunk)
+                    break
+                LOG.error("eth_getLogs failed for blocks %s..%s on all endpoints (%s); advancing", cursor, end, exc)
+                cursor = end + 1
+                break
+        if logs is None:
+            continue
         for log in logs:
             topics = log.get("topics") or []
             if len(topics) < 4:
@@ -603,11 +634,13 @@ def discover_once(store: QueueStore, include_chain: bool = True) -> Dict[str, An
         store.enqueue(item["ca"], source, item, chain_id=chain_id, priority=50)
         tag = str(CHAIN_METADATA[chain_id]["tag"])
         dex_counts[tag] = dex_counts.get(tag, 0) + 1
-    rbh_chain = (
-        scan_uniswap_v4_initialize(store)
-        if include_chain and CHAIN_ID in ENABLED_CHAIN_IDS
-        else {"logs": 0, "tokens": 0}
-    )
+    rbh_chain = {"logs": 0, "tokens": 0}
+    if include_chain and CHAIN_ID in ENABLED_CHAIN_IDS:
+        try:
+            rbh_chain = scan_uniswap_v4_initialize(store)
+        except Exception as exc:
+            LOG.error("Robinhood Chain Uniswap v4 scan failed (skipping for this cycle): %s", exc)
+            rbh_chain = {"error": str(exc), "logs": 0, "tokens": 0}
     return {"dex_tokens": len(dex), "dex_by_chain": dex_counts, "robinhood_v4": rbh_chain}
 
 def run_cycle(db: ForensicDatabase, store: QueueStore, max_jobs: int, include_chain: bool = True) -> Dict[str, Any]:
