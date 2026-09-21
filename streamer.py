@@ -60,7 +60,7 @@ DEX_ENDPOINTS = {
     "dex_ads_latest": "https://api.dexscreener.com/ads/latest/v1",
 }
 DEX_PAID_SOURCES = frozenset(DEX_ENDPOINTS)
-SEARCH_QUERIES = ("robinhood", "arc", "pons", "usdc", "safemoon", "bull", "vort", "arcade", "inu", "doge", "cat", "ai", "pepe", "trump", "eth", "coin", "token", "moon", "chad", "elon")
+SEARCH_QUERIES = ("robinhood", "arc", "pons", "inu", "doge", "cat", "ai", "pepe", "trump", "eth", "coin", "token", "moon", "chad", "elon")
 LOG = logging.getLogger("omnireborn.streamer")
 STOP_REQUESTED = False
 
