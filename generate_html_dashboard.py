@@ -1511,6 +1511,15 @@ html_content = f"""<!DOCTYPE html>
                     <select id="leads-team-filter" class="select-input" onchange="filterLeadsTable()">
                         <option value="ALL">All Teams</option>
                     </select>
+                    <select id="leads-ath-filter" class="select-input" onchange="filterLeadsTable()">
+                        <option value="ALL">All ATH Amounts</option>
+                        <option value="1M">ATH ≥ $1M (Mega Runners)</option>
+                        <option value="500K">ATH ≥ $500K</option>
+                        <option value="100K">ATH ≥ $100K</option>
+                        <option value="50K">ATH ≥ $50K</option>
+                        <option value="10K">ATH ≥ $10K</option>
+                        <option value="SUB_10K">ATH &lt; $10K (Micro/Dead)</option>
+                    </select>
                     <select id="leads-rug-filter" class="select-input" onchange="filterLeadsTable()">
                         <option value="ALL">All Status (Alive & Rugged)</option>
                         <option value="ALIVE_ONLY">🟢 Still Alive Only</option>
@@ -1534,7 +1543,7 @@ html_content = f"""<!DOCTYPE html>
                             <th class="sortable" onclick="sortLeads('token')" style="cursor: pointer;">Token / Contract ↕</th>
                             <th class="sortable" onclick="sortLeads('team')" style="cursor: pointer;">Inferred Team ↕</th>
                             <th class="sortable" onclick="sortLeads('best_match_symbol')" style="cursor: pointer;">Nearest Sibling Token ↕</th>
-                            <th class="sortable" onclick="sortLeads('ath')" style="cursor: pointer;">Peak MC ↕</th>
+                            <th class="sortable" onclick="sortLeads('ath')" style="cursor: pointer;">Peak ATH ↕</th>
                             <th class="sortable" onclick="sortLeads('lifespan')" style="cursor: pointer;">Lifespan (Time to Rug) ↕</th>
                             <th class="sortable" onclick="sortLeads('date')" style="cursor: pointer;">Launch Date (UTC) ↕</th>
                             <th>Top Matching Evidence (Proximity)</th>
@@ -1968,6 +1977,7 @@ html_content = f"""<!DOCTYPE html>
             const chainFilter = activeChainFilter;
             const tierFilter = (document.getElementById('leads-tier-filter') ? document.getElementById('leads-tier-filter').value : 'ALL');
             const teamFilter = (document.getElementById('leads-team-filter') ? document.getElementById('leads-team-filter').value.toLowerCase() : 'all');
+            const athFilter = (document.getElementById('leads-ath-filter') ? document.getElementById('leads-ath-filter').value : 'ALL');
             const rugFilter = (document.getElementById('leads-rug-filter') ? document.getElementById('leads-rug-filter').value : 'ALL');
 
             // Filter
@@ -1979,6 +1989,14 @@ html_content = f"""<!DOCTYPE html>
                 if (rugFilter === 'RUG_ONLY' && c.is_alive) return false;
                 if (rugFilter === 'HIDE_RUGS' && c.is_rug) return false;
                 if (rugFilter === 'RUGS_ONLY' && !c.is_rug) return false;
+
+                const candAth = Number(c.ath) || 0;
+                if (athFilter === '1M' && candAth < 1000000) return false;
+                if (athFilter === '500K' && candAth < 500000) return false;
+                if (athFilter === '100K' && candAth < 100000) return false;
+                if (athFilter === '50K' && candAth < 50000) return false;
+                if (athFilter === '10K' && candAth < 10000) return false;
+                if (athFilter === 'SUB_10K' && candAth >= 10000) return false;
                 if (searchTerm) {{
                     const symMatch = c.symbol.toLowerCase().includes(searchTerm);
                     const nameMatch = c.name.toLowerCase().includes(searchTerm);
@@ -2111,7 +2129,7 @@ html_content = f"""<!DOCTYPE html>
                         ${{sibCaShort ? `<div style="font-size: 10px; color: var(--text-muted); font-family: monospace; margin-top: 2px;"><code>${{sibCaShort}}</code></div>` : ''}}
                     </td>
                     <td>
-                        <div class="mc-val ${{mcClass}}" title="Peak Market Cap: $${{c.ath.toLocaleString('en-US')}}">${{mcFormatted}}</div>
+                        <div class="mc-val ${{mcClass}}" title="Peak ATH: $${{c.ath.toLocaleString('en-US')}}">${{mcFormatted}}</div>
                         ${{c.ath > 0 ? `<div style="font-size: 10px; color: var(--text-muted); font-family: monospace;">$${{Math.round(c.ath).toLocaleString()}}</div>` : ''}}
                     </td>
                     <td>${{statusBadge}}</td>
@@ -2331,6 +2349,7 @@ html_content = f"""<!DOCTYPE html>
             if (document.getElementById('leads-search')) document.getElementById('leads-search').value = '';
             if (document.getElementById('leads-tier-filter')) document.getElementById('leads-tier-filter').value = 'ALL';
             if (document.getElementById('leads-team-filter')) document.getElementById('leads-team-filter').value = 'ALL';
+            if (document.getElementById('leads-ath-filter')) document.getElementById('leads-ath-filter').value = 'ALL';
             if (document.getElementById('leads-rug-filter')) document.getElementById('leads-rug-filter').value = 'ALL';
             selectTopChain('ALL');
         }}
