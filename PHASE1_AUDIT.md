@@ -2,18 +2,17 @@
 
 ## Goal
 
-Learn as many auditable developer fingerprints and repeatable habits as possible from explicitly qualified tokens, then apply those fingerprints to the wider token corpus. Phase 1 produces research leads; it does not treat a similarity score as proof of common ownership.
+Learn as many auditable developer fingerprints and repeatable habits as possible from trusted labeled training anchors, then apply those fingerprints to the wider token corpus. Phase 1 produces research leads; it does not treat a similarity score as proof of common ownership.
 
 ## Qualification boundary
 
-Only rows from `ca_matching_RBH_*.csv` are marked qualified because that file is the labeled matching set. Telegram-scan and bundle rows remain unqualified unless an operator explicitly qualifies them. This prevents the pipeline from training on its own guesses.
+Qualification and training are intentionally separate:
 
-Current corpus:
+- `is_qualified=1` means the token passed a recorded evidence gate after its required on-chain profile was collected. Current automatic gates are a verified DEX paid/profile/ads discovery or a Robinhood Uniswap v4 migration event.
+- `is_training_anchor=1` means the token has a trusted team label and may teach the fingerprint matcher. Only labeled ground truth or an explicit operator `--qualified` action creates an anchor.
+- A live Arc token can therefore be qualified and visible without teaching the model an unverified team identity. Search-only backfill never counts as DEX paid.
 
-- 248 total tokens
-- 75 explicitly qualified tokens
-- 32 recurring qualified fingerprints
-- 74 wider-corpus candidates at `WEAK`, `WATCH`, `PROBABLE_LEAD`, or `HIGH_LEAD` level
+This prevents the pipeline from training on its own guesses while still reporting genuine qualified discoveries.
 
 ## What was corrected
 
@@ -52,14 +51,14 @@ Top unqualified leads include `LUCKY`, `XL`, `HIPPO`, and `WORM`, driven primari
 ## Commands
 
 ```powershell
-# Rebuild the qualified-to-universe audit and all CSV exports
+# Rebuild the training-anchor-to-universe audit and all CSV exports
 python phase1.py audit --output phase1_fingerprint_report.json
 
 # Enrich one token from live chain/explorer data and preserve all evidence
 $env:ROBIN_ETHERSCAN_API_KEY = "..."
 python phase1.py enrich 0xTOKEN --chain-id 4663
 
-# Only add --qualified after the token passes your independent qualification rule
+# --qualified is an explicit operator action and also creates a trusted training anchor
 python phase1.py enrich 0xTOKEN --chain-id 4663 --qualified
 
 # Offline validation
@@ -70,5 +69,18 @@ Generated outputs:
 
 - `phase1_fingerprint_report.json`: complete machine-readable audit
 - `phase1_fingerprint_report_fingerprints.csv`: recurring fingerprints, global prevalence, qualified precision, and team purity
-- `phase1_fingerprint_report_candidates.csv`: unqualified token leads with tier and evidence
+- `phase1_fingerprint_report_candidates.csv`: non-anchor token leads with tier and evidence
 - `phase1_fingerprint_report_team_habits.csv`: recurring habits and coverage within each labeled team
+## Market-cap and ATH refresh
+
+Current market cap, FDV, and liquidity are live observations and are stored separately from historical ATH. DexScreener's documented token-pairs response supplies `marketCap`, `fdv`, `liquidity`, and `pairCreatedAt`; it does not supply historical ATH or a rug timestamp. The dashboard therefore shows `ATH N/A` and `Status unknown` when those values have no recorded source. It never converts missing data into `<$1K` or an estimated four-minute lifespan.
+
+Refresh every token currently below $1,000 or still missing a current market observation:
+
+```bash
+python refresh_market_data.py --db forensics.db --under-usd 1000
+python generate_html_dashboard.py
+```
+
+The refresh batches up to 30 addresses per request, retries transient API failures, selects the most liquid pair where the contract is the base token, records an observation timestamp, and creates a verified SQLite backup unless `--no-backup` is explicitly supplied. Use `--all` for a complete market refresh and `--details` for per-token output. `observed_peak_market_cap_usd` is only the highest collector observation; it must not be presented as all-time high.
+

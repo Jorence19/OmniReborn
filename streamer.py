@@ -22,7 +22,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from branding_scraper import BrandingScraper
-from config import CHAIN_METADATA, ETHERSCAN_API_KEY, RPC_ENDPOINTS, ROBIN_ETHERSCAN_API_KEY
+from config import CHAIN_METADATA, RPC_ENDPOINTS, ROBIN_ETHERSCAN_API_KEY
 from database import ForensicDatabase
 from forensics import extract_full_token_metadata
 from phase1 import build_report, persist_profile, write_report_artifacts
@@ -59,6 +59,7 @@ DEX_ENDPOINTS = {
     "dex_profile_recent": "https://api.dexscreener.com/token-profiles/recent-updates/v1",
     "dex_ads_latest": "https://api.dexscreener.com/ads/latest/v1",
 }
+DEX_PAID_SOURCES = frozenset(DEX_ENDPOINTS)
 SEARCH_QUERIES = ("robinhood", "arc", "pons", "inu", "doge", "cat", "ai", "pepe", "trump", "eth", "coin", "token", "moon", "chad", "elon")
 LOG = logging.getLogger("omnireborn.streamer")
 STOP_REQUESTED = False
@@ -448,8 +449,12 @@ def market_fields(pair: Dict[str, Any]) -> Dict[str, Any]:
                      if (s.get("platform") or s.get("type")) == "telegram"), None)
     return {
         "symbol": base.get("symbol"), "name": base.get("name"), "token_live_at": created_at,
-        "ath_usd": pair.get("marketCap") or pair.get("fdv"),
+        "current_market_cap_usd": pair.get("marketCap"),
+        "fdv_usd": pair.get("fdv"),
+        "current_liquidity_usd": (pair.get("liquidity") or {}).get("usd"),
         "peak_liquidity_usd": (pair.get("liquidity") or {}).get("usd"),
+        "market_pair_url": pair.get("url"),
+        "market_data_at": iso_utc(),
         "website": websites[0].get("url") if websites else None,
         "x_handle": x_value, "tg_url": tg_value,
     }
@@ -474,22 +479,36 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
     canonical_ca = persist_profile(db, profile, qualified=False)
     pair = fetch_market_profile(ca, chain_id)
     market = market_fields(pair) if pair else {}
-    dex_paid = "dex_" in source
-    migrated = chain_id == CHAIN_ID and "uniswap_v4_initialize" in source
+    source_parts = {part for part in source.split("+") if part}
+    dex_paid = bool(source_parts & DEX_PAID_SOURCES)
+    migrated = chain_id == CHAIN_ID and "uniswap_v4_initialize" in source_parts
+    qualified = bool(dex_paid or migrated)
+    qualification_gates = [
+        gate for gate, passed in (("dex_paid", dex_paid), ("migrated", migrated)) if passed
+    ]
     canonical_ca = db.upsert_token({
         "ca": canonical_ca, "chain_id": chain_id, "chain": spec["tag"],
         "launchpad": "Uniswap v4" if migrated else None,
         "symbol": market.get("symbol") or profile.get("token_symbol"),
         "name": market.get("name") or profile.get("token_name"),
-        "token_live_at": market.get("token_live_at"), "ath_usd": market.get("ath_usd"),
+        "token_live_at": market.get("token_live_at"),
+        "current_market_cap_usd": market.get("current_market_cap_usd"),
+        "observed_peak_market_cap_usd": market.get("current_market_cap_usd"),
+        "fdv_usd": market.get("fdv_usd"),
+        "current_liquidity_usd": market.get("current_liquidity_usd"),
+        "market_pair_url": market.get("market_pair_url"),
+        "market_data_at": market.get("market_data_at"),
         "peak_liquidity_usd": market.get("peak_liquidity_usd"),
         "website": market.get("website") or profile.get("website_url"),
         "x_handle": market.get("x_handle") or profile.get("twitter_url"),
         "description": profile.get("description"), "is_migrated": migrated,
-        "is_dex_paid": dex_paid, "is_qualified": False,
+        "is_dex_paid": dex_paid, "is_qualified": qualified,
+        "is_training_anchor": False,
         "qualification_reasons": {
-            "discovery_source": source, "not_training_anchor": True,
-            "chain_id": chain_id, "native_symbol": spec["native_symbol"],
+            "gates": qualification_gates, "discovery_sources": sorted(source_parts),
+            "profile_complete": True, "market_found": bool(pair),
+            "training_anchor": False, "chain_id": chain_id,
+            "native_symbol": spec["native_symbol"],
         },
     })
     if market:
@@ -505,7 +524,9 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
         })
     return {
         "ca": canonical_ca, "chain_id": chain_id, "chain": spec["tag"],
-        "symbol": profile.get("token_symbol"), "market_found": bool(pair),
+        "symbol": market.get("symbol") or profile.get("token_symbol"),
+        "market_found": bool(pair), "is_qualified": qualified,
+        "is_training_anchor": False, "qualification_gates": qualification_gates,
     }
 
 def process_queue(db: ForensicDatabase, store: QueueStore, max_jobs: int = 10) -> Dict[str, int]:
@@ -608,9 +629,18 @@ def preflight(db: ForensicDatabase, store: QueueStore) -> Tuple[bool, Dict[str, 
         record("explorer_key_4663", bool(ROBIN_ETHERSCAN_API_KEY),
                "configured" if ROBIN_ETHERSCAN_API_KEY else "ROBIN_ETHERSCAN_API_KEY missing")
     if 5042 in ENABLED_CHAIN_IDS:
-        arc_explorer_key = ETHERSCAN_API_KEY or ROBIN_ETHERSCAN_API_KEY
-        record("explorer_key_5042", bool(arc_explorer_key),
-               "configured" if arc_explorer_key else "ETHERSCAN_API_KEY or ROBIN_ETHERSCAN_API_KEY missing")
+        try:
+            arc_api = str(CHAIN_METADATA[5042]["explorer_api_url"])
+            response = HTTP.get(
+                arc_api, params={"module": "proxy", "action": "eth_blockNumber"},
+                timeout=(5.0, 12.0),
+            )
+            response.raise_for_status()
+            block_hex = response.json().get("result")
+            record("explorer_api_5042", bool(block_hex and str(block_hex).startswith("0x")),
+                   arc_api if block_hex else "ArcScan returned no block number")
+        except Exception as exc:
+            record("explorer_api_5042", False, f"{type(exc).__name__}: {exc}")
 
     for chain_id in ENABLED_CHAIN_IDS:
         spec = CHAIN_METADATA[chain_id]

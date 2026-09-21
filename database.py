@@ -47,7 +47,15 @@ class ForensicDatabase:
             "tokens": {
                 "chain_id": "INTEGER NOT NULL DEFAULT 4663",
                 "is_qualified": "INTEGER DEFAULT 0",
+                "is_training_anchor": "INTEGER DEFAULT 0",
                 "qualification_reasons": "TEXT",
+                "ath_source": "TEXT",
+                "current_market_cap_usd": "REAL",
+                "observed_peak_market_cap_usd": "REAL DEFAULT 0",
+                "fdv_usd": "REAL",
+                "current_liquidity_usd": "REAL",
+                "market_pair_url": "TEXT",
+                "market_data_at": "TEXT",
             },
             "execution_profiles": {
                 "creation_block": "INTEGER", "creation_timestamp": "TEXT",
@@ -75,6 +83,10 @@ class ForensicDatabase:
             for column, declaration in columns.items():
                 if column not in existing:
                     conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {declaration}")
+                    if table == "tokens" and column == "is_training_anchor":
+                        conn.execute(
+                            "UPDATE tokens SET is_training_anchor=COALESCE(is_qualified, 0)"
+                        )
 
     @staticmethod
     def _optional_float(value):
@@ -98,13 +110,17 @@ class ForensicDatabase:
         sql = """
         INSERT INTO tokens (
             ca, chain_id, chain, symbol, name, launchpad, token_live_at, migrated_at,
-            time_to_graduate_sec, is_migrated, is_dex_paid, is_qualified,
-            qualification_reasons, ath_usd, peak_liquidity_usd, x_handle,
+            time_to_graduate_sec, is_migrated, is_dex_paid, is_qualified, is_training_anchor,
+            qualification_reasons, ath_usd, ath_source, current_market_cap_usd,
+            observed_peak_market_cap_usd, fdv_usd, current_liquidity_usd,
+            market_pair_url, market_data_at, peak_liquidity_usd, x_handle,
             website, description
         ) VALUES (
             :ca, :chain_id, :chain, :symbol, :name, :launchpad, :token_live_at, :migrated_at,
-            :time_to_graduate_sec, :is_migrated, :is_dex_paid, :is_qualified,
-            :qualification_reasons, :ath_usd, :peak_liquidity_usd, :x_handle,
+            :time_to_graduate_sec, :is_migrated, :is_dex_paid, :is_qualified, :is_training_anchor,
+            :qualification_reasons, :ath_usd, :ath_source, :current_market_cap_usd,
+            :observed_peak_market_cap_usd, :fdv_usd, :current_liquidity_usd,
+            :market_pair_url, :market_data_at, :peak_liquidity_usd, :x_handle,
             :website, :description
         )
         ON CONFLICT(ca) DO UPDATE SET
@@ -119,12 +135,23 @@ class ForensicDatabase:
             is_migrated = MAX(tokens.is_migrated, excluded.is_migrated),
             is_dex_paid = MAX(tokens.is_dex_paid, excluded.is_dex_paid),
             is_qualified = MAX(tokens.is_qualified, excluded.is_qualified),
+            is_training_anchor = MAX(tokens.is_training_anchor, excluded.is_training_anchor),
             qualification_reasons = CASE
-                WHEN tokens.is_qualified = 1 AND excluded.is_qualified = 0
+                WHEN tokens.is_training_anchor = 1 AND excluded.is_training_anchor = 0
                 THEN tokens.qualification_reasons
                 ELSE COALESCE(excluded.qualification_reasons, tokens.qualification_reasons)
             END,
             ath_usd = MAX(COALESCE(tokens.ath_usd, 0), COALESCE(excluded.ath_usd, 0)),
+            ath_source = COALESCE(excluded.ath_source, tokens.ath_source),
+            current_market_cap_usd = COALESCE(excluded.current_market_cap_usd, tokens.current_market_cap_usd),
+            observed_peak_market_cap_usd = MAX(
+                COALESCE(tokens.observed_peak_market_cap_usd, 0),
+                COALESCE(excluded.observed_peak_market_cap_usd, 0)
+            ),
+            fdv_usd = COALESCE(excluded.fdv_usd, tokens.fdv_usd),
+            current_liquidity_usd = COALESCE(excluded.current_liquidity_usd, tokens.current_liquidity_usd),
+            market_pair_url = COALESCE(excluded.market_pair_url, tokens.market_pair_url),
+            market_data_at = COALESCE(excluded.market_data_at, tokens.market_data_at),
             peak_liquidity_usd = MAX(COALESCE(tokens.peak_liquidity_usd, 0), COALESCE(excluded.peak_liquidity_usd, 0)),
             x_handle = COALESCE(excluded.x_handle, tokens.x_handle),
             website = COALESCE(excluded.website, tokens.website),
@@ -149,8 +176,18 @@ class ForensicDatabase:
             "is_migrated": int(bool(data.get("is_migrated"))),
             "is_dex_paid": int(bool(data.get("is_dex_paid"))),
             "is_qualified": int(bool(data.get("is_qualified"))),
+            "is_training_anchor": int(bool(data.get("is_training_anchor"))),
             "qualification_reasons": reasons,
             "ath_usd": self._optional_float(data.get("ath_usd", data.get("ath"))) or 0.0,
+            "ath_source": data.get("ath_source"),
+            "current_market_cap_usd": self._optional_float(data.get("current_market_cap_usd")),
+            "observed_peak_market_cap_usd": self._optional_float(
+                data.get("observed_peak_market_cap_usd", data.get("current_market_cap_usd"))
+            ) or 0.0,
+            "fdv_usd": self._optional_float(data.get("fdv_usd")),
+            "current_liquidity_usd": self._optional_float(data.get("current_liquidity_usd")),
+            "market_pair_url": data.get("market_pair_url"),
+            "market_data_at": data.get("market_data_at"),
             "peak_liquidity_usd": self._optional_float(data.get("peak_liquidity_usd")) or 0.0,
             "x_handle": data.get("x_handle") or data.get("x"),
             "website": data.get("website"), "description": data.get("description"),

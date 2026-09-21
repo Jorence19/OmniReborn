@@ -33,6 +33,7 @@ CHAIN_METADATA = {
     5042: {
         "name": "Arc", "tag": "ARC", "dex_chain_id": "arc",
         "explorer_url": "https://explorer.arc.io",
+        "explorer_api_url": os.getenv("ARC_EXPLORER_API_URL", "https://api.arc-scan.org/api"),
         "native_symbol": "USDC",
         "public_rpc": "https://rpc.mainnet.arc.io",
     },

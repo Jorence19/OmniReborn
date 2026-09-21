@@ -29,6 +29,14 @@ class CandidateApiTests(unittest.TestCase):
                 "best_match_chain": "untrusted",
                 "ath": 10000,
                 "is_rug": False,
+                "is_alive": True,
+                "lifespan_sec": None,
+                "lifespan_str": "Market observed",
+                "market_cap": 8287,
+                "ath_known": False,
+                "is_qualified": True,
+                "is_training_anchor": False,
+                "is_dex_paid": True,
                 "evidence": [{"feature": "funder_1hop", "value": "0xabc", "reliability": .85}],
             }],
         }), encoding="utf-8")
@@ -50,6 +58,13 @@ class CandidateApiTests(unittest.TestCase):
         candidate = response.json()["candidates"][0]
         self.assertEqual((candidate["chain_id"], candidate["chain"]), (5042, "ARC"))
         self.assertEqual((candidate["best_match_chain_id"], candidate["best_match_chain"]), (4663, "RBH"))
+        self.assertTrue(candidate["is_qualified"])
+        self.assertFalse(candidate["is_training_anchor"])
+        self.assertTrue(candidate["is_dex_paid"])
+        self.assertTrue(candidate["is_alive"])
+        self.assertIsNone(candidate["lifespan_sec"])
+        self.assertEqual(candidate["lifespan_str"], "Market observed")
+        self.assertEqual(candidate["market_cap"], 8287)
         self.assertEqual(response.headers["access-control-allow-origin"], "https://tracker.example.org")
         self.assertIn("etag", response.headers)
 

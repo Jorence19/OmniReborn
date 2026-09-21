@@ -57,6 +57,7 @@ def import_all():
                 "launchpad": clean_str(row.get("launchpad")) or "Pons",
                 "chain": "RBH",
                 "is_qualified": True,
+                "is_training_anchor": True,
                 "qualification_reasons": {"source": "ca_matching_ground_truth"}
             })
 
@@ -129,6 +130,7 @@ def import_all():
                 "launchpad": clean_str(row.get("launchpad")) or "Pons",
                 "token_live_at": clean_str(row.get("token_live")),
                 "ath_usd": clean_float(row.get("ath")),
+                "ath_source": "tgscan_archive",
                 "x_handle": clean_str(row.get("x")),
                 "website": clean_str(row.get("website")),
                 "description": clean_str(row.get("description"))

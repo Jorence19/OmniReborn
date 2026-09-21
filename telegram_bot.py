@@ -263,6 +263,9 @@ def load_candidates(settings):
         row["symbol"] = clean(row.get("symbol"), "UNKNOWN")
         row["score"] = float(row.get("score", row.get("candidate_score", 0)) or 0)
         row["confidence"] = clean(row.get("confidence"), "UNRATED")
+        row["is_qualified"] = bool(row.get("is_qualified", False))
+        row["is_training_anchor"] = bool(row.get("is_training_anchor", False))
+        row["is_dex_paid"] = bool(row.get("is_dex_paid", False))
         row["team"] = clean(
             row.get("team", row.get("inferred_team")), "Unclustered"
         )
@@ -270,8 +273,10 @@ def load_candidates(settings):
         result.append(row)
     if settings.db.exists():
         query = """
-            SELECT token_live_at,ath_usd,dev_wallet,funder_1hop,
-                   candidate_team,team_tier
+            SELECT token_live_at,ath_usd,ath_source,current_market_cap_usd,
+                   observed_peak_market_cap_usd,fdv_usd,current_liquidity_usd,market_data_at,
+                   dev_wallet,funder_1hop,candidate_team,team_tier,
+                   is_qualified,is_training_anchor,is_dex_paid
             FROM v_full_forensic_profile
             WHERE LOWER(ca)=? AND chain_id=? LIMIT 1
         """
@@ -329,7 +334,12 @@ def lead_message(row, alert=False):
         title + "\n" + token
         + "Confidence: <b>" + html.escape(row["confidence"])
         + "</b> - Score: <b>" + format(row["score"], ".1f")
-        + "%</b>\nContract: <code>" + html.escape(row["ca"])
+        + "%</b>\nQualified: <b>" + ("YES" if row.get("is_qualified") else "NO")
+        + "</b> (training anchor: " + ("YES" if row.get("is_training_anchor") else "NO")
+        + ")\nCurrent MC: <b>$" + format(float(row.get("current_market_cap_usd", row.get("market_cap", 0)) or 0), ",.0f")
+        + "</b> - Sourced ATH: <b>"
+        + (("$" + format(float(row.get("ath_usd", row.get("ath", 0)) or 0), ",.0f")) if row.get("ath_source") else "N/A")
+        + "</b>\nContract: <code>" + html.escape(row["ca"])
         + "</code>\nNearest sibling: $" + html.escape(row["best_match_symbol"])
         + " - Team: " + team
         + "\nDeployer: <code>" + html.escape(clean(row.get("dev_wallet"), "unknown"))
@@ -356,11 +366,14 @@ def export_xlsx(rows, path):
         "Inferred Team",
         "Deployer",
         "1-Hop Funder",
-        "ATH (USD)",
+        "Current MC (USD)",
+        "Sourced ATH (USD)",
         "Launch Date (UTC)",
         "Top Evidence Matches",
         "Contract Address",
         "Rug",
+        "Qualified",
+        "Training Anchor",
     ]
     sheet.append(headers)
     blue = PatternFill("solid", fgColor="1F4E78")
@@ -397,11 +410,14 @@ def export_xlsx(rows, path):
                 ),
                 safe_cell(clean(row.get("dev_wallet"))),
                 safe_cell(clean(row.get("funder_1hop"))),
-                float(row.get("ath_usd", row.get("ath", 0)) or 0),
+                float(row.get("current_market_cap_usd", row.get("market_cap", 0)) or 0),
+                float(row.get("ath_usd", row.get("ath", 0)) or 0) if row.get("ath_source") else None,
                 launched,
                 safe_cell(evidence_summary(row)),
                 safe_cell(row["ca"]),
                 "YES" if rug else "NO",
+                "YES" if row.get("is_qualified") else "NO",
+                "YES" if row.get("is_training_anchor") else "NO",
             ]
         )
         fill = red if rug else green if row["confidence"] == "HIGH_LEAD" else None
@@ -409,7 +425,7 @@ def export_xlsx(rows, path):
             for cell in sheet[sheet.max_row]:
                 cell.fill = fill
     sheet.freeze_panes = "A2"
-    widths = [14, 10, 18, 12, 22, 22, 46, 46, 16, 22, 60, 46, 10]
+    widths = [14, 10, 18, 12, 22, 22, 46, 46, 16, 16, 22, 60, 46, 10, 14, 18]
     for index, width in enumerate(widths, 1):
         sheet.column_dimensions[chr(64 + index)].width = width
     for cell in sheet["D"][1:]:

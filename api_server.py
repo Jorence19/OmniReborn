@@ -45,6 +45,18 @@ def _finite_number(value: Any, default: float = 0.0, minimum: float | None = Non
     return result
 
 
+def _optional_number(value: Any, minimum: float = 0.0) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(result):
+        return None
+    return max(minimum, result)
+
+
 def _text(value: Any, limit: int) -> str:
     if value is None:
         return ""
@@ -113,7 +125,20 @@ def sanitize_candidate(raw: Any) -> dict[str, Any]:
         "best_match_chain_id": best_match_chain_id,
         "best_match_chain": best_match_chain,
         "ath": ath,
-        "is_rug": bool(raw.get("is_rug", ath <= 5000.0)),
+        "ath_known": bool(raw.get("ath_known", False)),
+        "ath_source": _text(raw.get("ath_source"), 80),
+        "market_cap": _optional_number(raw.get("market_cap")),
+        "observed_peak_market_cap": _optional_number(raw.get("observed_peak_market_cap")),
+        "fdv": _optional_number(raw.get("fdv")),
+        "current_liquidity": _optional_number(raw.get("current_liquidity")),
+        "market_data_at": _text(raw.get("market_data_at"), 64),
+        "is_rug": bool(raw.get("is_rug", False)),
+        "is_alive": bool(raw.get("is_alive", False)),
+        "lifespan_sec": _optional_number(raw.get("lifespan_sec")),
+        "lifespan_str": _text(raw.get("lifespan_str"), 32) or "Unknown",
+        "is_qualified": bool(raw.get("is_qualified", False)),
+        "is_training_anchor": bool(raw.get("is_training_anchor", False)),
+        "is_dex_paid": bool(raw.get("is_dex_paid", False)),
         "evidence": evidence,
         "token_live": _text(raw.get("token_live"), 64),
         "website": _text(raw.get("website"), 500),

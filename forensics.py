@@ -4,7 +4,10 @@ import requests
 import re
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, Tuple, List
-from config import KNOWN_EXCHANGES, RPC_ENDPOINTS, ETHERSCAN_API_KEY, BASESCAN_API_KEY, ROBIN_ETHERSCAN_API_KEY
+from config import (
+    CHAIN_METADATA, KNOWN_EXCHANGES, RPC_ENDPOINTS, ETHERSCAN_API_KEY,
+    BASESCAN_API_KEY, ROBIN_ETHERSCAN_API_KEY,
+)
 
 def rpc_call(rpc_url: str, method: str, params: list, req_id: int = 1):
     """Executes a JSON-RPC request to the specified EVM node."""
@@ -311,9 +314,7 @@ def _api_key_for_chain(chain_id: int) -> str:
     if chain_id == 4663:
         return ROBIN_ETHERSCAN_API_KEY
     if chain_id == 5042:
-        # Etherscan V2 keys are unified across supported chains. Keep a
-        # dedicated override, but reuse the configured Robinhood V2 key.
-        return ETHERSCAN_API_KEY or ROBIN_ETHERSCAN_API_KEY
+        return ""
     if chain_id == 8453:
         return BASESCAN_API_KEY or ETHERSCAN_API_KEY
     return ETHERSCAN_API_KEY
@@ -367,11 +368,13 @@ def trace_creator_and_funding(
         'deployer_balance_eth': None,
     }
 
-    base_url = "https://api.etherscan.io/v2/api"
+    chain_spec = CHAIN_METADATA.get(chain_id, {})
+    base_url = chain_spec.get("explorer_api_url") or "https://api.etherscan.io/v2/api"
     api_key = _api_key_for_chain(chain_id)
 
     def api_get(**params):
-        params.update({'chainid': chain_id, 'apikey': api_key})
+        if chain_id != 5042:
+            params.update({'chainid': chain_id, 'apikey': api_key})
         response = requests.get(base_url, params=params, timeout=12)
         response.raise_for_status()
         return response.json()
@@ -389,7 +392,11 @@ def trace_creator_and_funding(
             module='contract', action='getcontractcreation',
             contractaddresses=contract_address,
         )
-        if payload.get('status') == '1' and payload.get('result'):
+        if payload.get('status') != '1' or not isinstance(payload.get('result'), list) or not payload['result']:
+            raise RuntimeError(
+                f"explorer rejected contract lookup: {payload.get('message') or payload.get('result')}"
+            )
+        if payload.get('result'):
             item = payload['result'][0]
             details['deployer_address'] = (item.get('contractCreator') or '').lower() or None
             details['creation_tx_hash'] = item.get('txHash')

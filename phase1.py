@@ -430,6 +430,7 @@ def persist_profile(db: ForensicDatabase, profile: Dict[str, Any], *, qualified:
         "ca": profile["ca"], "chain_id": chain_id, "chain": chain_tag,
         "symbol": profile.get("token_symbol"),
         "name": profile.get("token_name"), "is_qualified": qualified,
+        "is_training_anchor": qualified,
         "qualification_reasons": {"source": "phase1_enrich"} if qualified else None,
         "description": profile.get("description"), "website": profile.get("website_url"),
         "x_handle": profile.get("twitter_url"),
@@ -467,11 +468,11 @@ def persist_profile(db: ForensicDatabase, profile: Dict[str, Any], *, qualified:
 
 def build_report(db: ForensicDatabase, qualified_only: bool = True) -> Dict[str, Any]:
     universe = db.get_all_historical_tokens()
-    rows = [row for row in universe if int(row.get("is_qualified") or 0) == 1] if qualified_only else universe
+    rows = [row for row in universe if int(row.get("is_training_anchor") or 0) == 1] if qualified_only else universe
     catalog = discover_fingerprints(rows, universe)
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "scope": "qualified_tokens_to_all_tokens" if qualified_only else "all_tokens",
+        "scope": "training_anchors_to_all_tokens" if qualified_only else "all_tokens",
         "token_count": len(rows),
         "universe_token_count": len(universe),
         "fingerprint_catalog": catalog,

@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from database import ForensicDatabase
-from streamer import QueueStore, ingest_and_enrich_job, topic_address, validate_address
+from streamer import QueueStore, ingest_and_enrich_job, market_fields, topic_address, validate_address
 
 
 class QueueTests(unittest.TestCase):
@@ -55,13 +55,18 @@ class GuardrailTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             db = ForensicDatabase(str(Path(directory) / "collector.db"))
             ca = "0x" + "9" * 40
-            db.upsert_token({"ca": ca, "is_qualified": True, "qualification_reasons": {"source": "manual"}})
-            db.upsert_token({"ca": ca, "is_qualified": False, "is_dex_paid": True,
+            db.upsert_token({"ca": ca, "is_qualified": True, "is_training_anchor": True,
+                             "qualification_reasons": {"source": "manual"}})
+            db.upsert_token({"ca": ca, "is_qualified": True, "is_training_anchor": False,
+                             "is_dex_paid": True,
                              "qualification_reasons": {"source": "live"}})
             with db.get_connection() as conn:
-                row = conn.execute("SELECT is_qualified, qualification_reasons FROM tokens WHERE ca=?", (ca,)).fetchone()
-            self.assertEqual(row[0], 1)
-            self.assertIn("manual", row[1])
+                row = conn.execute(
+                    "SELECT is_qualified, is_training_anchor, qualification_reasons FROM tokens WHERE ca=?",
+                    (ca,),
+                ).fetchone()
+            self.assertEqual(tuple(row[:2]), (1, 1))
+            self.assertIn("manual", row[2])
 
     def test_token_registry_fails_closed_on_cross_chain_address_collision(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -74,7 +79,7 @@ class GuardrailTests(unittest.TestCase):
                 row = conn.execute("SELECT chain_id, symbol FROM tokens WHERE ca=?", (ca,)).fetchone()
             self.assertEqual(tuple(row), (4663, "RBH"))
 
-    def test_arc_ingest_persists_chain_and_never_auto_qualifies(self):
+    def test_arc_paid_ingest_qualifies_without_becoming_training_anchor(self):
         with tempfile.TemporaryDirectory() as directory:
             db = ForensicDatabase(str(Path(directory) / "collector.db"))
             ca = "0x" + "7" * 40
@@ -96,9 +101,42 @@ class GuardrailTests(unittest.TestCase):
             self.assertEqual((result["chain_id"], result["chain"]), (5042, "ARC"))
             with db.get_connection() as conn:
                 row = conn.execute(
-                    "SELECT chain_id, chain, is_qualified, is_dex_paid FROM tokens WHERE ca=?", (ca,)
+                    "SELECT chain_id, chain, is_qualified, is_training_anchor, is_dex_paid "
+                    "FROM tokens WHERE ca=?", (ca,)
                 ).fetchone()
-            self.assertEqual(tuple(row), (5042, "ARC", 0, 1))
+            self.assertEqual(tuple(row), (5042, "ARC", 1, 0, 1))
+
+    def test_current_market_cap_is_never_written_as_ath(self):
+        fields = market_fields({
+            "baseToken": {"symbol": "LIVE", "name": "Live Token"},
+            "marketCap": 1234,
+            "fdv": 1500,
+            "liquidity": {"usd": 800},
+            "pairCreatedAt": 1789305867000,
+            "url": "https://dexscreener.com/robinhood/pair",
+        })
+        self.assertNotIn("ath_usd", fields)
+        self.assertEqual(fields["current_market_cap_usd"], 1234)
+        self.assertEqual(fields["fdv_usd"], 1500)
+        self.assertEqual(fields["current_liquidity_usd"], 800)
+
+    def test_sourced_ath_and_current_market_cap_are_independent(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = ForensicDatabase(str(Path(directory) / "collector.db"))
+            ca = "0x" + "6" * 40
+            db.upsert_token({
+                "ca": ca, "ath_usd": 25000, "ath_source": "tgscan_archive",
+            })
+            db.upsert_token({
+                "ca": ca, "current_market_cap_usd": 3200,
+                "observed_peak_market_cap_usd": 3200,
+            })
+            with db.get_connection() as conn:
+                row = conn.execute(
+                    "SELECT ath_usd,ath_source,current_market_cap_usd,"
+                    "observed_peak_market_cap_usd FROM tokens WHERE ca=?", (ca,)
+                ).fetchone()
+            self.assertEqual(tuple(row), (25000, "tgscan_archive", 3200, 3200))
 
     def test_address_validation_and_topic_decode(self):
         ca = "0x" + "a" * 40
@@ -108,7 +146,7 @@ class GuardrailTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_address("not-an-address")
 
-    def test_live_discovery_never_auto_qualifies_training_anchor(self):
+    def test_live_discovery_qualifies_but_never_auto_creates_training_anchor(self):
         with tempfile.TemporaryDirectory() as directory:
             db = ForensicDatabase(str(Path(directory) / "collector.db"))
             ca = "0x" + "2" * 40
@@ -126,9 +164,35 @@ class GuardrailTests(unittest.TestCase):
                  patch("streamer.fetch_market_profile", return_value={}):
                 ingest_and_enrich_job(db, job)
             with db.get_connection() as conn:
-                row = conn.execute("SELECT is_qualified, is_dex_paid FROM tokens WHERE ca=?", (ca,)).fetchone()
-            self.assertEqual(row[0], 0)
-            self.assertEqual(row[1], 1)
+                row = conn.execute(
+                    "SELECT is_qualified, is_training_anchor, is_dex_paid FROM tokens WHERE ca=?",
+                    (ca,),
+                ).fetchone()
+            self.assertEqual(tuple(row), (1, 0, 1))
+
+    def test_search_backfill_is_not_misclassified_as_paid_or_qualified(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = ForensicDatabase(str(Path(directory) / "collector.db"))
+            ca = "0x" + "5" * 40
+            profile = {
+                "ca": ca, "chain_id": 5042, "token_name": "Backfill", "token_symbol": "OLD",
+                "bytecode_sha256": "a" * 64, "normalized_bytecode_sha256": "b" * 64,
+                "deployer_address": "0x" + "3" * 40,
+                "creation_tx_hash": "0x" + "4" * 64,
+                "function_selectors": "a9059cbb", "method_ids_hash": "deadbeef",
+                "funding_lineage": [], "hardcoded_addresses": [],
+                "storage_address_candidates": [],
+            }
+            job = {"ca": ca, "chain_id": 5042, "source": "dex_search_backfill", "attempts": 1}
+            with patch("streamer.extract_full_token_metadata", return_value=profile), \
+                 patch("streamer.fetch_market_profile", return_value={}):
+                ingest_and_enrich_job(db, job)
+            with db.get_connection() as conn:
+                row = conn.execute(
+                    "SELECT is_qualified, is_training_anchor, is_dex_paid FROM tokens WHERE ca=?",
+                    (ca,),
+                ).fetchone()
+            self.assertEqual(tuple(row), (0, 0, 0))
 
 
 if __name__ == "__main__":

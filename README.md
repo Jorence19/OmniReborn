@@ -23,7 +23,7 @@ Instead of evaluating newly launched tokens in isolation or relying on generic l
 ## 🌟 Core Innovations
 
 ### 1. Nearest Duplicate (Pairwise Sibling) Cross-Examination
-Unlike traditional clustering that relies on global centroid averages (which can be overwhelmed by one large cartel), OmniReborn cross-examines every candidate token pairwise against every qualified anchor token in the database.
+Unlike traditional clustering that relies on global centroid averages (which can be overwhelmed by one large cartel), OmniReborn cross-examines every candidate token pairwise against every trusted training-anchor token in the database.
 * Identifies the exact **closest sibling token** ($A^*$).
 * Smaller dev teams with 2–4 tokens (`team intel`, `team nchip`, `team robinary`) receive direct attribution without being drowned out by larger teams.
 

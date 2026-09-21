@@ -9,7 +9,7 @@ Required before launch:
 - A Hostinger HTTPS origin, such as `https://tracker.your-real-domain.com`.
 - A Vultr API hostname, such as `api.your-real-domain.com`, with an A record to the Vultr IPv4 address.
 - Private/archive-capable Robinhood Chain and Arc RPCs.
-- An Etherscan V2 key. Set `ETHERSCAN_API_KEY`; when it is empty, Arc can reuse `ROBIN_ETHERSCAN_API_KEY`.
+- A Robinhood explorer key in `ROBIN_ETHERSCAN_API_KEY`. Arc uses the public ArcScan-compatible API and does not require an Etherscan key.
 - `ENABLED_CHAIN_IDS=4663,5042`.
 - Ubuntu packages: `git python3 python3-venv nginx curl certbot python3-certbot-nginx`.
 - Vultr firewall rules exposing 22 only from your administration IP and 80/443 publicly. Never expose port 8000.
@@ -47,6 +47,7 @@ Set real values for:
 ```dotenv
 ROBIN_ETHERSCAN_API_KEY=...
 ETHERSCAN_API_KEY=...
+ARC_EXPLORER_API_URL=https://api.arc-scan.org/api
 ROBINHOOD_RPC_URL=https://YOUR_PRIVATE_ROBINHOOD_ARCHIVE_RPC
 ARC_RPC_URL=https://YOUR_PRIVATE_ARC_ARCHIVE_RPC
 ENABLED_CHAIN_IDS=4663,5042

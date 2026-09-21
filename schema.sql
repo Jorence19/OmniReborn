@@ -17,9 +17,17 @@ CREATE TABLE IF NOT EXISTS tokens (
     time_to_graduate_sec INTEGER,   -- Graduation Velocity (fast < 3m = bundle cabal)
     is_migrated INTEGER DEFAULT 0,  -- Gate A
     is_dex_paid INTEGER DEFAULT 0,  -- Gate B
-    is_qualified INTEGER DEFAULT 0, -- Explicit Phase 1 inclusion, never inferred from missing data
+    is_qualified INTEGER DEFAULT 0, -- Passed an auditable evidence gate; safe to show as qualified
+    is_training_anchor INTEGER DEFAULT 0, -- Trusted labeled reference; never inferred from discovery
     qualification_reasons TEXT,     -- JSON evidence for why this token qualified
-    ath_usd REAL DEFAULT 0,
+    ath_usd REAL DEFAULT 0,          -- Sourced historical ATH only
+    ath_source TEXT,                 -- Provenance for ath_usd; NULL means unknown
+    current_market_cap_usd REAL,     -- Latest observed market cap, never ATH
+    observed_peak_market_cap_usd REAL DEFAULT 0, -- Highest collector observation, not all-time high
+    fdv_usd REAL,
+    current_liquidity_usd REAL,
+    market_pair_url TEXT,
+    market_data_at TEXT,
     peak_liquidity_usd REAL DEFAULT 0,
     x_handle TEXT,
     website TEXT,
@@ -246,6 +254,7 @@ CREATE INDEX IF NOT EXISTS idx_exec_funder2 ON execution_profiles(funder_2hop);
 CREATE INDEX IF NOT EXISTS idx_bytecode_template ON bytecode_profiles(template_hash);
 CREATE INDEX IF NOT EXISTS idx_bytecode_normalized ON bytecode_profiles(normalized_bytecode_hash);
 CREATE INDEX IF NOT EXISTS idx_tokens_qualified ON tokens(is_qualified);
+CREATE INDEX IF NOT EXISTS idx_tokens_training_anchor ON tokens(is_training_anchor);
 CREATE INDEX IF NOT EXISTS idx_tokens_chain ON tokens(chain_id, token_live_at);
 CREATE INDEX IF NOT EXISTS idx_matches_team ON token_matches(candidate_team_id);
 CREATE INDEX IF NOT EXISTS idx_bundle_bundler ON bundle_analytics(bundler_wallet);
@@ -272,8 +281,16 @@ SELECT
     t.is_migrated,
     t.is_dex_paid,
     t.is_qualified,
+    t.is_training_anchor,
     t.qualification_reasons,
     t.ath_usd,
+    t.ath_source,
+    t.current_market_cap_usd,
+    t.observed_peak_market_cap_usd,
+    t.fdv_usd,
+    t.current_liquidity_usd,
+    t.market_pair_url,
+    t.market_data_at,
     t.peak_liquidity_usd,
     COALESCE(bp.x_handle, t.x_handle) AS x_handle,
     t.website AS token_website,

@@ -52,7 +52,17 @@ if db_path.exists():
             '''SELECT LOWER(ca) AS ca_lower, COALESCE(chain_id, 4663) AS chain_id,
                       chain AS live_chain, name AS live_name,
                       token_live_at AS live_token_live, ath_usd AS live_ath,
-                      website AS live_website, x_handle AS live_x
+                      website AS live_website, x_handle AS live_x,
+                      ath_source AS live_ath_source,
+                      current_market_cap_usd AS live_market_cap,
+                      observed_peak_market_cap_usd AS live_observed_peak_market_cap,
+                      fdv_usd AS live_fdv,
+                      current_liquidity_usd AS live_liquidity,
+                      market_pair_url AS live_market_pair_url,
+                      market_data_at AS live_market_data_at,
+                      COALESCE(is_qualified, 0) AS live_is_qualified,
+                      COALESCE(is_training_anchor, 0) AS live_is_training_anchor,
+                      COALESCE(is_dex_paid, 0) AS live_is_dex_paid
                FROM tokens''',
             connection,
         )
@@ -82,7 +92,17 @@ if db_path.exists():
                           WHEN tm.best_match_pct >= 30 THEN 'WATCH'
                           ELSE 'TRACKED'
                       END AS confidence,
-                      tm.match_reasons AS evidence
+                      tm.match_reasons AS evidence,
+                      COALESCE(t.is_qualified, 0) AS live_is_qualified,
+                      COALESCE(t.is_training_anchor, 0) AS live_is_training_anchor,
+                      COALESCE(t.is_dex_paid, 0) AS live_is_dex_paid,
+                      t.ath_source AS live_ath_source,
+                      t.current_market_cap_usd AS live_market_cap,
+                      t.observed_peak_market_cap_usd AS live_observed_peak_market_cap,
+                      t.fdv_usd AS live_fdv,
+                      t.current_liquidity_usd AS live_liquidity,
+                      t.market_pair_url AS live_market_pair_url,
+                      t.market_data_at AS live_market_data_at
                FROM tokens t
                LEFT JOIN token_matches tm ON LOWER(t.ca) = LOWER(tm.ca)''',
             connection,
@@ -141,40 +161,11 @@ def parse_dt(s):
     return None
 
 
-def calc_lifespan(t_live_str, t_social_str, t_boost_str, ath, chain_id):
-    # Arc tokens or live active pairs are marked ongoing / alive
-    if chain_id == 5042:
-        return True, None, "🟢 Still Alive"
-    
-    t_live = parse_dt(t_live_str)
-    t_social = parse_dt(t_social_str)
-    t_boost = parse_dt(t_boost_str)
-    
-    last_event = max([t for t in (t_social, t_boost) if t is not None], default=None)
-    if t_live and last_event and last_event >= t_live:
-        sec = int((last_event - t_live).total_seconds())
-    elif t_live and ath <= 5000:
-        sec = 180  # ~3 min quick dump
-    elif ath >= 1000000:
-        sec = 7200  # ~2 hrs for million-dollar runners
-    elif ath >= 100000:
-        sec = 2100  # ~35 mins for mid runners
-    elif ath > 5000:
-        sec = 900   # ~15 mins
-    else:
-        sec = 240   # ~4 mins for failed launches
-        
-    mins = round(sec / 60)
-    if mins < 1:
-        s = "< 1 min"
-    elif mins < 60:
-        s = f"{mins} mins"
-    elif mins < 1440:
-        s = f"{sec / 3600:.1f} hrs"
-    else:
-        s = f"{sec / 86400:.1f} days"
-        
-    return False, sec, s
+def market_status(market_data_at):
+    """A current pair observation is not proof of lifespan or rug timing."""
+    if first_present(market_data_at):
+        return True, False, None, "Market observed"
+    return False, False, None, "Unknown"
 
 
 # Prepare candidates JSON structure for client-side JavaScript
@@ -195,12 +186,15 @@ for idx, r in merged.iterrows():
     live_ath = float(r.get('live_ath') or 0) if pd.notna(r.get('live_ath')) else 0.0
     historical_ath = float(r.get('ath') or 0) if pd.notna(r.get('ath')) else 0.0
     ath = max(live_ath, historical_ath, 0.0)
+    ath_source = str(first_present(r.get('live_ath_source'), 'tgscan_archive' if historical_ath > 0 else None) or '')
+    ath_known = bool(ath_source and ath > 0)
+    market_cap = float(r.get('live_market_cap')) if pd.notna(r.get('live_market_cap')) else None
+    observed_peak_market_cap = float(r.get('live_observed_peak_market_cap')) if pd.notna(r.get('live_observed_peak_market_cap')) else None
+    fdv = float(r.get('live_fdv')) if pd.notna(r.get('live_fdv')) else None
+    current_liquidity = float(r.get('live_liquidity')) if pd.notna(r.get('live_liquidity')) else None
+    market_data_at = str(first_present(r.get('live_market_data_at')) or '')
     token_live = str(first_present(r.get('live_token_live'), r.get('token_live')) or '')
-    t_social = str(r.get('time_social_paid') or '')
-    t_boost = str(r.get('1st_boost') or '')
-    
-    is_alive, lifespan_sec, lifespan_str = calc_lifespan(token_live, t_social, t_boost, ath, chain_id)
-    is_rug = not is_alive
+    is_alive, is_rug, lifespan_sec, lifespan_str = market_status(market_data_at)
     
     # Parse evidence
     ev_raw = r['evidence']
@@ -217,12 +211,23 @@ for idx, r in merged.iterrows():
         "name": name,
         "confidence": conf,
         "score": score,
+        "is_qualified": bool(int(r.get("live_is_qualified") or 0)),
+        "is_training_anchor": bool(int(r.get("live_is_training_anchor") or 0)),
+        "is_dex_paid": bool(int(r.get("live_is_dex_paid") or 0)),
         "team": team,
         "best_match_symbol": best_match_symbol,
         "best_match_ca": best_match_ca,
         "best_match_chain_id": best_match_chain_id,
         "best_match_chain": best_match_chain,
-        "ath": ath,
+        "ath": ath if ath_known else None,
+        "ath_known": ath_known,
+        "ath_source": ath_source,
+        "market_cap": market_cap,
+        "observed_peak_market_cap": observed_peak_market_cap,
+        "fdv": fdv,
+        "current_liquidity": current_liquidity,
+        "market_pair_url": str(first_present(r.get("live_market_pair_url")) or ""),
+        "market_data_at": market_data_at,
         "is_rug": is_rug,
         "is_alive": is_alive,
         "lifespan_sec": lifespan_sec,
@@ -1174,6 +1179,18 @@ html_content = f"""<!DOCTYPE html>
             margin-left: 6px;
             vertical-align: middle;
         }}
+        .qualification-pill {{
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.16);
+            color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.45);
+            padding: 2px 6px;
+            margin-left: 6px;
+            border-radius: 999px;
+            font-size: 9px;
+            font-weight: 900;
+            letter-spacing: 0.04em;
+        }}
         .score-val {{
             font-size: 15px;
             font-weight: 800;
@@ -1601,9 +1618,9 @@ html_content = f"""<!DOCTYPE html>
                 <div class="subtext">Shared habit & bytecode traces</div>
             </div>
             <div class="stat-card" style="--stat-accent: #f59e0b;">
-                <div class="title">Rug Timing / Lifespan</div>
-                <div class="val" id="stat-rug-leads" style="color: #fbbf24;">~25m</div>
-                <div class="subtext" id="stat-rug-sub">Median time to rug pull</div>
+                <div class="title">Live Market Coverage</div>
+                <div class="val" id="stat-rug-leads" style="color: #fbbf24;">0</div>
+                <div class="subtext" id="stat-rug-sub">Tokens refreshed from live pairs</div>
             </div>
             <div class="stat-card" style="--stat-accent: #10b981;">
                 <div class="title" id="stat-runner-title">Top Runner Peak ATH</div>
@@ -1628,9 +1645,9 @@ html_content = f"""<!DOCTYPE html>
                         <option value="ALL">All Teams</option>
                     </select>
                     <select id="leads-rug-filter" class="select-input" onchange="filterLeadsTable()">
-                        <option value="ALL">All Status (Alive & Rugged)</option>
-                        <option value="ALIVE_ONLY">🟢 Still Alive Only</option>
-                        <option value="RUG_ONLY">⏱️ Rugged Tokens Only</option>
+                        <option value="ALL">All Market Statuses</option>
+                        <option value="ALIVE_ONLY">🟢 Market Observed</option>
+                        <option value="RUG_ONLY">Confirmed Rugs Only</option>
                     </select>
                     <span class="team-indicator-badge" id="team-indicator-badge" title="Identified dev teams in this view">👥 <b id="team-found-count">0</b> Teams Identified</span>
 
@@ -1649,7 +1666,7 @@ html_content = f"""<!DOCTYPE html>
 
                     <!-- Time to Rug: Min Box - Slider - Max Box -->
                     <div class="range-inline-group">
-                        <span class="range-inline-label">⏱️ Rug:</span>
+                        <span class="range-inline-label">⏱️ Verified rug time:</span>
                         <input type="text" id="rug-min-input" class="range-input-box" value="0m" placeholder="Min" title="Type min time (e.g. 0m, 5m, 30m, 1h)" onchange="onRugBoxChange('min', this.value)">
                         <div class="dual-range-track rug-track" id="rug-track-wrap">
                             <div class="dual-rail-bg"></div>
@@ -1680,8 +1697,8 @@ html_content = f"""<!DOCTYPE html>
                             <th class="sortable" onclick="sortLeads('token')" style="cursor: pointer;">Token / Contract ↕</th>
                             <th class="sortable" onclick="sortLeads('team')" style="cursor: pointer;">Inferred Team ↕</th>
                             <th class="sortable" onclick="sortLeads('best_match_symbol')" style="cursor: pointer;">Nearest Sibling Token ↕</th>
-                            <th class="sortable" onclick="sortLeads('ath')" style="cursor: pointer;">Peak ATH ↕</th>
-                            <th class="sortable" onclick="sortLeads('lifespan')" style="cursor: pointer;">Lifespan (Time to Rug) ↕</th>
+                            <th class="sortable" onclick="sortLeads('ath')" style="cursor: pointer;">Current MC / Sourced ATH ↕</th>
+                            <th class="sortable" onclick="sortLeads('lifespan')" style="cursor: pointer;">Verified Status / Lifespan ↕</th>
                             <th class="sortable" onclick="sortLeads('date')" style="cursor: pointer;">Launch Date (UTC) ↕</th>
                             <th>Top Matching Evidence (Proximity)</th>
                             <th>Live Charts / Actions</th>
@@ -1845,19 +1862,36 @@ html_content = f"""<!DOCTYPE html>
                     reliability: Math.max(0, Math.min(1, number(item.reliability))),
                     proximity: Math.max(0, Math.min(1, number(item.proximity, 1)))
                 }})) : [];
-            const ath = Math.max(0, number(raw.ath));
+            const optionalNumber = value => {{
+                if (value === null || value === undefined || value === '') return null;
+                const parsed = Number(value);
+                return Number.isFinite(parsed) ? Math.max(0, parsed) : null;
+            }};
+            const ath = optionalNumber(raw.ath);
+            const marketCap = optionalNumber(raw.market_cap);
+            const observedPeakMarketCap = optionalNumber(raw.observed_peak_market_cap);
+            const fdv = optionalNumber(raw.fdv);
+            const currentLiquidity = optionalNumber(raw.current_liquidity);
             const isAlive = Boolean(raw.is_alive);
-            const lifespanSec = number(raw.lifespan_sec, 0);
-            const lifespanStr = clean(raw.lifespan_str, 32) || (isAlive ? '🟢 Still Alive' : (ath <= 5000 ? '< 5 mins' : '~25 mins'));
+            const lifespanSec = optionalNumber(raw.lifespan_sec);
+            const lifespanStr = clean(raw.lifespan_str, 32) || (isAlive ? 'Market observed' : 'Unknown');
             return {{
                 ca, chain_id: chainId, chain: chainName,
                 symbol: clean(raw.symbol, 80), name: clean(raw.name, 200),
                 confidence, score: Math.max(0, Math.min(100, number(raw.score))),
+                is_qualified: Boolean(raw.is_qualified),
+                is_training_anchor: Boolean(raw.is_training_anchor),
+                is_dex_paid: Boolean(raw.is_dex_paid),
                 team: clean(raw.team || 'unclustered', 120),
                 best_match_symbol: clean(raw.best_match_symbol, 80),
                 best_match_ca: /^0x[0-9a-fA-F]{{40}}$/.test(bestCa) ? bestCa : '',
                 best_match_chain_id: bestMatchChainId, best_match_chain: bestMatchChainName,
-                ath, is_rug: Boolean(raw.is_rug), is_alive: isAlive,
+                ath, ath_known: Boolean(raw.ath_known) && ath !== null,
+                ath_source: clean(raw.ath_source, 80),
+                market_cap: marketCap, observed_peak_market_cap: observedPeakMarketCap,
+                fdv, current_liquidity: currentLiquidity,
+                market_data_at: clean(raw.market_data_at, 64),
+                is_rug: Boolean(raw.is_rug), is_alive: isAlive,
                 lifespan_sec: lifespanSec, lifespan_str: lifespanStr,
                 evidence,
                 token_live: clean(raw.token_live, 64),
@@ -2044,7 +2078,7 @@ html_content = f"""<!DOCTYPE html>
             let highCount = 0;
             let probCount = 0;
             let watchCount = 0;
-            let rugCount = 0;
+            let marketObservedCount = 0;
             let universeCount = 0;
             let maxAth = 0.0;
             let topRunnerStr = '-';
@@ -2067,12 +2101,12 @@ html_content = f"""<!DOCTYPE html>
                 const matchesChain = (activeChainFilter === 'ALL' || String(cand.chain_id) === activeChainFilter);
                 if (matchesChain) {{
                     universeCount++;
-                    if (cand.is_rug) rugCount++;
+                    if (cand.is_alive) marketObservedCount++;
                     if (cand.confidence === 'HIGH_LEAD') highCount++;
                     else if (cand.confidence === 'PROBABLE_LEAD') probCount++;
                     else if (cand.confidence === 'WATCH') watchCount++;
 
-                    if (cand.ath > maxAth) {{
+                    if (cand.ath_known && cand.ath > maxAth) {{
                         maxAth = cand.ath;
                         topRunnerStr = `$${{cand.symbol || 'TOKEN'}} • ${{cand.team || 'unclustered'}}`;
                     }}
@@ -2087,10 +2121,10 @@ html_content = f"""<!DOCTYPE html>
             if (document.getElementById('stat-high-leads')) document.getElementById('stat-high-leads').textContent = highCount;
             if (document.getElementById('stat-prob-leads')) document.getElementById('stat-prob-leads').textContent = probCount;
             if (document.getElementById('stat-rug-leads')) {{
-                document.getElementById('stat-rug-leads').textContent = (activeChainFilter === '5042') ? '0' : rugCount;
+                document.getElementById('stat-rug-leads').textContent = marketObservedCount;
             }}
             if (document.getElementById('stat-rug-sub')) {{
-                document.getElementById('stat-rug-sub').textContent = (activeChainFilter === '5042') ? 'All 5 tokens alive' : 'Median lifespan: ~25 mins';
+                document.getElementById('stat-rug-sub').textContent = 'Tokens refreshed from live Dex pairs';
             }}
 
             if (document.getElementById('stat-runner-val')) {{
@@ -2369,9 +2403,13 @@ html_content = f"""<!DOCTYPE html>
                 if (rugFilter === 'RUGS_ONLY' && !c.is_rug) return false;
 
                 // ATH Min/Max filter
-                const candAth = Number(c.ath) || 0;
-                if (candAth < activeAthMin) return false;
-                if (activeAthMax !== Infinity && candAth > activeAthMax) return false;
+                if (c.ath_known) {{
+                    const candAth = Number(c.ath);
+                    if (candAth < activeAthMin) return false;
+                    if (activeAthMax !== Infinity && candAth > activeAthMax) return false;
+                }} else if (activeAthMin > 0 || activeAthMax !== Infinity) {{
+                    return false;
+                }}
 
                 // Time to Rug Min/Max filter
                 const minRugSec = activeRugMinMins * 60;
@@ -2380,10 +2418,12 @@ html_content = f"""<!DOCTYPE html>
                     if (minRugSec > 0 || maxRugSec !== Infinity) {{
                         if (!includeAlive) return false;
                     }}
-                }} else {{
-                    const candLife = (c.lifespan_sec !== null && c.lifespan_sec !== undefined) ? Number(c.lifespan_sec) : (c.ath <= 5000 ? 180 : 1500);
+                }} else if (c.lifespan_sec !== null && c.lifespan_sec !== undefined) {{
+                    const candLife = Number(c.lifespan_sec);
                     if (candLife < minRugSec) return false;
                     if (maxRugSec !== Infinity && candLife > maxRugSec) return false;
+                }} else if (minRugSec > 0 || maxRugSec !== Infinity) {{
+                    return false;
                 }}
 
                 if (searchTerm) {{
@@ -2407,8 +2447,8 @@ html_content = f"""<!DOCTYPE html>
                     valA = order[valA] || 0;
                     valB = order[valB] || 0;
                 }} else if (sortCol === 'ath') {{
-                    valA = a.ath || 0;
-                    valB = b.ath || 0;
+                    valA = a.ath_known ? a.ath : -1;
+                    valB = b.ath_known ? b.ath : -1;
                 }} else if (sortCol === 'lifespan') {{
                     valA = a.is_alive ? 999999999 : (a.lifespan_sec || 0);
                     valB = b.is_alive ? 999999999 : (b.lifespan_sec || 0);
@@ -2450,35 +2490,28 @@ html_content = f"""<!DOCTYPE html>
                     evHtml = '<span style="color: var(--text-muted); font-size: 11px;">No discrete evidence</span>';
                 }}
 
-                // Format Peak MC
-                let mcFormatted = '$0';
-                let mcClass = 'mc-low';
-                if (c.ath >= 1000000) {{
-                    mcFormatted = `$${{(c.ath / 1000000).toFixed(2)}}M`;
-                    mcClass = 'mc-high';
-                }} else if (c.ath >= 100000) {{
-                    mcFormatted = `$${{Math.round(c.ath / 1000)}}K`;
-                    mcClass = 'mc-mid';
-                }} else if (c.ath >= 1000) {{
-                    mcFormatted = `$${{(c.ath / 1000).toFixed(1)}}K`;
-                    mcClass = 'mc-sub';
-                }} else if (c.ath > 0) {{
-                    mcFormatted = `$${{Math.round(c.ath).toLocaleString()}}`;
-                    mcClass = 'mc-low';
-                }} else {{
-                    mcFormatted = '<$1K';
-                    mcClass = 'mc-low';
-                }}
+                const formatUsd = value => {{
+                    if (value === null || value === undefined) return 'N/A';
+                    if (value >= 1000000) return `$${{(value / 1000000).toFixed(2)}}M`;
+                    if (value >= 1000) return `$${{(value / 1000).toFixed(1)}}K`;
+                    return `$${{Math.round(value).toLocaleString()}}`;
+                }};
+                const mcValue = c.market_cap !== null ? c.market_cap : c.fdv;
+                const mcLabel = c.market_cap !== null ? 'MC' : (c.fdv !== null ? 'FDV' : 'MC');
+                const mcFormatted = formatUsd(mcValue);
+                const athFormatted = c.ath_known ? formatUsd(c.ath) : 'N/A';
+                const mcClass = mcValue !== null && mcValue >= 1000000 ? 'mc-high'
+                    : mcValue !== null && mcValue >= 100000 ? 'mc-mid'
+                    : mcValue !== null && mcValue >= 1000 ? 'mc-sub' : 'mc-low';
 
-                // Lifespan / Status display
+                // A live pair observation is not proof of token lifespan or rug time.
                 let statusBadge = '';
                 if (c.is_alive) {{
-                    statusBadge = '<span class="status-pill alive" title="Actively trading token • Liquidity intact">🟢 Still Alive</span>';
+                    statusBadge = '<span class="status-pill alive" title="A market pair was observed during the latest refresh">🟢 Market observed</span>';
+                }} else if (c.is_rug && c.lifespan_sec !== null) {{
+                    statusBadge = `<span class="status-pill rug" title="Verified lifespan from a sourced rug timestamp">⏱️ ${{c.lifespan_str}}</span>`;
                 }} else {{
-                    const lStr = c.lifespan_str || (c.ath <= 5000 ? '< 5 mins' : '~25 mins');
-                    const isQuick = (c.lifespan_sec && c.lifespan_sec <= 600) || lStr.includes('< 5') || lStr.includes('< 1');
-                    const badgeCls = isQuick ? 'status-pill quick-rug' : 'status-pill rug';
-                    statusBadge = `<span class="${{badgeCls}}" title="Active lifespan before liquidity pull / dump">⏱️ ${{lStr}}</span>`;
+                    statusBadge = '<span class="status-pill" title="No verified rug timestamp and no current pair observation">Status unknown</span>';
                 }}
 
                 const isArc = c.chain_id === 5042;
@@ -2504,6 +2537,7 @@ html_content = f"""<!DOCTYPE html>
                         <div>
                             <span class="token-symbol">$${{c.symbol}}</span>
                             <span class="${{chainPillClass}}">${{chainPillLabel}}</span>
+                            ${{c.is_qualified ? `<span class="qualification-pill" title="Passed an auditable migrated or DEX-paid evidence gate; this is not a team-training label">QUALIFIED</span>` : ''}}
                             <span class="token-name">${{c.name !== c.symbol ? c.name : ''}}</span>
                         </div>
                         <div class="token-ca">
@@ -2518,8 +2552,8 @@ html_content = f"""<!DOCTYPE html>
                         ${{sibCaShort ? `<div style="font-size: 10px; color: var(--text-muted); font-family: monospace; margin-top: 2px;"><code>${{sibCaShort}}</code></div>` : ''}}
                     </td>
                     <td>
-                        <div class="mc-val ${{mcClass}}" title="Peak ATH: $${{c.ath.toLocaleString('en-US')}}">${{mcFormatted}}</div>
-                        ${{c.ath > 0 ? `<div style="font-size: 10px; color: var(--text-muted); font-family: monospace;">$${{Math.round(c.ath).toLocaleString()}}</div>` : ''}}
+                        <div class="mc-val ${{mcClass}}" title="Latest observed market value">${{mcLabel}} ${{mcFormatted}}</div>
+                        <div style="font-size: 10px; color: var(--text-muted); font-family: monospace;" title="Historical ATH is shown only when a source is recorded">ATH ${{athFormatted}}</div>
                     </td>
                     <td>${{statusBadge}}</td>
                     <td class="date-cell">${{dateDisplay}}</td>

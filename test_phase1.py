@@ -97,7 +97,10 @@ class Phase1ReportTests(unittest.TestCase):
     def test_schema_supports_qualified_report(self):
         with tempfile.TemporaryDirectory() as directory:
             db = ForensicDatabase(str(Path(directory) / "test.db"))
-            db.upsert_token({"ca": "0x" + "1" * 40, "symbol": "ONE", "is_qualified": True})
+            db.upsert_token({
+                "ca": "0x" + "1" * 40, "symbol": "ONE",
+                "is_qualified": True, "is_training_anchor": True,
+            })
             report = build_report(db, qualified_only=True)
             self.assertEqual(report["token_count"], 1)
 

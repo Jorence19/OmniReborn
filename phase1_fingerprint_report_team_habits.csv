@@ -4,8 +4,11 @@ team astro,31,method_selector,434d13e2,30,96.77
 team astro,31,funder_label,fresh wallet,27,87.1
 team astro,31,funder_1hop,0xf70da97812cb96acdf810712aa562db8dfa3dbef,11,35.48
 team astro,31,value_eth,4663:0.0005,10,32.26
+team astro,31,launch_weekday_utc,monday,5,16.13
 team astro,31,nonce,1,4,12.9
 team astro,31,funder_1hop,0x88d25c861938a91af4ad57ad964a8fcc6c6351d3,3,9.68
+team astro,31,launch_weekday_utc,wednesday,3,9.68
+team astro,31,launch_weekday_utc,tuesday,3,9.68
 team astro,31,nonce,5,3,9.68
 team astro,31,nonce,2,3,9.68
 team astro,31,priority_gwei,4663:0.1,3,9.68
@@ -13,9 +16,14 @@ team astro,31,dev_wallet,0xdeaa8c051053074b61f5d09b6543feabdf3f605a,2,6.45
 team astro,31,fund_amount,4663:1.9998,2,6.45
 team astro,31,funder_1hop,0xfd3cc7c8a2f26c13a9862f89a57833d63c9f10ff,2,6.45
 team astro,31,gwei,4663:0.098014,2,6.45
+team astro,31,launch_hour_utc,15,2,6.45
+team astro,31,launch_hour_utc,21,2,6.45
+team astro,31,launch_hour_utc,01,2,6.45
+team astro,31,launch_hour_utc,16,2,6.45
+team astro,31,launch_weekday_utc,sunday,2,6.45
 team astro,31,nonce,3,2,6.45
-team astro,31,nonce,9,2,6.45
 team astro,31,nonce,8,2,6.45
+team astro,31,nonce,9,2,6.45
 team astro,31,priority_gwei,4663:0.00000001,2,6.45
 team astro,31,value_eth,4663:0.5005,2,6.45
 team gigalon,14,funder_label,fresh wallet,14,100.0
@@ -40,6 +48,7 @@ team intel,3,funder_label,fresh wallet,3,100.0
 team intel,3,launchpad,pons,3,100.0
 team intel,3,method_selector,815842cf,3,100.0
 team intel,3,template_hash,a78b5f805b8a06dd7770e6d6a4d338563e17b2218f84fa6c3d98c1a640e6ae6b,3,100.0
+team intel,3,launch_hour_utc,14,2,66.67
 team data,2,funder_1hop,0xf70da97812cb96acdf810712aa562db8dfa3dbef,2,100.0
 team data,2,funder_label,fresh wallet,2,100.0
 team data,2,launchpad,pons,2,100.0

@@ -21,7 +21,7 @@ Production collection requires private/archive-capable RPCs for both enabled cha
 - SIGTERM/SIGINT produces a graceful stop; systemd restarts failures.
 - A five-minute watchdog restarts a hung/stale service.
 - Daily backups use SQLite's online backup API, verify `integrity_check`, write SHA-256 checksums, and keep 14 days.
-- Live discoveries set migrated/DEX-paid gates but never automatically become qualified training anchors.
+- Live discoveries that pass migrated/DEX-paid gates become qualified but never automatically become trusted training anchors.
 - Chain ID is preserved from queue through enrichment, reporting, API validation, and dashboard links.
 - Native-denominated Robinhood ETH values and Arc USDC values are never treated as comparable habits.
 - A same-address/different-chain registry collision fails closed instead of silently overwriting forensic evidence.
@@ -30,7 +30,7 @@ Production collection requires private/archive-capable RPCs for both enabled cha
 
 The Robinhood on-chain backfill scans every Uniswap v4 `Initialize` event emitted by the official Robinhood Chain PoolManager. This is exhaustive only for pools created through that PoolManager, not for contracts that never use it.
 
-Arc is currently discovered through DexScreener boost/profile/ads feeds and dated search, then enriched through Etherscan V2 and Arc RPC. This is production-safe and resumable, but it is not an exhaustive Arc token/pool indexer. Do not describe it as retrieving every Arc contract or every Arc token. Exhaustive Arc coverage requires a verified Arc factory/PoolManager event source or a full contract-creation indexer.
+Arc is currently discovered through DexScreener boost/profile/ads feeds and dated search, then enriched through ArcScan and Arc RPC. This is production-safe and resumable, but it is not an exhaustive Arc token/pool indexer. Do not describe it as retrieving every Arc contract or every Arc token. Exhaustive Arc coverage requires a verified Arc factory/PoolManager event source or a full contract-creation indexer.
 
 A rare identical 20-byte contract address appearing on both chains is rejected and dead-lettered because the legacy profile tables are address-keyed. This prevents corruption but means literal all-address coverage requires a future composite-key schema migration.
 
@@ -60,7 +60,7 @@ Required values:
 - `ROBINHOOD_RPC_URL` pointing to a private/archive-capable endpoint
 - `ARC_RPC_URL` pointing to a private/archive-capable Arc endpoint
 - `ENABLED_CHAIN_IDS=4663,5042`
-- `ETHERSCAN_API_KEY`, or a unified Etherscan V2 key in `ROBIN_ETHERSCAN_API_KEY`
+- `ARC_EXPLORER_API_URL=https://api.arc-scan.org/api` (no Arc Etherscan key required)
 - deployment paths from `.env.example`
 
 Rerun the installer, update the Nginx `server_name`, enable the site, and obtain SSL:
@@ -132,6 +132,6 @@ Shared hosting can serve the static dashboard only. Upload `index.html` and `.ht
 - Robinhood Chain endpoints: https://docs.robinhood.com/chain/connecting/
 - Arc network parameters: https://docs.arc.io/arc/references/connect-to-arc
 - Arc node providers: https://docs.arc.io/arc/tools/node-providers
-- ArcScan and Etherscan API: https://info.etherscan.com/what-is-arcscan/
+- ArcScan API: https://docs.arc-scan.org/docs/api
 - Uniswap v4 deployments: https://developers.uniswap.org/docs/protocols/v4/deployments
 - DexScreener API limits and endpoints: https://docs.dexscreener.com/api/reference

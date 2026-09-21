@@ -820,10 +820,10 @@
       "symbol": "SCR"
     },
     {
-      "best_match_ca": "0x85BD531bA0787D14fF20aa5a3d49E0E44Ac9650C",
+      "best_match_ca": "0x4fFCE3A117e17076C072Fb95E447b2361f69763B",
       "best_match_chain": "RBH",
       "best_match_chain_id": 4663,
-      "best_match_symbol": "HABITS",
+      "best_match_symbol": "SAFEMOON",
       "ca": "0xF708a91B30Ffae94B217d5c388A072BFCa88313C",
       "candidate_score": 87.3,
       "chain": "RBH",
@@ -862,10 +862,10 @@
       "symbol": "BUBBLE"
     },
     {
-      "best_match_ca": "0x85BD531bA0787D14fF20aa5a3d49E0E44Ac9650C",
+      "best_match_ca": "0x4fFCE3A117e17076C072Fb95E447b2361f69763B",
       "best_match_chain": "RBH",
       "best_match_chain_id": 4663,
-      "best_match_symbol": "HABITS",
+      "best_match_symbol": "SAFEMOON",
       "ca": "0x7A80b90e1c0e7365e7A71551791b539dF68b2ecF",
       "candidate_score": 87.3,
       "chain": "RBH",
@@ -4285,10 +4285,10 @@
       "symbol": "Evolve"
     },
     {
-      "best_match_ca": "0x85BD531bA0787D14fF20aa5a3d49E0E44Ac9650C",
+      "best_match_ca": "0x6a50F139F3eD4C9c7bDa0D067c5Ed09De1EEBbeA",
       "best_match_chain": "RBH",
       "best_match_chain_id": 4663,
-      "best_match_symbol": "HABITS",
+      "best_match_symbol": "CLAWNCH",
       "ca": "0xDF09eDb6B7C7de7c8472E243d78681b71aCEd3de",
       "candidate_score": 33.98,
       "chain": "RBH",
@@ -4296,13 +4296,13 @@
       "confidence": "WATCH",
       "evidence": [
         {
-          "anchor_value": "0.0000",
+          "anchor_value": "0.0005",
           "contribution": 0.22,
-          "feature": "priority_gwei",
+          "feature": "value_eth",
           "proximity": 1.0,
           "reliability": 0.22,
           "type": "numeric",
-          "value": "0.0000 (ref: 0.0000)"
+          "value": "0.0005 (ref: 0.0005)"
         },
         {
           "anchor_value": "434d13e2",
@@ -5461,10 +5461,10 @@
       "symbol": "FLYBLOCKS"
     },
     {
-      "best_match_ca": "0xD9E82b01fbD8EB7A59D456fEf3B56D39d90caa47",
+      "best_match_ca": "0xEb24a2663af4Ee979dCbfE39cB95B5F12D369c4B",
       "best_match_chain": "RBH",
       "best_match_chain_id": 4663,
-      "best_match_symbol": "Grok",
+      "best_match_symbol": "CEREBRO",
       "ca": "0x232A0614bf27D0163cA73FA14772f420dE3E0041",
       "candidate_score": 28.24,
       "chain": "RBH",
@@ -5490,7 +5490,7 @@
           "value": "pons"
         }
       ],
-      "inferred_team": "team gigalon",
+      "inferred_team": "team astro",
       "symbol": "BUCKAZOID"
     },
     {
@@ -5527,10 +5527,10 @@
       "symbol": "CASHCAT"
     },
     {
-      "best_match_ca": "0x197de420B5a5Ce9420d25893835CA585d207FbC6",
+      "best_match_ca": "0x34c65Bd35D0a081B3A2dEE84856ddDd8fD00E69e",
       "best_match_chain": "RBH",
       "best_match_chain_id": 4663,
-      "best_match_symbol": "OPEC",
+      "best_match_symbol": "NYSE",
       "ca": "0xfCE34D21A92069100E3226638140706cF03a266E",
       "candidate_score": 28.24,
       "chain": "RBH",
@@ -5593,10 +5593,10 @@
       "symbol": "HOP"
     },
     {
-      "best_match_ca": "0x197de420B5a5Ce9420d25893835CA585d207FbC6",
+      "best_match_ca": "0x34c65Bd35D0a081B3A2dEE84856ddDd8fD00E69e",
       "best_match_chain": "RBH",
       "best_match_chain_id": 4663,
-      "best_match_symbol": "OPEC",
+      "best_match_symbol": "NYSE",
       "ca": "0xbEF83DA2237be439d0BE0b50d452b89A6968B112",
       "candidate_score": 28.24,
       "chain": "RBH",
@@ -5626,10 +5626,10 @@
       "symbol": "LOOT"
     },
     {
-      "best_match_ca": "0xD9E82b01fbD8EB7A59D456fEf3B56D39d90caa47",
+      "best_match_ca": "0xEb24a2663af4Ee979dCbfE39cB95B5F12D369c4B",
       "best_match_chain": "RBH",
       "best_match_chain_id": 4663,
-      "best_match_symbol": "Grok",
+      "best_match_symbol": "CEREBRO",
       "ca": "0x9fB69d90B0D29eE9D52f72261F6c6a9C5FF4aD3E",
       "candidate_score": 28.24,
       "chain": "RBH",
@@ -5655,14 +5655,14 @@
           "value": "pons"
         }
       ],
-      "inferred_team": "team gigalon",
+      "inferred_team": "team astro",
       "symbol": "MINR"
     },
     {
-      "best_match_ca": "0xD9E82b01fbD8EB7A59D456fEf3B56D39d90caa47",
+      "best_match_ca": "0xEb24a2663af4Ee979dCbfE39cB95B5F12D369c4B",
       "best_match_chain": "RBH",
       "best_match_chain_id": 4663,
-      "best_match_symbol": "Grok",
+      "best_match_symbol": "CEREBRO",
       "ca": "0x3B16959A2A2Ee60d26fbbadad74628aa6f6B97b4",
       "candidate_score": 28.24,
       "chain": "RBH",
@@ -5688,7 +5688,7 @@
           "value": "pons"
         }
       ],
-      "inferred_team": "team gigalon",
+      "inferred_team": "team astro",
       "symbol": "MUSEBOOK"
     },
     {
@@ -6154,10 +6154,58 @@
       "symbol": "Chad"
     },
     {
-      "best_match_ca": "0x4fFCE3A117e17076C072Fb95E447b2361f69763B",
+      "best_match_ca": "0x6a50F139F3eD4C9c7bDa0D067c5Ed09De1EEBbeA",
       "best_match_chain": "RBH",
       "best_match_chain_id": 4663,
-      "best_match_symbol": "SAFEMOON",
+      "best_match_symbol": "CLAWNCH",
+      "ca": "0xc45ae84e38871a2c1cd9eeec489680edbcaa146b",
+      "candidate_score": 22.0,
+      "chain": "ARC",
+      "chain_id": 5042,
+      "confidence": "WEAK",
+      "evidence": [
+        {
+          "anchor_value": "2",
+          "contribution": 0.22,
+          "feature": "nonce",
+          "proximity": 1.0,
+          "reliability": 0.22,
+          "type": "numeric",
+          "value": "2"
+        }
+      ],
+      "inferred_team": "team astro",
+      "symbol": "BULL"
+    },
+    {
+      "best_match_ca": "0x85BD531bA0787D14fF20aa5a3d49E0E44Ac9650C",
+      "best_match_chain": "RBH",
+      "best_match_chain_id": 4663,
+      "best_match_symbol": "HABITS",
+      "ca": "0x4d57060f3825d3b995f35a30194f3e74e105f3ec",
+      "candidate_score": 22.0,
+      "chain": "ARC",
+      "chain_id": 5042,
+      "confidence": "WEAK",
+      "evidence": [
+        {
+          "anchor_value": "9",
+          "contribution": 0.22,
+          "feature": "nonce",
+          "proximity": 1.0,
+          "reliability": 0.22,
+          "type": "numeric",
+          "value": "9"
+        }
+      ],
+      "inferred_team": "team astro",
+      "symbol": "VORT"
+    },
+    {
+      "best_match_ca": "0xB98bF424fA411057500f737FdB773Ed874c98312",
+      "best_match_chain": "RBH",
+      "best_match_chain_id": 4663,
+      "best_match_symbol": "FLOOR",
       "ca": "0x8bcb94279FC2c984EC34e0C1f2192df8c69EA4F0",
       "candidate_score": 20.14,
       "chain": "RBH",
@@ -6183,7 +6231,7 @@
           "value": "pons"
         }
       ],
-      "inferred_team": "team astro",
+      "inferred_team": "unclustered",
       "symbol": "HDLT"
     },
     {
@@ -6238,8 +6286,8 @@
   "fingerprint_catalog": [
     {
       "feature": "funder_1hop",
-      "fingerprint_strength": 93.52,
-      "global_prevalence_pct": 1.99,
+      "fingerprint_strength": 93.55,
+      "global_prevalence_pct": 1.94,
       "global_token_count": 5,
       "leading_team": "team robinary",
       "qualified_precision_pct": 100.0,
@@ -6264,8 +6312,8 @@
     },
     {
       "feature": "template_hash",
-      "fingerprint_strength": 93.52,
-      "global_prevalence_pct": 1.99,
+      "fingerprint_strength": 93.55,
+      "global_prevalence_pct": 1.94,
       "global_token_count": 5,
       "leading_team": "team robinary",
       "qualified_precision_pct": 100.0,
@@ -6290,8 +6338,8 @@
     },
     {
       "feature": "fund_amount",
-      "fingerprint_strength": 91.18,
-      "global_prevalence_pct": 1.59,
+      "fingerprint_strength": 91.21,
+      "global_prevalence_pct": 1.55,
       "global_token_count": 4,
       "leading_team": "team robinary",
       "qualified_precision_pct": 100.0,
@@ -6314,8 +6362,8 @@
     },
     {
       "feature": "funder_1hop",
-      "fingerprint_strength": 88.99,
-      "global_prevalence_pct": 1.2,
+      "fingerprint_strength": 89.01,
+      "global_prevalence_pct": 1.16,
       "global_token_count": 3,
       "leading_team": "team nchip",
       "qualified_precision_pct": 100.0,
@@ -6336,8 +6384,8 @@
     },
     {
       "feature": "method_selector",
-      "fingerprint_strength": 88.99,
-      "global_prevalence_pct": 1.2,
+      "fingerprint_strength": 89.01,
+      "global_prevalence_pct": 1.16,
       "global_token_count": 3,
       "leading_team": "team intel",
       "qualified_precision_pct": 100.0,
@@ -6358,8 +6406,8 @@
     },
     {
       "feature": "template_hash",
-      "fingerprint_strength": 88.99,
-      "global_prevalence_pct": 1.2,
+      "fingerprint_strength": 89.01,
+      "global_prevalence_pct": 1.16,
       "global_token_count": 3,
       "leading_team": "team intel",
       "qualified_precision_pct": 100.0,
@@ -6380,28 +6428,48 @@
     },
     {
       "feature": "dev_wallet",
-      "fingerprint_strength": 87.03,
-      "global_prevalence_pct": 0.8,
+      "fingerprint_strength": 87.05,
+      "global_prevalence_pct": 0.78,
       "global_token_count": 2,
       "leading_team": "team astro",
       "qualified_precision_pct": 100.0,
       "qualified_token_count": 2,
       "symbols": [
-        "HODL",
-        "astro"
+        "astro",
+        "HODL"
       ],
       "team_purity_pct": 100.0,
       "tokens": [
-        "0xD6127f456f7432A0890155522AC272B6eE78bBbb",
-        "0xdE1a4B8927769f8b6Ed07e5d5F49E7f649EbCbbd"
+        "0xdE1a4B8927769f8b6Ed07e5d5F49E7f649EbCbbd",
+        "0xD6127f456f7432A0890155522AC272B6eE78bBbb"
       ],
       "unqualified_token_count": 0,
       "value": "0xdeaa8c051053074b61f5d09b6543feabdf3f605a"
     },
     {
       "feature": "fund_amount",
-      "fingerprint_strength": 87.03,
-      "global_prevalence_pct": 0.8,
+      "fingerprint_strength": 87.05,
+      "global_prevalence_pct": 0.78,
+      "global_token_count": 2,
+      "leading_team": "team astro",
+      "qualified_precision_pct": 100.0,
+      "qualified_token_count": 2,
+      "symbols": [
+        "astro",
+        "HODL"
+      ],
+      "team_purity_pct": 100.0,
+      "tokens": [
+        "0xdE1a4B8927769f8b6Ed07e5d5F49E7f649EbCbbd",
+        "0xD6127f456f7432A0890155522AC272B6eE78bBbb"
+      ],
+      "unqualified_token_count": 0,
+      "value": "4663:1.9998"
+    },
+    {
+      "feature": "fund_amount",
+      "fingerprint_strength": 87.05,
+      "global_prevalence_pct": 0.78,
       "global_token_count": 2,
       "leading_team": "team nchip",
       "qualified_precision_pct": 100.0,
@@ -6419,49 +6487,29 @@
       "value": "4663:1.0501"
     },
     {
-      "feature": "fund_amount",
-      "fingerprint_strength": 87.03,
-      "global_prevalence_pct": 0.8,
-      "global_token_count": 2,
-      "leading_team": "team astro",
-      "qualified_precision_pct": 100.0,
-      "qualified_token_count": 2,
-      "symbols": [
-        "HODL",
-        "astro"
-      ],
-      "team_purity_pct": 100.0,
-      "tokens": [
-        "0xD6127f456f7432A0890155522AC272B6eE78bBbb",
-        "0xdE1a4B8927769f8b6Ed07e5d5F49E7f649EbCbbd"
-      ],
-      "unqualified_token_count": 0,
-      "value": "4663:1.9998"
-    },
-    {
       "feature": "funder_1hop",
-      "fingerprint_strength": 87.03,
-      "global_prevalence_pct": 0.8,
+      "fingerprint_strength": 87.05,
+      "global_prevalence_pct": 0.78,
       "global_token_count": 2,
       "leading_team": "team astro",
       "qualified_precision_pct": 100.0,
       "qualified_token_count": 2,
       "symbols": [
-        "HODL",
-        "astro"
+        "astro",
+        "HODL"
       ],
       "team_purity_pct": 100.0,
       "tokens": [
-        "0xD6127f456f7432A0890155522AC272B6eE78bBbb",
-        "0xdE1a4B8927769f8b6Ed07e5d5F49E7f649EbCbbd"
+        "0xdE1a4B8927769f8b6Ed07e5d5F49E7f649EbCbbd",
+        "0xD6127f456f7432A0890155522AC272B6eE78bBbb"
       ],
       "unqualified_token_count": 0,
       "value": "0xfd3cc7c8a2f26c13a9862f89a57833d63c9f10ff"
     },
     {
       "feature": "gwei",
-      "fingerprint_strength": 87.03,
-      "global_prevalence_pct": 0.8,
+      "fingerprint_strength": 87.05,
+      "global_prevalence_pct": 0.78,
       "global_token_count": 2,
       "leading_team": "team astro",
       "qualified_precision_pct": 100.0,
@@ -6479,29 +6527,9 @@
       "value": "4663:0.098014"
     },
     {
-      "feature": "nonce",
-      "fingerprint_strength": 87.03,
-      "global_prevalence_pct": 0.8,
-      "global_token_count": 2,
-      "leading_team": "team astro",
-      "qualified_precision_pct": 100.0,
-      "qualified_token_count": 2,
-      "symbols": [
-        "HABITS",
-        "Q"
-      ],
-      "team_purity_pct": 100.0,
-      "tokens": [
-        "0x85BD531bA0787D14fF20aa5a3d49E0E44Ac9650C",
-        "0xA9414326203dd6CB2b3D7d7d78350a8a1F7438d8"
-      ],
-      "unqualified_token_count": 0,
-      "value": "9"
-    },
-    {
       "feature": "value_eth",
-      "fingerprint_strength": 87.03,
-      "global_prevalence_pct": 0.8,
+      "fingerprint_strength": 87.05,
+      "global_prevalence_pct": 0.78,
       "global_token_count": 2,
       "leading_team": "team astro",
       "qualified_precision_pct": 100.0,
@@ -6520,8 +6548,8 @@
     },
     {
       "feature": "method_selector",
-      "fingerprint_strength": 85.52,
-      "global_prevalence_pct": 1.99,
+      "fingerprint_strength": 85.55,
+      "global_prevalence_pct": 1.94,
       "global_token_count": 5,
       "leading_team": "team nchip",
       "qualified_precision_pct": 80.0,
@@ -6543,9 +6571,29 @@
       "value": "c1d28584"
     },
     {
+      "feature": "nonce",
+      "fingerprint_strength": 77.68,
+      "global_prevalence_pct": 1.16,
+      "global_token_count": 3,
+      "leading_team": "team astro",
+      "qualified_precision_pct": 66.67,
+      "qualified_token_count": 2,
+      "symbols": [
+        "HABITS",
+        "Q"
+      ],
+      "team_purity_pct": 100.0,
+      "tokens": [
+        "0x85BD531bA0787D14fF20aa5a3d49E0E44Ac9650C",
+        "0xA9414326203dd6CB2b3D7d7d78350a8a1F7438d8"
+      ],
+      "unqualified_token_count": 1,
+      "value": "9"
+    },
+    {
       "feature": "value_eth",
-      "fingerprint_strength": 74.46,
-      "global_prevalence_pct": 2.39,
+      "fingerprint_strength": 74.5,
+      "global_prevalence_pct": 2.33,
       "global_token_count": 6,
       "leading_team": "team nchip",
       "qualified_precision_pct": 50.0,
@@ -6566,8 +6614,8 @@
     },
     {
       "feature": "template_hash",
-      "fingerprint_strength": 73.29,
-      "global_prevalence_pct": 12.75,
+      "fingerprint_strength": 73.35,
+      "global_prevalence_pct": 12.4,
       "global_token_count": 32,
       "leading_team": "team gigalon",
       "qualified_precision_pct": 43.75,
@@ -6610,8 +6658,8 @@
     },
     {
       "feature": "nonce",
-      "fingerprint_strength": 72.68,
-      "global_prevalence_pct": 1.59,
+      "fingerprint_strength": 72.71,
+      "global_prevalence_pct": 1.55,
       "global_token_count": 4,
       "leading_team": "team astro",
       "qualified_precision_pct": 50.0,
@@ -6630,8 +6678,8 @@
     },
     {
       "feature": "priority_gwei",
-      "fingerprint_strength": 72.68,
-      "global_prevalence_pct": 1.59,
+      "fingerprint_strength": 72.71,
+      "global_prevalence_pct": 1.55,
       "global_token_count": 4,
       "leading_team": "team astro",
       "qualified_precision_pct": 50.0,
@@ -6650,22 +6698,22 @@
     },
     {
       "feature": "nonce",
-      "fingerprint_strength": 71.63,
-      "global_prevalence_pct": 2.39,
+      "fingerprint_strength": 71.66,
+      "global_prevalence_pct": 2.33,
       "global_token_count": 6,
       "leading_team": "team astro",
       "qualified_precision_pct": 66.67,
       "qualified_token_count": 4,
       "symbols": [
-        "SAFEMOON",
         "FLOOR",
+        "SAFEMOON",
         "FORGE",
         "GME"
       ],
       "team_purity_pct": 75.0,
       "tokens": [
-        "0x4fFCE3A117e17076C072Fb95E447b2361f69763B",
         "0xB98bF424fA411057500f737FdB773Ed874c98312",
+        "0x4fFCE3A117e17076C072Fb95E447b2361f69763B",
         "0xA9384EB62343BB623DEAA6cBDAa0A7fd0E6c5F15",
         "0x232eCBdb38040c93EEBf497121e1241067e937bF"
       ],
@@ -6674,152 +6722,192 @@
     },
     {
       "feature": "value_eth",
-      "fingerprint_strength": 69.18,
-      "global_prevalence_pct": 13.94,
+      "fingerprint_strength": 69.25,
+      "global_prevalence_pct": 13.57,
       "global_token_count": 35,
       "leading_team": "team astro",
       "qualified_precision_pct": 28.57,
       "qualified_token_count": 10,
       "symbols": [
         "CLAWNCH",
-        "FORGE",
-        "BOOTS",
         "CEREBRO",
+        "FORGE",
         "GME",
+        "ELEPHANT",
+        "COIN",
+        "BOOTS",
         "PANTHER",
         "BYCOCKET",
-        "ROBBY",
-        "COIN",
-        "ELEPHANT"
+        "ROBBY"
       ],
       "team_purity_pct": 100.0,
       "tokens": [
         "0x6a50F139F3eD4C9c7bDa0D067c5Ed09De1EEBbeA",
-        "0xA9384EB62343BB623DEAA6cBDAa0A7fd0E6c5F15",
-        "0x63608fa42f0E1fd4427EcF548fFF59b4d71b71B0",
         "0xEb24a2663af4Ee979dCbfE39cB95B5F12D369c4B",
+        "0xA9384EB62343BB623DEAA6cBDAa0A7fd0E6c5F15",
         "0x232eCBdb38040c93EEBf497121e1241067e937bF",
+        "0x40de99E3551dEeDDBAE26fA05Eeb33d0537EE20f",
+        "0xf3203b152a88465ADcd2ea914d1667D15e01b6c3",
+        "0x63608fa42f0E1fd4427EcF548fFF59b4d71b71B0",
         "0x97BafF797Fc44F3deBb50eb62e0E1175ca360000",
         "0x173727CDe55cF8FE46fd2D9EF4a19D7188A14d3b",
-        "0xF28f00d39C6aa5fF851978a70B6dD7340891FD5f",
-        "0xf3203b152a88465ADcd2ea914d1667D15e01b6c3",
-        "0x40de99E3551dEeDDBAE26fA05Eeb33d0537EE20f"
+        "0xF28f00d39C6aa5fF851978a70B6dD7340891FD5f"
       ],
       "unqualified_token_count": 25,
       "value": "4663:0.0005"
     },
     {
       "feature": "priority_gwei",
-      "fingerprint_strength": 67.83,
-      "global_prevalence_pct": 3.98,
+      "fingerprint_strength": 67.87,
+      "global_prevalence_pct": 3.88,
       "global_token_count": 10,
       "leading_team": "team astro",
       "qualified_precision_pct": 30.0,
       "qualified_token_count": 3,
       "symbols": [
         "SOUP",
-        "HOODIECOIN",
-        "astro"
+        "astro",
+        "HOODIECOIN"
       ],
       "team_purity_pct": 100.0,
       "tokens": [
         "0x0E3c3420dA3EF7Ee6aAD373dd2cdD968f57A0788",
-        "0x55AE1d4C532fa686C168a0549DAc36c25309F0Ea",
-        "0xdE1a4B8927769f8b6Ed07e5d5F49E7f649EbCbbd"
+        "0xdE1a4B8927769f8b6Ed07e5d5F49E7f649EbCbbd",
+        "0x55AE1d4C532fa686C168a0549DAc36c25309F0Ea"
       ],
       "unqualified_token_count": 7,
       "value": "4663:0.1"
     },
     {
+      "feature": "launch_quarter_hour_utc",
+      "fingerprint_strength": 67.05,
+      "global_prevalence_pct": 0.78,
+      "global_token_count": 2,
+      "leading_team": "team intel",
+      "qualified_precision_pct": 100.0,
+      "qualified_token_count": 2,
+      "symbols": [
+        "INTEL",
+        "Data"
+      ],
+      "team_purity_pct": 50.0,
+      "tokens": [
+        "0xE331eEdb3Bc25830e61b0b4835eB110cFb6288C8",
+        "0x3A38116302463a7B027d9bC5bc6137a52F213ea1"
+      ],
+      "unqualified_token_count": 0,
+      "value": "14:45"
+    },
+    {
       "feature": "method_selector",
-      "fingerprint_strength": 67.03,
-      "global_prevalence_pct": 0.8,
+      "fingerprint_strength": 67.05,
+      "global_prevalence_pct": 0.78,
       "global_token_count": 2,
       "leading_team": "team data",
       "qualified_precision_pct": 100.0,
       "qualified_token_count": 2,
       "symbols": [
-        "NYXPAY",
-        "Data"
+        "Data",
+        "NYXPAY"
       ],
       "team_purity_pct": 50.0,
       "tokens": [
-        "0x439DeE9D1E9467d891D81d9C1fc4b47335879F38",
-        "0x3A38116302463a7B027d9bC5bc6137a52F213ea1"
+        "0x3A38116302463a7B027d9bC5bc6137a52F213ea1",
+        "0x439DeE9D1E9467d891D81d9C1fc4b47335879F38"
       ],
       "unqualified_token_count": 0,
       "value": "2085e3dc"
     },
     {
+      "feature": "launch_hour_utc",
+      "fingerprint_strength": 65.66,
+      "global_prevalence_pct": 2.71,
+      "global_token_count": 7,
+      "leading_team": "team astro",
+      "qualified_precision_pct": 28.57,
+      "qualified_token_count": 2,
+      "symbols": [
+        "astro",
+        "HOODIECOIN"
+      ],
+      "team_purity_pct": 100.0,
+      "tokens": [
+        "0xdE1a4B8927769f8b6Ed07e5d5F49E7f649EbCbbd",
+        "0x55AE1d4C532fa686C168a0549DAc36c25309F0Ea"
+      ],
+      "unqualified_token_count": 5,
+      "value": "16"
+    },
+    {
       "feature": "method_selector",
-      "fingerprint_strength": 64.78,
-      "global_prevalence_pct": 43.82,
+      "fingerprint_strength": 64.87,
+      "global_prevalence_pct": 42.64,
       "global_token_count": 110,
       "leading_team": "team astro",
       "qualified_precision_pct": 27.27,
       "qualified_token_count": 30,
       "symbols": [
-        "UNITYPAD",
         "SOUP",
+        "UNITYPAD",
+        "SAFEMOON",
+        "ORBIT",
+        "CLAWNCH",
+        "CEREBRO",
+        "FORGE",
+        "VLAD",
+        "astro",
+        "GME",
+        "PENNY",
+        "ELEPHANT",
+        "HOODIECOIN",
+        "COIN",
+        "CULTURE",
         "WYND",
         "DARIOO",
         "BUZZ",
         "ROYALE",
         "HABITS",
-        "SAFEMOON",
         "INLEX",
-        "ORBIT",
-        "CLAWNCH",
-        "FORGE",
         "BOOTS",
-        "VLAD",
-        "CEREBRO",
         "HP",
-        "GME",
         "PANTHER",
-        "PENNY",
         "BYCOCKET",
         "Q",
         "POLI",
-        "HOODIECOIN",
         "ROBBY",
-        "COIN",
-        "astro",
-        "CULTURE",
-        "ELEPHANT",
         "ARTCAT",
         "NEIGHBOR"
       ],
       "team_purity_pct": 100.0,
       "tokens": [
-        "0xF06e9aE646AD8577fecaeC761ad224865603679A",
         "0x0E3c3420dA3EF7Ee6aAD373dd2cdD968f57A0788",
+        "0xF06e9aE646AD8577fecaeC761ad224865603679A",
+        "0x4fFCE3A117e17076C072Fb95E447b2361f69763B",
+        "0xCDE24D930DeDeddd6AB6faDF10adC416A1A0072A",
+        "0x6a50F139F3eD4C9c7bDa0D067c5Ed09De1EEBbeA",
+        "0xEb24a2663af4Ee979dCbfE39cB95B5F12D369c4B",
+        "0xA9384EB62343BB623DEAA6cBDAa0A7fd0E6c5F15",
+        "0xd7Bac75b4455664078C78389f432F6837C814f2b",
+        "0xdE1a4B8927769f8b6Ed07e5d5F49E7f649EbCbbd",
+        "0x232eCBdb38040c93EEBf497121e1241067e937bF",
+        "0xBe8189aC06C8E34191EC2Bb22Cc464ED1323A9fe",
+        "0x40de99E3551dEeDDBAE26fA05Eeb33d0537EE20f",
+        "0x55AE1d4C532fa686C168a0549DAc36c25309F0Ea",
+        "0xf3203b152a88465ADcd2ea914d1667D15e01b6c3",
+        "0x80F05AA931319E46A658f6F7d549Ac9Ca767C34A",
         "0x0a8978Af87407f8B49ED91205f62DC9851cD73a2",
         "0x22d047da13997E384Abc2F390Bc9495D7Ac54b7d",
         "0x154B59D5edA4Ad58e947B85A4726dD016bBd2aE4",
         "0xd7Bd847e838aBe9544B6414FA6EFCB0748a58532",
         "0x85BD531bA0787D14fF20aa5a3d49E0E44Ac9650C",
-        "0x4fFCE3A117e17076C072Fb95E447b2361f69763B",
         "0xCF32b9c1104C14e05a5B17a78618cbD70Bf42091",
-        "0xCDE24D930DeDeddd6AB6faDF10adC416A1A0072A",
-        "0x6a50F139F3eD4C9c7bDa0D067c5Ed09De1EEBbeA",
-        "0xA9384EB62343BB623DEAA6cBDAa0A7fd0E6c5F15",
         "0x63608fa42f0E1fd4427EcF548fFF59b4d71b71B0",
-        "0xd7Bac75b4455664078C78389f432F6837C814f2b",
-        "0xEb24a2663af4Ee979dCbfE39cB95B5F12D369c4B",
         "0x0c54421BD4138A0Cd8D6a0534e22Ff0aAe8CDCCb",
-        "0x232eCBdb38040c93EEBf497121e1241067e937bF",
         "0x97BafF797Fc44F3deBb50eb62e0E1175ca360000",
-        "0xBe8189aC06C8E34191EC2Bb22Cc464ED1323A9fe",
         "0x173727CDe55cF8FE46fd2D9EF4a19D7188A14d3b",
         "0xA9414326203dd6CB2b3D7d7d78350a8a1F7438d8",
         "0x44A9DF2b5d5873029c45926a6642b2dc92f127Dd",
-        "0x55AE1d4C532fa686C168a0549DAc36c25309F0Ea",
         "0xF28f00d39C6aa5fF851978a70B6dD7340891FD5f",
-        "0xf3203b152a88465ADcd2ea914d1667D15e01b6c3",
-        "0xdE1a4B8927769f8b6Ed07e5d5F49E7f649EbCbbd",
-        "0x80F05AA931319E46A658f6F7d549Ac9Ca767C34A",
-        "0x40de99E3551dEeDDBAE26fA05Eeb33d0537EE20f",
         "0x5861EaAd052Ce737B2a522f80494455BBA047ff6",
         "0x3d6f0f78b18C1c4815587509A13fa96F62477a2B"
       ],
@@ -6828,8 +6916,8 @@
     },
     {
       "feature": "nonce",
-      "fingerprint_strength": 64.19,
-      "global_prevalence_pct": 1.99,
+      "fingerprint_strength": 64.22,
+      "global_prevalence_pct": 1.94,
       "global_token_count": 5,
       "leading_team": "team astro",
       "qualified_precision_pct": 60.0,
@@ -6850,8 +6938,8 @@
     },
     {
       "feature": "method_selector",
-      "fingerprint_strength": 63.72,
-      "global_prevalence_pct": 15.14,
+      "fingerprint_strength": 63.79,
+      "global_prevalence_pct": 14.73,
       "global_token_count": 38,
       "leading_team": "team gigalon",
       "qualified_precision_pct": 50.0,
@@ -6903,9 +6991,37 @@
       "value": "ca20cf82"
     },
     {
+      "feature": "launch_weekday_utc",
+      "fingerprint_strength": 63.42,
+      "global_prevalence_pct": 8.91,
+      "global_token_count": 23,
+      "leading_team": "team astro",
+      "qualified_precision_pct": 26.09,
+      "qualified_token_count": 6,
+      "symbols": [
+        "PENNY",
+        "ELEPHANT",
+        "HOODIECOIN",
+        "Data",
+        "COIN",
+        "CULTURE"
+      ],
+      "team_purity_pct": 83.33,
+      "tokens": [
+        "0xBe8189aC06C8E34191EC2Bb22Cc464ED1323A9fe",
+        "0x40de99E3551dEeDDBAE26fA05Eeb33d0537EE20f",
+        "0x55AE1d4C532fa686C168a0549DAc36c25309F0Ea",
+        "0x3A38116302463a7B027d9bC5bc6137a52F213ea1",
+        "0xf3203b152a88465ADcd2ea914d1667D15e01b6c3",
+        "0x80F05AA931319E46A658f6F7d549Ac9Ca767C34A"
+      ],
+      "unqualified_token_count": 17,
+      "value": "monday"
+    },
+    {
       "feature": "funder_1hop",
-      "fingerprint_strength": 62.96,
-      "global_prevalence_pct": 6.77,
+      "fingerprint_strength": 63.01,
+      "global_prevalence_pct": 6.59,
       "global_token_count": 17,
       "leading_team": "team astro",
       "qualified_precision_pct": 17.65,
@@ -6925,42 +7041,35 @@
       "value": "0x88d25c861938a91af4ad57ad964a8fcc6c6351d3"
     },
     {
-      "feature": "nonce",
-      "fingerprint_strength": 61.06,
-      "global_prevalence_pct": 4.78,
-      "global_token_count": 12,
-      "leading_team": "team astro",
-      "qualified_precision_pct": 33.33,
-      "qualified_token_count": 4,
-      "symbols": [
-        "CLAWNCH",
-        "BOOTS",
-        "ROBBY",
-        "KPOP"
-      ],
-      "team_purity_pct": 75.0,
-      "tokens": [
-        "0x6a50F139F3eD4C9c7bDa0D067c5Ed09De1EEBbeA",
-        "0x63608fa42f0E1fd4427EcF548fFF59b4d71b71B0",
-        "0xF28f00d39C6aa5fF851978a70B6dD7340891FD5f",
-        "0xca3ce24FB1a6E7dB0003f9c785405A851E3F1e18"
-      ],
-      "unqualified_token_count": 8,
-      "value": "2"
-    },
-    {
       "feature": "funder_label",
-      "fingerprint_strength": 60.57,
-      "global_prevalence_pct": 27.09,
+      "fingerprint_strength": 60.64,
+      "global_prevalence_pct": 26.36,
       "global_token_count": 68,
       "leading_team": "team astro",
       "qualified_precision_pct": 100.0,
       "qualified_token_count": 68,
       "symbols": [
-        "gigalon",
+        "SOUP",
         "INTEL",
         "UNITYPAD",
-        "SOUP",
+        "FLOOR",
+        "SAFEMOON",
+        "CLAWNCH",
+        "CEREBRO",
+        "CPRINT",
+        "NYSE",
+        "FORGE",
+        "astro",
+        "GME",
+        "PENNY",
+        "ELEPHANT",
+        "HOODIECOIN",
+        "Data",
+        "COIN",
+        "CULTURE",
+        "ORE",
+        "GME",
+        "gigalon",
         "Grok",
         "Maple",
         "WYND",
@@ -6968,27 +7077,19 @@
         "DEGENFLY",
         "BUZZ",
         "HABITS",
-        "SAFEMOON",
         "NEXO",
         "NCHIP",
         "OPEC",
         "$SPY",
         "INLEX",
-        "CLAWNCH",
         "ROBINARY",
         "MACBOOK",
-        "CPRINT",
-        "FLOOR",
         "Laptop",
         "website",
         "COMPUTER",
-        "FORGE",
-        "NYSE",
         "BOOTS",
         "HTANK",
-        "CEREBRO",
         "NYXPAY",
-        "GME",
         "ADOGE",
         "SAYLORMOON",
         "4WALL",
@@ -6996,42 +7097,50 @@
         "CATURN",
         "PANTHER",
         "HOODOWS",
-        "PENNY",
         "ROBIN",
         "BYCOCKET",
         "SAFEMOON",
         "Q",
         "EXR",
         "POLI",
-        "HOODIECOIN",
-        "Data",
         "XYZ",
         "WHITEHAT",
         "RIVORA",
         "ROBBY",
         "UBER",
         "NASDUCK",
-        "COIN",
         "HODL",
-        "astro",
-        "CULTURE",
         "CRIF",
-        "ELEPHANT",
         "HOODGLE",
         "ARTCAT",
         "NEIGHBOR",
         "ELONGATE",
         "$ARROW",
-        "GME",
-        "ORE",
         "GBC"
       ],
       "team_purity_pct": 39.71,
       "tokens": [
-        "0x7190Cb95dead29359eB9050f03Ce6bffBf2915c0",
+        "0x0E3c3420dA3EF7Ee6aAD373dd2cdD968f57A0788",
         "0xE331eEdb3Bc25830e61b0b4835eB110cFb6288C8",
         "0xF06e9aE646AD8577fecaeC761ad224865603679A",
-        "0x0E3c3420dA3EF7Ee6aAD373dd2cdD968f57A0788",
+        "0xB98bF424fA411057500f737FdB773Ed874c98312",
+        "0x4fFCE3A117e17076C072Fb95E447b2361f69763B",
+        "0x6a50F139F3eD4C9c7bDa0D067c5Ed09De1EEBbeA",
+        "0xEb24a2663af4Ee979dCbfE39cB95B5F12D369c4B",
+        "0xaB86eaD8ee235fdeF69f80b753352862ed24c81c",
+        "0x34c65Bd35D0a081B3A2dEE84856ddDd8fD00E69e",
+        "0xA9384EB62343BB623DEAA6cBDAa0A7fd0E6c5F15",
+        "0xdE1a4B8927769f8b6Ed07e5d5F49E7f649EbCbbd",
+        "0x232eCBdb38040c93EEBf497121e1241067e937bF",
+        "0xBe8189aC06C8E34191EC2Bb22Cc464ED1323A9fe",
+        "0x40de99E3551dEeDDBAE26fA05Eeb33d0537EE20f",
+        "0x55AE1d4C532fa686C168a0549DAc36c25309F0Ea",
+        "0x3A38116302463a7B027d9bC5bc6137a52F213ea1",
+        "0xf3203b152a88465ADcd2ea914d1667D15e01b6c3",
+        "0x80F05AA931319E46A658f6F7d549Ac9Ca767C34A",
+        "0x8620b1ED6AB043b4dE85597B74C333e0DF50a63e",
+        "0xc2362AfF2A2a4CC1f48cF3Dab2C4e2605eb94BA3",
+        "0x7190Cb95dead29359eB9050f03Ce6bffBf2915c0",
         "0xD9E82b01fbD8EB7A59D456fEf3B56D39d90caa47",
         "0x6b09c294eCC9fbE3285f0421EB76eBB6222adE64",
         "0x0a8978Af87407f8B49ED91205f62DC9851cD73a2",
@@ -7039,27 +7148,19 @@
         "0xa9b7966D16e4CA1D0A98e29fEb17cf9F6afFE8b7",
         "0x154B59D5edA4Ad58e947B85A4726dD016bBd2aE4",
         "0x85BD531bA0787D14fF20aa5a3d49E0E44Ac9650C",
-        "0x4fFCE3A117e17076C072Fb95E447b2361f69763B",
         "0x7ff07f5437Eb22750617182f1AE91e050a45aF3C",
         "0x73Fd518b4998Df42FBa3AE740865F374522baE2a",
         "0x197de420B5a5Ce9420d25893835CA585d207FbC6",
         "0x0c68aB86F630ACe540205b3fDDbe4b96058fA888",
         "0xCF32b9c1104C14e05a5B17a78618cbD70Bf42091",
-        "0x6a50F139F3eD4C9c7bDa0D067c5Ed09De1EEBbeA",
         "0x41bF9BfA1BB13758BdeF159486c218bcAbF2B79c",
         "0xF6C8d04d7ACA7B207fF9631F7c2FAE7b31DBa6C0",
-        "0xaB86eaD8ee235fdeF69f80b753352862ed24c81c",
-        "0xB98bF424fA411057500f737FdB773Ed874c98312",
         "0x0b265Da4Dc6d6C1d924058CF9900DB8d0d0c9135",
         "0x3eca6E4e09Cfa8d59DeEafe4538A564ACef78ba9",
         "0x1C5F0A1aaA4f2Ee657cbb95312E3b85DD54341D9",
-        "0xA9384EB62343BB623DEAA6cBDAa0A7fd0E6c5F15",
-        "0x34c65Bd35D0a081B3A2dEE84856ddDd8fD00E69e",
         "0x63608fa42f0E1fd4427EcF548fFF59b4d71b71B0",
         "0x0cC4cec6a0350F5168320F0e4871A2C0B153A9D9",
-        "0xEb24a2663af4Ee979dCbfE39cB95B5F12D369c4B",
         "0x439DeE9D1E9467d891D81d9C1fc4b47335879F38",
-        "0x232eCBdb38040c93EEBf497121e1241067e937bF",
         "0x9781E25CCC7259d8FBFDC377D14AD51A894111c5",
         "0x5B82fA862B29a5D0136EFaf392FDBcb6AFE1561e",
         "0x8DfbFd3021E8b9c390a99C39747Ea4D295187BA0",
@@ -7067,127 +7168,314 @@
         "0xd46920a6FE69A4226e3c54EAfda9a553f65A5149",
         "0x97BafF797Fc44F3deBb50eb62e0E1175ca360000",
         "0x5A2EF5CeF74A8A6CCc0e1Ca76a570Ba98e7e5E57",
-        "0xBe8189aC06C8E34191EC2Bb22Cc464ED1323A9fe",
         "0xdba07C9E580E8A4A24564097E93fd0CD7989F30a",
         "0x173727CDe55cF8FE46fd2D9EF4a19D7188A14d3b",
         "0xe26CF98e70Cfc08f23dbBBbA8db51D0c4d55F6cc",
         "0xA9414326203dd6CB2b3D7d7d78350a8a1F7438d8",
         "0x1F27fe7B9708fAc9b8Df0e8816D6FD3a0dbC0ad5",
         "0x44A9DF2b5d5873029c45926a6642b2dc92f127Dd",
-        "0x55AE1d4C532fa686C168a0549DAc36c25309F0Ea",
-        "0x3A38116302463a7B027d9bC5bc6137a52F213ea1",
         "0x8a13Bb78161F55bEaEAEa0203B7e66113678Be80",
         "0x96abd983C8EA716cE22c96d23c2B47e7d43f50Cd",
         "0x62A819bA1C873e5044a82210058250499327df05",
         "0xF28f00d39C6aa5fF851978a70B6dD7340891FD5f",
         "0xb2a53f9C20cFb9581458d8c4188db7a0B2270EAd",
         "0x41838DC5166A987F8b5E1F4B8dB22BBbd88e9AdC",
-        "0xf3203b152a88465ADcd2ea914d1667D15e01b6c3",
         "0xD6127f456f7432A0890155522AC272B6eE78bBbb",
-        "0xdE1a4B8927769f8b6Ed07e5d5F49E7f649EbCbbd",
-        "0x80F05AA931319E46A658f6F7d549Ac9Ca767C34A",
         "0xdFEFF46129b666A6Fbf76e6ACE3b6218cd23f183",
-        "0x40de99E3551dEeDDBAE26fA05Eeb33d0537EE20f",
         "0xB2E9E3701Ad29F75cBd5F81e90866E029Fd01776",
         "0x5861EaAd052Ce737B2a522f80494455BBA047ff6",
         "0x3d6f0f78b18C1c4815587509A13fa96F62477a2B",
         "0xE4C88febB204fa79E1E951EAbC0Bc01fC0241B84",
         "0x00009D479a2Ab915e9a55C020873D975cf816778",
-        "0xc2362AfF2A2a4CC1f48cF3Dab2C4e2605eb94BA3",
-        "0x8620b1ED6AB043b4dE85597B74C333e0DF50a63e",
         "0x43304bA2ECE7CdB58d0c572B10ae64fC0697088a"
       ],
       "unqualified_token_count": 0,
       "value": "fresh wallet"
     },
     {
+      "feature": "nonce",
+      "fingerprint_strength": 60.19,
+      "global_prevalence_pct": 5.04,
+      "global_token_count": 13,
+      "leading_team": "team astro",
+      "qualified_precision_pct": 30.77,
+      "qualified_token_count": 4,
+      "symbols": [
+        "CLAWNCH",
+        "KPOP",
+        "BOOTS",
+        "ROBBY"
+      ],
+      "team_purity_pct": 75.0,
+      "tokens": [
+        "0x6a50F139F3eD4C9c7bDa0D067c5Ed09De1EEBbeA",
+        "0xca3ce24FB1a6E7dB0003f9c785405A851E3F1e18",
+        "0x63608fa42f0E1fd4427EcF548fFF59b4d71b71B0",
+        "0xF28f00d39C6aa5fF851978a70B6dD7340891FD5f"
+      ],
+      "unqualified_token_count": 9,
+      "value": "2"
+    },
+    {
+      "feature": "launch_hour_utc",
+      "fingerprint_strength": 59.35,
+      "global_prevalence_pct": 5.81,
+      "global_token_count": 15,
+      "leading_team": "team astro",
+      "qualified_precision_pct": 13.33,
+      "qualified_token_count": 2,
+      "symbols": [
+        "FORGE",
+        "CULTURE"
+      ],
+      "team_purity_pct": 100.0,
+      "tokens": [
+        "0xA9384EB62343BB623DEAA6cBDAa0A7fd0E6c5F15",
+        "0x80F05AA931319E46A658f6F7d549Ac9Ca767C34A"
+      ],
+      "unqualified_token_count": 13,
+      "value": "01"
+    },
+    {
+      "feature": "launch_hour_utc",
+      "fingerprint_strength": 58.9,
+      "global_prevalence_pct": 2.71,
+      "global_token_count": 7,
+      "leading_team": "team astro",
+      "qualified_precision_pct": 42.86,
+      "qualified_token_count": 3,
+      "symbols": [
+        "SOUP",
+        "CEREBRO",
+        "ORE"
+      ],
+      "team_purity_pct": 66.67,
+      "tokens": [
+        "0x0E3c3420dA3EF7Ee6aAD373dd2cdD968f57A0788",
+        "0xEb24a2663af4Ee979dCbfE39cB95B5F12D369c4B",
+        "0x8620b1ED6AB043b4dE85597B74C333e0DF50a63e"
+      ],
+      "unqualified_token_count": 4,
+      "value": "15"
+    },
+    {
+      "feature": "launch_hour_utc",
+      "fingerprint_strength": 58.9,
+      "global_prevalence_pct": 2.71,
+      "global_token_count": 7,
+      "leading_team": "team intel",
+      "qualified_precision_pct": 42.86,
+      "qualified_token_count": 3,
+      "symbols": [
+        "INTEL",
+        "CPRINT",
+        "Data"
+      ],
+      "team_purity_pct": 66.67,
+      "tokens": [
+        "0xE331eEdb3Bc25830e61b0b4835eB110cFb6288C8",
+        "0xaB86eaD8ee235fdeF69f80b753352862ed24c81c",
+        "0x3A38116302463a7B027d9bC5bc6137a52F213ea1"
+      ],
+      "unqualified_token_count": 4,
+      "value": "14"
+    },
+    {
+      "feature": "launch_hour_utc",
+      "fingerprint_strength": 58.9,
+      "global_prevalence_pct": 2.71,
+      "global_token_count": 7,
+      "leading_team": "team astro",
+      "qualified_precision_pct": 42.86,
+      "qualified_token_count": 3,
+      "symbols": [
+        "FLOOR",
+        "CLAWNCH",
+        "ELEPHANT"
+      ],
+      "team_purity_pct": 66.67,
+      "tokens": [
+        "0xB98bF424fA411057500f737FdB773Ed874c98312",
+        "0x6a50F139F3eD4C9c7bDa0D067c5Ed09De1EEBbeA",
+        "0x40de99E3551dEeDDBAE26fA05Eeb33d0537EE20f"
+      ],
+      "unqualified_token_count": 4,
+      "value": "21"
+    },
+    {
       "feature": "funder_1hop",
-      "fingerprint_strength": 58.8,
-      "global_prevalence_pct": 13.15,
+      "fingerprint_strength": 58.86,
+      "global_prevalence_pct": 12.79,
       "global_token_count": 33,
       "leading_team": "team astro",
       "qualified_precision_pct": 69.7,
       "qualified_token_count": 23,
       "symbols": [
         "INTEL",
-        "HABITS",
+        "FLOOR",
         "SAFEMOON",
+        "CLAWNCH",
+        "CPRINT",
+        "GME",
+        "PENNY",
+        "Data",
+        "COIN",
+        "CULTURE",
+        "ORE",
+        "HABITS",
         "NEXO",
         "OPEC",
         "INLEX",
-        "CLAWNCH",
-        "CPRINT",
-        "FLOOR",
         "NYXPAY",
-        "GME",
         "SCRIP",
         "PANTHER",
-        "PENNY",
         "ROBIN",
-        "Data",
         "RIVORA",
         "ROBBY",
-        "COIN",
-        "CULTURE",
         "CRIF",
-        "ARTCAT",
-        "ORE"
+        "ARTCAT"
       ],
       "team_purity_pct": 47.83,
       "tokens": [
         "0xE331eEdb3Bc25830e61b0b4835eB110cFb6288C8",
-        "0x85BD531bA0787D14fF20aa5a3d49E0E44Ac9650C",
+        "0xB98bF424fA411057500f737FdB773Ed874c98312",
         "0x4fFCE3A117e17076C072Fb95E447b2361f69763B",
+        "0x6a50F139F3eD4C9c7bDa0D067c5Ed09De1EEBbeA",
+        "0xaB86eaD8ee235fdeF69f80b753352862ed24c81c",
+        "0x232eCBdb38040c93EEBf497121e1241067e937bF",
+        "0xBe8189aC06C8E34191EC2Bb22Cc464ED1323A9fe",
+        "0x3A38116302463a7B027d9bC5bc6137a52F213ea1",
+        "0xf3203b152a88465ADcd2ea914d1667D15e01b6c3",
+        "0x80F05AA931319E46A658f6F7d549Ac9Ca767C34A",
+        "0x8620b1ED6AB043b4dE85597B74C333e0DF50a63e",
+        "0x85BD531bA0787D14fF20aa5a3d49E0E44Ac9650C",
         "0x7ff07f5437Eb22750617182f1AE91e050a45aF3C",
         "0x197de420B5a5Ce9420d25893835CA585d207FbC6",
         "0xCF32b9c1104C14e05a5B17a78618cbD70Bf42091",
-        "0x6a50F139F3eD4C9c7bDa0D067c5Ed09De1EEBbeA",
-        "0xaB86eaD8ee235fdeF69f80b753352862ed24c81c",
-        "0xB98bF424fA411057500f737FdB773Ed874c98312",
         "0x439DeE9D1E9467d891D81d9C1fc4b47335879F38",
-        "0x232eCBdb38040c93EEBf497121e1241067e937bF",
         "0xd4eC9fC5AEB1C49456cbd8943fd19e8310E371B3",
         "0x97BafF797Fc44F3deBb50eb62e0E1175ca360000",
-        "0xBe8189aC06C8E34191EC2Bb22Cc464ED1323A9fe",
         "0xdba07C9E580E8A4A24564097E93fd0CD7989F30a",
-        "0x3A38116302463a7B027d9bC5bc6137a52F213ea1",
         "0x62A819bA1C873e5044a82210058250499327df05",
         "0xF28f00d39C6aa5fF851978a70B6dD7340891FD5f",
-        "0xf3203b152a88465ADcd2ea914d1667D15e01b6c3",
-        "0x80F05AA931319E46A658f6F7d549Ac9Ca767C34A",
         "0xdFEFF46129b666A6Fbf76e6ACE3b6218cd23f183",
-        "0x5861EaAd052Ce737B2a522f80494455BBA047ff6",
-        "0x8620b1ED6AB043b4dE85597B74C333e0DF50a63e"
+        "0x5861EaAd052Ce737B2a522f80494455BBA047ff6"
       ],
       "unqualified_token_count": 10,
       "value": "0xf70da97812cb96acdf810712aa562db8dfa3dbef"
     },
     {
+      "feature": "launch_weekday_utc",
+      "fingerprint_strength": 55.71,
+      "global_prevalence_pct": 3.49,
+      "global_token_count": 9,
+      "leading_team": "team astro",
+      "qualified_precision_pct": 33.33,
+      "qualified_token_count": 3,
+      "symbols": [
+        "SOUP",
+        "INTEL",
+        "UNITYPAD"
+      ],
+      "team_purity_pct": 66.67,
+      "tokens": [
+        "0x0E3c3420dA3EF7Ee6aAD373dd2cdD968f57A0788",
+        "0xE331eEdb3Bc25830e61b0b4835eB110cFb6288C8",
+        "0xF06e9aE646AD8577fecaeC761ad224865603679A"
+      ],
+      "unqualified_token_count": 6,
+      "value": "sunday"
+    },
+    {
+      "feature": "launch_weekday_utc",
+      "fingerprint_strength": 55.64,
+      "global_prevalence_pct": 8.14,
+      "global_token_count": 21,
+      "leading_team": "team astro",
+      "qualified_precision_pct": 19.05,
+      "qualified_token_count": 4,
+      "symbols": [
+        "REAL",
+        "VLAD",
+        "astro",
+        "GME"
+      ],
+      "team_purity_pct": 75.0,
+      "tokens": [
+        "0xb0BE8A40a960c18CA274010102509A4C19048B2f",
+        "0xd7Bac75b4455664078C78389f432F6837C814f2b",
+        "0xdE1a4B8927769f8b6Ed07e5d5F49E7f649EbCbbd",
+        "0x232eCBdb38040c93EEBf497121e1241067e937bF"
+      ],
+      "unqualified_token_count": 17,
+      "value": "tuesday"
+    },
+    {
+      "feature": "launch_hour_utc",
+      "fingerprint_strength": 52.71,
+      "global_prevalence_pct": 1.55,
+      "global_token_count": 4,
+      "leading_team": "team astro",
+      "qualified_precision_pct": 50.0,
+      "qualified_token_count": 2,
+      "symbols": [
+        "VLAD",
+        "KPOP"
+      ],
+      "team_purity_pct": 50.0,
+      "tokens": [
+        "0xd7Bac75b4455664078C78389f432F6837C814f2b",
+        "0xca3ce24FB1a6E7dB0003f9c785405A851E3F1e18"
+      ],
+      "unqualified_token_count": 2,
+      "value": "20"
+    },
+    {
+      "feature": "launch_quarter_hour_utc",
+      "fingerprint_strength": 52.71,
+      "global_prevalence_pct": 1.55,
+      "global_token_count": 4,
+      "leading_team": "team astro",
+      "qualified_precision_pct": 50.0,
+      "qualified_token_count": 2,
+      "symbols": [
+        "ORBIT",
+        "GME"
+      ],
+      "team_purity_pct": 50.0,
+      "tokens": [
+        "0xCDE24D930DeDeddd6AB6faDF10adC416A1A0072A",
+        "0xc2362AfF2A2a4CC1f48cF3Dab2C4e2605eb94BA3"
+      ],
+      "unqualified_token_count": 2,
+      "value": "00:30"
+    },
+    {
       "feature": "nonce",
-      "fingerprint_strength": 50.35,
-      "global_prevalence_pct": 10.76,
+      "fingerprint_strength": 50.41,
+      "global_prevalence_pct": 10.47,
       "global_token_count": 27,
       "leading_team": "team astro",
       "qualified_precision_pct": 29.63,
       "qualified_token_count": 8,
       "symbols": [
+        "CEREBRO",
+        "CULTURE",
         "Grok",
         "$SPY",
         "INLEX",
         "MACBOOK",
-        "CEREBRO",
-        "CULTURE",
         "ARTCAT",
         "GI"
       ],
       "team_purity_pct": 50.0,
       "tokens": [
+        "0xEb24a2663af4Ee979dCbfE39cB95B5F12D369c4B",
+        "0x80F05AA931319E46A658f6F7d549Ac9Ca767C34A",
         "0xD9E82b01fbD8EB7A59D456fEf3B56D39d90caa47",
         "0x0c68aB86F630ACe540205b3fDDbe4b96058fA888",
         "0xCF32b9c1104C14e05a5B17a78618cbD70Bf42091",
         "0xF6C8d04d7ACA7B207fF9631F7c2FAE7b31DBa6C0",
-        "0xEb24a2663af4Ee979dCbfE39cB95B5F12D369c4B",
-        "0x80F05AA931319E46A658f6F7d549Ac9Ca767C34A",
         "0x5861EaAd052Ce737B2a522f80494455BBA047ff6",
         "0x8EfD3bBD9A94D11AE654B72804A04f6A805c80f7"
       ],
@@ -7195,18 +7483,105 @@
       "value": "1"
     },
     {
+      "feature": "launch_hour_utc",
+      "fingerprint_strength": 49.55,
+      "global_prevalence_pct": 1.94,
+      "global_token_count": 5,
+      "leading_team": "team astro",
+      "qualified_precision_pct": 40.0,
+      "qualified_token_count": 2,
+      "symbols": [
+        "ORBIT",
+        "GME"
+      ],
+      "team_purity_pct": 50.0,
+      "tokens": [
+        "0xCDE24D930DeDeddd6AB6faDF10adC416A1A0072A",
+        "0xc2362AfF2A2a4CC1f48cF3Dab2C4e2605eb94BA3"
+      ],
+      "unqualified_token_count": 3,
+      "value": "00"
+    },
+    {
+      "feature": "launch_weekday_utc",
+      "fingerprint_strength": 43.27,
+      "global_prevalence_pct": 3.49,
+      "global_token_count": 9,
+      "leading_team": "team astro",
+      "qualified_precision_pct": 22.22,
+      "qualified_token_count": 2,
+      "symbols": [
+        "ORBIT",
+        "GME"
+      ],
+      "team_purity_pct": 50.0,
+      "tokens": [
+        "0xCDE24D930DeDeddd6AB6faDF10adC416A1A0072A",
+        "0xc2362AfF2A2a4CC1f48cF3Dab2C4e2605eb94BA3"
+      ],
+      "unqualified_token_count": 7,
+      "value": "thursday"
+    },
+    {
+      "feature": "launch_weekday_utc",
+      "fingerprint_strength": 43.23,
+      "global_prevalence_pct": 42.25,
+      "global_token_count": 109,
+      "leading_team": "team astro",
+      "qualified_precision_pct": 4.59,
+      "qualified_token_count": 5,
+      "symbols": [
+        "CLAWNCH",
+        "CEREBRO",
+        "CPRINT",
+        "NYSE",
+        "FORGE"
+      ],
+      "team_purity_pct": 60.0,
+      "tokens": [
+        "0x6a50F139F3eD4C9c7bDa0D067c5Ed09De1EEBbeA",
+        "0xEb24a2663af4Ee979dCbfE39cB95B5F12D369c4B",
+        "0xaB86eaD8ee235fdeF69f80b753352862ed24c81c",
+        "0x34c65Bd35D0a081B3A2dEE84856ddDd8fD00E69e",
+        "0xA9384EB62343BB623DEAA6cBDAa0A7fd0E6c5F15"
+      ],
+      "unqualified_token_count": 104,
+      "value": "wednesday"
+    },
+    {
       "feature": "launchpad",
-      "fingerprint_strength": 40.42,
-      "global_prevalence_pct": 88.45,
+      "fingerprint_strength": 40.52,
+      "global_prevalence_pct": 86.05,
       "global_token_count": 222,
       "leading_team": "team astro",
       "qualified_precision_pct": 33.78,
       "qualified_token_count": 75,
       "symbols": [
-        "gigalon",
+        "SOUP",
         "INTEL",
         "UNITYPAD",
-        "SOUP",
+        "FLOOR",
+        "SAFEMOON",
+        "ORBIT",
+        "CLAWNCH",
+        "CEREBRO",
+        "CPRINT",
+        "NYSE",
+        "FORGE",
+        "REAL",
+        "VLAD",
+        "astro",
+        "GME",
+        "PENNY",
+        "ELEPHANT",
+        "HOODIECOIN",
+        "Data",
+        "COIN",
+        "CULTURE",
+        "KPOP",
+        "ORE",
+        "GME",
+        "gigalon",
         "Grok",
         "Maple",
         "WYND",
@@ -7215,31 +7590,20 @@
         "BUZZ",
         "ROYALE",
         "HABITS",
-        "SAFEMOON",
         "NEXO",
         "NCHIP",
         "OPEC",
         "$SPY",
         "INLEX",
-        "ORBIT",
-        "CLAWNCH",
         "ROBINARY",
         "MACBOOK",
-        "CPRINT",
-        "FLOOR",
         "Laptop",
         "website",
         "COMPUTER",
-        "FORGE",
-        "NYSE",
         "BOOTS",
-        "REAL",
         "HTANK",
-        "VLAD",
-        "CEREBRO",
         "HP",
         "NYXPAY",
-        "GME",
         "ADOGE",
         "SAYLORMOON",
         "4WALL",
@@ -7247,44 +7611,55 @@
         "CATURN",
         "PANTHER",
         "HOODOWS",
-        "PENNY",
         "ROBIN",
         "BYCOCKET",
         "SAFEMOON",
         "Q",
         "EXR",
         "POLI",
-        "HOODIECOIN",
-        "Data",
         "XYZ",
         "WHITEHAT",
         "RIVORA",
         "ROBBY",
         "UBER",
         "NASDUCK",
-        "COIN",
         "HODL",
-        "astro",
-        "CULTURE",
         "CRIF",
-        "ELEPHANT",
         "HOODGLE",
         "ARTCAT",
         "NEIGHBOR",
         "ELONGATE",
         "GI",
-        "KPOP",
         "$ARROW",
-        "GME",
-        "ORE",
         "GBC"
       ],
       "team_purity_pct": 41.33,
       "tokens": [
-        "0x7190Cb95dead29359eB9050f03Ce6bffBf2915c0",
+        "0x0E3c3420dA3EF7Ee6aAD373dd2cdD968f57A0788",
         "0xE331eEdb3Bc25830e61b0b4835eB110cFb6288C8",
         "0xF06e9aE646AD8577fecaeC761ad224865603679A",
-        "0x0E3c3420dA3EF7Ee6aAD373dd2cdD968f57A0788",
+        "0xB98bF424fA411057500f737FdB773Ed874c98312",
+        "0x4fFCE3A117e17076C072Fb95E447b2361f69763B",
+        "0xCDE24D930DeDeddd6AB6faDF10adC416A1A0072A",
+        "0x6a50F139F3eD4C9c7bDa0D067c5Ed09De1EEBbeA",
+        "0xEb24a2663af4Ee979dCbfE39cB95B5F12D369c4B",
+        "0xaB86eaD8ee235fdeF69f80b753352862ed24c81c",
+        "0x34c65Bd35D0a081B3A2dEE84856ddDd8fD00E69e",
+        "0xA9384EB62343BB623DEAA6cBDAa0A7fd0E6c5F15",
+        "0xb0BE8A40a960c18CA274010102509A4C19048B2f",
+        "0xd7Bac75b4455664078C78389f432F6837C814f2b",
+        "0xdE1a4B8927769f8b6Ed07e5d5F49E7f649EbCbbd",
+        "0x232eCBdb38040c93EEBf497121e1241067e937bF",
+        "0xBe8189aC06C8E34191EC2Bb22Cc464ED1323A9fe",
+        "0x40de99E3551dEeDDBAE26fA05Eeb33d0537EE20f",
+        "0x55AE1d4C532fa686C168a0549DAc36c25309F0Ea",
+        "0x3A38116302463a7B027d9bC5bc6137a52F213ea1",
+        "0xf3203b152a88465ADcd2ea914d1667D15e01b6c3",
+        "0x80F05AA931319E46A658f6F7d549Ac9Ca767C34A",
+        "0xca3ce24FB1a6E7dB0003f9c785405A851E3F1e18",
+        "0x8620b1ED6AB043b4dE85597B74C333e0DF50a63e",
+        "0xc2362AfF2A2a4CC1f48cF3Dab2C4e2605eb94BA3",
+        "0x7190Cb95dead29359eB9050f03Ce6bffBf2915c0",
         "0xD9E82b01fbD8EB7A59D456fEf3B56D39d90caa47",
         "0x6b09c294eCC9fbE3285f0421EB76eBB6222adE64",
         "0x0a8978Af87407f8B49ED91205f62DC9851cD73a2",
@@ -7293,31 +7668,20 @@
         "0x154B59D5edA4Ad58e947B85A4726dD016bBd2aE4",
         "0xd7Bd847e838aBe9544B6414FA6EFCB0748a58532",
         "0x85BD531bA0787D14fF20aa5a3d49E0E44Ac9650C",
-        "0x4fFCE3A117e17076C072Fb95E447b2361f69763B",
         "0x7ff07f5437Eb22750617182f1AE91e050a45aF3C",
         "0x73Fd518b4998Df42FBa3AE740865F374522baE2a",
         "0x197de420B5a5Ce9420d25893835CA585d207FbC6",
         "0x0c68aB86F630ACe540205b3fDDbe4b96058fA888",
         "0xCF32b9c1104C14e05a5B17a78618cbD70Bf42091",
-        "0xCDE24D930DeDeddd6AB6faDF10adC416A1A0072A",
-        "0x6a50F139F3eD4C9c7bDa0D067c5Ed09De1EEBbeA",
         "0x41bF9BfA1BB13758BdeF159486c218bcAbF2B79c",
         "0xF6C8d04d7ACA7B207fF9631F7c2FAE7b31DBa6C0",
-        "0xaB86eaD8ee235fdeF69f80b753352862ed24c81c",
-        "0xB98bF424fA411057500f737FdB773Ed874c98312",
         "0x0b265Da4Dc6d6C1d924058CF9900DB8d0d0c9135",
         "0x3eca6E4e09Cfa8d59DeEafe4538A564ACef78ba9",
         "0x1C5F0A1aaA4f2Ee657cbb95312E3b85DD54341D9",
-        "0xA9384EB62343BB623DEAA6cBDAa0A7fd0E6c5F15",
-        "0x34c65Bd35D0a081B3A2dEE84856ddDd8fD00E69e",
         "0x63608fa42f0E1fd4427EcF548fFF59b4d71b71B0",
-        "0xb0BE8A40a960c18CA274010102509A4C19048B2f",
         "0x0cC4cec6a0350F5168320F0e4871A2C0B153A9D9",
-        "0xd7Bac75b4455664078C78389f432F6837C814f2b",
-        "0xEb24a2663af4Ee979dCbfE39cB95B5F12D369c4B",
         "0x0c54421BD4138A0Cd8D6a0534e22Ff0aAe8CDCCb",
         "0x439DeE9D1E9467d891D81d9C1fc4b47335879F38",
-        "0x232eCBdb38040c93EEBf497121e1241067e937bF",
         "0x9781E25CCC7259d8FBFDC377D14AD51A894111c5",
         "0x5B82fA862B29a5D0136EFaf392FDBcb6AFE1561e",
         "0x8DfbFd3021E8b9c390a99C39747Ea4D295187BA0",
@@ -7325,45 +7689,59 @@
         "0xd46920a6FE69A4226e3c54EAfda9a553f65A5149",
         "0x97BafF797Fc44F3deBb50eb62e0E1175ca360000",
         "0x5A2EF5CeF74A8A6CCc0e1Ca76a570Ba98e7e5E57",
-        "0xBe8189aC06C8E34191EC2Bb22Cc464ED1323A9fe",
         "0xdba07C9E580E8A4A24564097E93fd0CD7989F30a",
         "0x173727CDe55cF8FE46fd2D9EF4a19D7188A14d3b",
         "0xe26CF98e70Cfc08f23dbBBbA8db51D0c4d55F6cc",
         "0xA9414326203dd6CB2b3D7d7d78350a8a1F7438d8",
         "0x1F27fe7B9708fAc9b8Df0e8816D6FD3a0dbC0ad5",
         "0x44A9DF2b5d5873029c45926a6642b2dc92f127Dd",
-        "0x55AE1d4C532fa686C168a0549DAc36c25309F0Ea",
-        "0x3A38116302463a7B027d9bC5bc6137a52F213ea1",
         "0x8a13Bb78161F55bEaEAEa0203B7e66113678Be80",
         "0x96abd983C8EA716cE22c96d23c2B47e7d43f50Cd",
         "0x62A819bA1C873e5044a82210058250499327df05",
         "0xF28f00d39C6aa5fF851978a70B6dD7340891FD5f",
         "0xb2a53f9C20cFb9581458d8c4188db7a0B2270EAd",
         "0x41838DC5166A987F8b5E1F4B8dB22BBbd88e9AdC",
-        "0xf3203b152a88465ADcd2ea914d1667D15e01b6c3",
         "0xD6127f456f7432A0890155522AC272B6eE78bBbb",
-        "0xdE1a4B8927769f8b6Ed07e5d5F49E7f649EbCbbd",
-        "0x80F05AA931319E46A658f6F7d549Ac9Ca767C34A",
         "0xdFEFF46129b666A6Fbf76e6ACE3b6218cd23f183",
-        "0x40de99E3551dEeDDBAE26fA05Eeb33d0537EE20f",
         "0xB2E9E3701Ad29F75cBd5F81e90866E029Fd01776",
         "0x5861EaAd052Ce737B2a522f80494455BBA047ff6",
         "0x3d6f0f78b18C1c4815587509A13fa96F62477a2B",
         "0xE4C88febB204fa79E1E951EAbC0Bc01fC0241B84",
         "0x8EfD3bBD9A94D11AE654B72804A04f6A805c80f7",
-        "0xca3ce24FB1a6E7dB0003f9c785405A851E3F1e18",
         "0x00009D479a2Ab915e9a55C020873D975cf816778",
-        "0xc2362AfF2A2a4CC1f48cF3Dab2C4e2605eb94BA3",
-        "0x8620b1ED6AB043b4dE85597B74C333e0DF50a63e",
         "0x43304bA2ECE7CdB58d0c572B10ae64fC0697088a"
       ],
       "unqualified_token_count": 147,
       "value": "pons"
     },
     {
+      "feature": "launch_weekday_utc",
+      "fingerprint_strength": 40.19,
+      "global_prevalence_pct": 5.04,
+      "global_token_count": 13,
+      "leading_team": "team astro",
+      "qualified_precision_pct": 30.77,
+      "qualified_token_count": 4,
+      "symbols": [
+        "FLOOR",
+        "SAFEMOON",
+        "KPOP",
+        "ORE"
+      ],
+      "team_purity_pct": 25.0,
+      "tokens": [
+        "0xB98bF424fA411057500f737FdB773Ed874c98312",
+        "0x4fFCE3A117e17076C072Fb95E447b2361f69763B",
+        "0xca3ce24FB1a6E7dB0003f9c785405A851E3F1e18",
+        "0x8620b1ED6AB043b4dE85597B74C333e0DF50a63e"
+      ],
+      "unqualified_token_count": 9,
+      "value": "friday"
+    },
+    {
       "feature": "template_hash",
-      "fingerprint_strength": 20.89,
-      "global_prevalence_pct": 4.78,
+      "fingerprint_strength": 20.93,
+      "global_prevalence_pct": 4.65,
       "global_token_count": 12,
       "leading_team": null,
       "qualified_precision_pct": 16.67,
@@ -7381,8 +7759,8 @@
       "value": "f10f86b05965a827a332e6c73086f18026fbe3917f4bffbec3f938b3b5397b56"
     }
   ],
-  "generated_at": "2026-09-19T17:43:13.569946+00:00",
-  "scope": "qualified_tokens_to_all_tokens",
+  "generated_at": "2026-09-21T18:36:26.570980+00:00",
+  "scope": "training_anchors_to_all_tokens",
   "team_habits": [
     {
       "recurring_habits": [
@@ -7417,6 +7795,12 @@
           "value": "4663:0.0005"
         },
         {
+          "count": 5,
+          "coverage_pct": 16.13,
+          "feature": "launch_weekday_utc",
+          "value": "monday"
+        },
+        {
           "count": 4,
           "coverage_pct": 12.9,
           "feature": "nonce",
@@ -7427,6 +7811,18 @@
           "coverage_pct": 9.68,
           "feature": "funder_1hop",
           "value": "0x88d25c861938a91af4ad57ad964a8fcc6c6351d3"
+        },
+        {
+          "count": 3,
+          "coverage_pct": 9.68,
+          "feature": "launch_weekday_utc",
+          "value": "wednesday"
+        },
+        {
+          "count": 3,
+          "coverage_pct": 9.68,
+          "feature": "launch_weekday_utc",
+          "value": "tuesday"
         },
         {
           "count": 3,
@@ -7473,6 +7869,36 @@
         {
           "count": 2,
           "coverage_pct": 6.45,
+          "feature": "launch_hour_utc",
+          "value": "15"
+        },
+        {
+          "count": 2,
+          "coverage_pct": 6.45,
+          "feature": "launch_hour_utc",
+          "value": "21"
+        },
+        {
+          "count": 2,
+          "coverage_pct": 6.45,
+          "feature": "launch_hour_utc",
+          "value": "01"
+        },
+        {
+          "count": 2,
+          "coverage_pct": 6.45,
+          "feature": "launch_hour_utc",
+          "value": "16"
+        },
+        {
+          "count": 2,
+          "coverage_pct": 6.45,
+          "feature": "launch_weekday_utc",
+          "value": "sunday"
+        },
+        {
+          "count": 2,
+          "coverage_pct": 6.45,
           "feature": "nonce",
           "value": "3"
         },
@@ -7480,13 +7906,13 @@
           "count": 2,
           "coverage_pct": 6.45,
           "feature": "nonce",
-          "value": "9"
+          "value": "8"
         },
         {
           "count": 2,
           "coverage_pct": 6.45,
           "feature": "nonce",
-          "value": "8"
+          "value": "9"
         },
         {
           "count": 2,
@@ -7505,12 +7931,64 @@
       "token_count": 31,
       "tokens": [
         {
+          "ca": "0x0E3c3420dA3EF7Ee6aAD373dd2cdD968f57A0788",
+          "symbol": "SOUP"
+        },
+        {
           "ca": "0xF06e9aE646AD8577fecaeC761ad224865603679A",
           "symbol": "UNITYPAD"
         },
         {
-          "ca": "0x0E3c3420dA3EF7Ee6aAD373dd2cdD968f57A0788",
-          "symbol": "SOUP"
+          "ca": "0x4fFCE3A117e17076C072Fb95E447b2361f69763B",
+          "symbol": "SAFEMOON"
+        },
+        {
+          "ca": "0xCDE24D930DeDeddd6AB6faDF10adC416A1A0072A",
+          "symbol": "ORBIT"
+        },
+        {
+          "ca": "0x6a50F139F3eD4C9c7bDa0D067c5Ed09De1EEBbeA",
+          "symbol": "CLAWNCH"
+        },
+        {
+          "ca": "0xEb24a2663af4Ee979dCbfE39cB95B5F12D369c4B",
+          "symbol": "CEREBRO"
+        },
+        {
+          "ca": "0xA9384EB62343BB623DEAA6cBDAa0A7fd0E6c5F15",
+          "symbol": "FORGE"
+        },
+        {
+          "ca": "0xd7Bac75b4455664078C78389f432F6837C814f2b",
+          "symbol": "VLAD"
+        },
+        {
+          "ca": "0xdE1a4B8927769f8b6Ed07e5d5F49E7f649EbCbbd",
+          "symbol": "astro"
+        },
+        {
+          "ca": "0x232eCBdb38040c93EEBf497121e1241067e937bF",
+          "symbol": "GME"
+        },
+        {
+          "ca": "0xBe8189aC06C8E34191EC2Bb22Cc464ED1323A9fe",
+          "symbol": "PENNY"
+        },
+        {
+          "ca": "0x40de99E3551dEeDDBAE26fA05Eeb33d0537EE20f",
+          "symbol": "ELEPHANT"
+        },
+        {
+          "ca": "0x55AE1d4C532fa686C168a0549DAc36c25309F0Ea",
+          "symbol": "HOODIECOIN"
+        },
+        {
+          "ca": "0xf3203b152a88465ADcd2ea914d1667D15e01b6c3",
+          "symbol": "COIN"
+        },
+        {
+          "ca": "0x80F05AA931319E46A658f6F7d549Ac9Ca767C34A",
+          "symbol": "CULTURE"
         },
         {
           "ca": "0x0a8978Af87407f8B49ED91205f62DC9851cD73a2",
@@ -7533,52 +8011,20 @@
           "symbol": "HABITS"
         },
         {
-          "ca": "0x4fFCE3A117e17076C072Fb95E447b2361f69763B",
-          "symbol": "SAFEMOON"
-        },
-        {
           "ca": "0xCF32b9c1104C14e05a5B17a78618cbD70Bf42091",
           "symbol": "INLEX"
-        },
-        {
-          "ca": "0xCDE24D930DeDeddd6AB6faDF10adC416A1A0072A",
-          "symbol": "ORBIT"
-        },
-        {
-          "ca": "0x6a50F139F3eD4C9c7bDa0D067c5Ed09De1EEBbeA",
-          "symbol": "CLAWNCH"
-        },
-        {
-          "ca": "0xA9384EB62343BB623DEAA6cBDAa0A7fd0E6c5F15",
-          "symbol": "FORGE"
         },
         {
           "ca": "0x63608fa42f0E1fd4427EcF548fFF59b4d71b71B0",
           "symbol": "BOOTS"
         },
         {
-          "ca": "0xd7Bac75b4455664078C78389f432F6837C814f2b",
-          "symbol": "VLAD"
-        },
-        {
-          "ca": "0xEb24a2663af4Ee979dCbfE39cB95B5F12D369c4B",
-          "symbol": "CEREBRO"
-        },
-        {
           "ca": "0x0c54421BD4138A0Cd8D6a0534e22Ff0aAe8CDCCb",
           "symbol": "HP"
         },
         {
-          "ca": "0x232eCBdb38040c93EEBf497121e1241067e937bF",
-          "symbol": "GME"
-        },
-        {
           "ca": "0x97BafF797Fc44F3deBb50eb62e0E1175ca360000",
           "symbol": "PANTHER"
-        },
-        {
-          "ca": "0xBe8189aC06C8E34191EC2Bb22Cc464ED1323A9fe",
-          "symbol": "PENNY"
         },
         {
           "ca": "0x173727CDe55cF8FE46fd2D9EF4a19D7188A14d3b",
@@ -7593,32 +8039,12 @@
           "symbol": "POLI"
         },
         {
-          "ca": "0x55AE1d4C532fa686C168a0549DAc36c25309F0Ea",
-          "symbol": "HOODIECOIN"
-        },
-        {
           "ca": "0xF28f00d39C6aa5fF851978a70B6dD7340891FD5f",
           "symbol": "ROBBY"
         },
         {
-          "ca": "0xf3203b152a88465ADcd2ea914d1667D15e01b6c3",
-          "symbol": "COIN"
-        },
-        {
           "ca": "0xD6127f456f7432A0890155522AC272B6eE78bBbb",
           "symbol": "HODL"
-        },
-        {
-          "ca": "0xdE1a4B8927769f8b6Ed07e5d5F49E7f649EbCbbd",
-          "symbol": "astro"
-        },
-        {
-          "ca": "0x80F05AA931319E46A658f6F7d549Ac9Ca767C34A",
-          "symbol": "CULTURE"
-        },
-        {
-          "ca": "0x40de99E3551dEeDDBAE26fA05Eeb33d0537EE20f",
-          "symbol": "ELEPHANT"
         },
         {
           "ca": "0x5861EaAd052Ce737B2a522f80494455BBA047ff6",
@@ -7879,6 +8305,12 @@
           "coverage_pct": 100.0,
           "feature": "template_hash",
           "value": "a78b5f805b8a06dd7770e6d6a4d338563e17b2218f84fa6c3d98c1a640e6ae6b"
+        },
+        {
+          "count": 2,
+          "coverage_pct": 66.67,
+          "feature": "launch_hour_utc",
+          "value": "14"
         }
       ],
       "team": "team intel",
@@ -7934,5 +8366,5 @@
     }
   ],
   "token_count": 75,
-  "universe_token_count": 251
+  "universe_token_count": 258
 }
