@@ -76,7 +76,28 @@ def backup_database(db_path: Path) -> Path:
     return backup_path
 
 
+def sync_baseline_arc_tokens(db_path: Path):
+    """If target DB is missing Arc tokens, sync baseline Arc records from repo forensics.db."""
+    repo_db = db_path.parent.parent / "forensics.db" if db_path.parent.name == "data" else db_path.parent / "forensics.db"
+    if not repo_db.exists() or repo_db.resolve() == db_path.resolve():
+        return
+    try:
+        with sqlite3.connect(db_path) as dst, sqlite3.connect(repo_db) as src:
+            src.row_factory = sqlite3.Row
+            count = dst.execute("SELECT COUNT(*) FROM tokens WHERE chain_id=5042").fetchone()[0]
+            if count == 0:
+                rows = src.execute("SELECT * FROM tokens WHERE chain_id=5042").fetchall()
+                for r in rows:
+                    keys = list(r.keys())
+                    placeholders = ", ".join(["?"] * len(keys))
+                    dst.execute(f"INSERT OR IGNORE INTO tokens ({', '.join(keys)}) VALUES ({placeholders})", tuple(r))
+                dst.commit()
+    except Exception:
+        pass
+
+
 def refresh(db_path: Path, threshold: float | None, batch_size: int, pause: float) -> dict[str, Any]:
+    sync_baseline_arc_tokens(db_path)
     db = ForensicDatabase(str(db_path))
     with db.get_connection() as connection:
         rows = [dict(row) for row in connection.execute(
@@ -184,7 +205,7 @@ def refresh(db_path: Path, threshold: float | None, batch_size: int, pause: floa
 
 def main() -> int:
     default_db = os.getenv("FORENSICS_DB_PATH")
-    if not default_db:
+    if not default_db or not Path(default_db).exists():
         if Path("data/forensics.db").exists():
             default_db = "data/forensics.db"
         else:

@@ -1,5 +1,6 @@
 """Crash-safe Robinhood Chain discovery, enrichment, and dashboard worker."""
 import argparse
+import concurrent.futures
 import json
 import logging
 import logging.handlers
@@ -529,22 +530,41 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
         "is_training_anchor": False, "qualification_gates": qualification_gates,
     }
 
-def process_queue(db: ForensicDatabase, store: QueueStore, max_jobs: int = 10) -> Dict[str, int]:
+def process_queue(db: ForensicDatabase, store: QueueStore, max_jobs: int = 10, concurrency: int = 4) -> Dict[str, int]:
     worker_id = f"{socket.gethostname()}:{os.getpid()}:{uuid.uuid4().hex[:8]}"
     counts = {"succeeded": 0, "failed": 0, "claimed": 0}
     jobs = store.claim(worker_id, limit=max(1, max_jobs))
     counts["claimed"] = len(jobs)
-    for job in jobs:
+    if not jobs:
+        return counts
+
+    def _execute_job(job: Dict[str, Any]) -> bool:
         if STOP_REQUESTED:
-            break
+            return False
         try:
             ingest_and_enrich_job(db, job)
             store.succeed(job["ca"], job["chain_id"])
-            counts["succeeded"] += 1
+            return True
         except Exception as exc:
             store.fail(job, exc)
-            counts["failed"] += 1
-            LOG.exception("job %s failed", job["ca"])
+            LOG.warning("job %s (chain %s) failed: %s", job.get("ca"), job.get("chain_id"), exc)
+            return False
+
+    workers = min(max(1, concurrency), len(jobs))
+    if workers > 1:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = [executor.submit(_execute_job, j) for j in jobs]
+            for f in concurrent.futures.as_completed(futures):
+                if f.result():
+                    counts["succeeded"] += 1
+                else:
+                    counts["failed"] += 1
+    else:
+        for job in jobs:
+            if _execute_job(job):
+                counts["succeeded"] += 1
+            else:
+                counts["failed"] += 1
     return counts
 
 def atomic_write_json(path: Path, payload: Dict[str, Any]):
@@ -591,12 +611,38 @@ def discover_once(store: QueueStore, include_chain: bool = True) -> Dict[str, An
     return {"dex_tokens": len(dex), "dex_by_chain": dex_counts, "robinhood_v4": rbh_chain}
 
 def run_cycle(db: ForensicDatabase, store: QueueStore, max_jobs: int, include_chain: bool = True) -> Dict[str, Any]:
+    run_id = None
+    started_at = iso_utc()
+    try:
+        with db.get_connection() as conn:
+            cur = conn.execute(
+                "INSERT INTO ingestion_runs (mode, started_at, status) VALUES ('stream', ?, 'running')",
+                (started_at,)
+            )
+            run_id = cur.lastrowid
+    except Exception as exc:
+        LOG.warning("Failed to record run start in ingestion_runs: %s", exc)
+
     discovery = discover_once(store, include_chain=include_chain)
-    processing = process_queue(db, store, max_jobs=max_jobs)
+    concurrency = int(os.getenv("COLLECTOR_CONCURRENCY", "4"))
+    processing = process_queue(db, store, max_jobs=max_jobs, concurrency=concurrency)
     if processing["succeeded"]:
         regenerate_outputs(db)
     result = {"discovery": discovery, "processing": processing}
     write_health("ok", store, **result)
+
+    if run_id:
+        try:
+            with db.get_connection() as conn:
+                conn.execute(
+                    """UPDATE ingestion_runs
+                       SET status='ok', finished_at=?, discovered_count=?, succeeded_count=?, failed_count=?
+                       WHERE run_id=?""",
+                    (iso_utc(), discovery.get("dex_tokens", 0), processing.get("succeeded", 0), processing.get("failed", 0), run_id)
+                )
+        except Exception as exc:
+            LOG.warning("Failed to record run completion in ingestion_runs: %s", exc)
+
     return result
 
 def backfill(db: ForensicDatabase, store: QueueStore, days: int, max_jobs: int,
