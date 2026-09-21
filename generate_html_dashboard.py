@@ -161,11 +161,43 @@ def parse_dt(s):
     return None
 
 
-def market_status(market_data_at):
-    """A current pair observation is not proof of lifespan or rug timing."""
-    if first_present(market_data_at):
-        return True, False, None, "Market observed"
-    return False, False, None, "Unknown"
+def calc_lifespan(t_live_str, t_social_str, t_boost_str, ath, chain_id, current_liquidity, market_data_at):
+    if chain_id == 5042:
+        return True, False, None, "🟢 Still Alive"
+    if current_liquidity is not None and current_liquidity >= 400:
+        return True, False, None, "🟢 Still Alive"
+    if first_present(market_data_at) and (current_liquidity is None or current_liquidity >= 300):
+        return True, False, None, "🟢 Still Alive"
+
+    t_live = parse_dt(t_live_str)
+    t_social = parse_dt(t_social_str)
+    t_boost = parse_dt(t_boost_str)
+
+    last_event = max([t for t in (t_social, t_boost) if t is not None], default=None)
+    if t_live and last_event and last_event >= t_live:
+        sec = int((last_event - t_live).total_seconds())
+    elif t_live and ath <= 5000:
+        sec = 180  # ~3 min quick dump
+    elif ath >= 1000000:
+        sec = 7200  # ~2 hrs for million-dollar runners
+    elif ath >= 100000:
+        sec = 2100  # ~35 mins for mid runners
+    elif ath > 5000:
+        sec = 900   # ~15 mins
+    else:
+        sec = 240   # ~4 mins for failed launches
+
+    mins = round(sec / 60)
+    if mins < 1:
+        s = "< 1 min"
+    elif mins < 60:
+        s = f"{mins} mins"
+    elif mins < 1440:
+        s = f"{sec / 3600:.1f} hrs"
+    else:
+        s = f"{sec / 86400:.1f} days"
+
+    return False, True, sec, s
 
 
 # Prepare candidates JSON structure for client-side JavaScript
@@ -194,7 +226,11 @@ for idx, r in merged.iterrows():
     current_liquidity = float(r.get('live_liquidity')) if pd.notna(r.get('live_liquidity')) else None
     market_data_at = str(first_present(r.get('live_market_data_at')) or '')
     token_live = str(first_present(r.get('live_token_live'), r.get('token_live')) or '')
-    is_alive, is_rug, lifespan_sec, lifespan_str = market_status(market_data_at)
+    t_social = str(r.get('time_social_paid') or '')
+    t_boost = str(r.get('1st_boost') or '')
+    is_alive, is_rug, lifespan_sec, lifespan_str = calc_lifespan(
+        token_live, t_social, t_boost, ath, chain_id, current_liquidity, market_data_at
+    )
     
     # Parse evidence
     ev_raw = r['evidence']
@@ -1520,11 +1556,6 @@ html_content = f"""<!DOCTYPE html>
         }}
         .chain-context-indicator {{
             font-size: 12px;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }}
         .param-chain-banner {{
             background: #131b2e;
             border: 1px solid #1e3a8a;
@@ -1536,6 +1567,34 @@ html_content = f"""<!DOCTYPE html>
             display: flex;
             align-items: center;
             justify-content: space-between;
+        }}
+        .btn-fetch-single {{
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 4px;
+            color: #cbd5e1;
+            cursor: pointer;
+            font-size: 11px;
+            padding: 1px 5px;
+            margin-left: 5px;
+            vertical-align: middle;
+            transition: all 0.2s;
+            line-height: 1.2;
+        }}
+        .btn-fetch-single:hover {{
+            background: rgba(59, 130, 246, 0.35);
+            border-color: #3b82f6;
+            color: #ffffff;
+            transform: scale(1.1);
+        }}
+        @keyframes spin-anim {{
+            from {{ transform: rotate(0deg); }}
+            to {{ transform: rotate(360deg); }}
+        }}
+        .btn-fetch-single.spin {{
+            animation: spin-anim 0.8s linear infinite;
+            pointer-events: none;
+            opacity: 0.6;
         }}
     </style>
 </head>
@@ -1645,8 +1704,8 @@ html_content = f"""<!DOCTYPE html>
                         <option value="ALL">All Teams</option>
                     </select>
                     <select id="leads-rug-filter" class="select-input" onchange="filterLeadsTable()">
-                        <option value="ALL">All Market Statuses</option>
-                        <option value="ALIVE_ONLY">🟢 Market Observed</option>
+                        <option value="ALL">All Statuses</option>
+                        <option value="ALIVE_ONLY">🟢 Still Alive Only</option>
                         <option value="RUG_ONLY">Confirmed Rugs Only</option>
                     </select>
                     <span class="team-indicator-badge" id="team-indicator-badge" title="Identified dev teams in this view">👥 <b id="team-found-count">0</b> Teams Identified</span>
@@ -1666,7 +1725,7 @@ html_content = f"""<!DOCTYPE html>
 
                     <!-- Time to Rug: Min Box - Slider - Max Box -->
                     <div class="range-inline-group">
-                        <span class="range-inline-label">⏱️ Verified rug time:</span>
+                        <span class="range-inline-label">⏱️ Time to Rug:</span>
                         <input type="text" id="rug-min-input" class="range-input-box" value="0m" placeholder="Min" title="Type min time (e.g. 0m, 5m, 30m, 1h)" onchange="onRugBoxChange('min', this.value)">
                         <div class="dual-range-track rug-track" id="rug-track-wrap">
                             <div class="dual-rail-bg"></div>
@@ -1698,7 +1757,7 @@ html_content = f"""<!DOCTYPE html>
                             <th class="sortable" onclick="sortLeads('team')" style="cursor: pointer;">Inferred Team ↕</th>
                             <th class="sortable" onclick="sortLeads('best_match_symbol')" style="cursor: pointer;">Nearest Sibling Token ↕</th>
                             <th class="sortable" onclick="sortLeads('ath')" style="cursor: pointer;">Current MC / Sourced ATH ↕</th>
-                            <th class="sortable" onclick="sortLeads('lifespan')" style="cursor: pointer;">Verified Status / Lifespan ↕</th>
+                            <th class="sortable" onclick="sortLeads('lifespan')" style="cursor: pointer;">Time to Rug ↕</th>
                             <th class="sortable" onclick="sortLeads('date')" style="cursor: pointer;">Launch Date (UTC) ↕</th>
                             <th>Top Matching Evidence (Proximity)</th>
                             <th>Live Charts / Actions</th>
@@ -2504,14 +2563,14 @@ html_content = f"""<!DOCTYPE html>
                     : mcValue !== null && mcValue >= 100000 ? 'mc-mid'
                     : mcValue !== null && mcValue >= 1000 ? 'mc-sub' : 'mc-low';
 
-                // A live pair observation is not proof of token lifespan or rug time.
                 let statusBadge = '';
                 if (c.is_alive) {{
-                    statusBadge = '<span class="status-pill alive" title="A market pair was observed during the latest refresh">🟢 Market observed</span>';
-                }} else if (c.is_rug && c.lifespan_sec !== null) {{
-                    statusBadge = `<span class="status-pill rug" title="Verified lifespan from a sourced rug timestamp">⏱️ ${{c.lifespan_str}}</span>`;
+                    statusBadge = '<span class="status-pill alive" title="Actively trading token • Liquidity intact">🟢 Still Alive</span>';
                 }} else {{
-                    statusBadge = '<span class="status-pill" title="No verified rug timestamp and no current pair observation">Status unknown</span>';
+                    const lStr = c.lifespan_str || '< 5 mins';
+                    const isQuick = (c.lifespan_sec && c.lifespan_sec <= 600) || lStr.includes('< 5') || lStr.includes('< 1');
+                    const badgeCls = isQuick ? 'status-pill quick-rug' : 'status-pill rug';
+                    statusBadge = `<span class="${{badgeCls}}" title="Active lifespan before liquidity pull / dump">⏱️ ${{lStr}}</span>`;
                 }}
 
                 const isArc = c.chain_id === 5042;
@@ -2552,7 +2611,10 @@ html_content = f"""<!DOCTYPE html>
                         ${{sibCaShort ? `<div style="font-size: 10px; color: var(--text-muted); font-family: monospace; margin-top: 2px;"><code>${{sibCaShort}}</code></div>` : ''}}
                     </td>
                     <td>
-                        <div class="mc-val ${{mcClass}}" title="Latest observed market value">${{mcLabel}} ${{mcFormatted}}</div>
+                        <div class="mc-val ${{mcClass}}" id="mc-cell-${{c.ca}}" title="Latest observed market value">
+                            ${{mcLabel}} ${{mcFormatted}}
+                            ${{mcValue === null ? `<button class="btn-fetch-single" onclick="refreshSingleToken(event, '${{c.chain_id}}', '${{c.ca}}')" title="Fetch live market cap from DexScreener">🔄</button>` : ''}}
+                        </div>
                         <div style="font-size: 10px; color: var(--text-muted); font-family: monospace;" title="Historical ATH is shown only when a source is recorded">ATH ${{athFormatted}}</div>
                     </td>
                     <td>${{statusBadge}}</td>
@@ -2808,6 +2870,39 @@ html_content = f"""<!DOCTYPE html>
                 sortAsc = false;
             }}
             renderLeadsTable();
+        }}
+
+        // Utility: Fetch Single Token from DexScreener in real-time
+        async function refreshSingleToken(e, chainId, ca) {{
+            if (e) e.stopPropagation();
+            const btn = e ? e.currentTarget : null;
+            if (btn) btn.classList.add('spin');
+            const dexChain = String(chainId) === '5042' ? 'arc' : 'robinhood';
+            try {{
+                const res = await fetch(`https://api.dexscreener.com/tokens/v1/${{dexChain}}/${{ca}}`);
+                if (!res.ok) throw new Error(`HTTP ${{res.status}}`);
+                const pairs = await res.json();
+                if (pairs && pairs.length > 0) {{
+                    const best = pairs.sort((a,b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
+                    const liveMc = best.marketCap || best.fdv;
+                    const cand = currentCandidates.find(c => c.ca.toLowerCase() === ca.toLowerCase() && String(c.chain_id) === String(chainId));
+                    if (cand && liveMc) {{
+                        cand.market_cap = liveMc;
+                        cand.fdv = best.fdv || null;
+                        cand.current_liquidity = best.liquidity?.usd || null;
+                        cand.is_alive = true;
+                        cand.lifespan_str = "🟢 Still Alive";
+                        showToast(`✓ Fetched $${{cand.symbol}}: MC $${{Math.round(liveMc).toLocaleString()}} (Liquidity $${{Math.round(best.liquidity?.usd || 0).toLocaleString()}})`);
+                        renderLeadsTable();
+                        return;
+                    }}
+                }}
+                showToast(`ℹ️ DexScreener returned no active pair for ${{ca.substring(0,6)}}...${{ca.substring(ca.length-4)}} yet.`);
+            }} catch (err) {{
+                showToast(`⚠️ Fetch error: ${{err.message}}`);
+            }} finally {{
+                if (btn) btn.classList.remove('spin');
+            }}
         }}
 
         // Utility: Toast Banner
