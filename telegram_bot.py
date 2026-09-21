@@ -174,6 +174,7 @@ class Telegram:
             {"command": "dbxlsx", "description": "Export formatted Excel workbook"},
             {"command": "dbcsv", "description": "Download raw candidate CSV"},
             {"command": "status", "description": "Collector and queue health"},
+            {"command": "log", "description": "Audit recent collector and queue logs"},
         ]
         self.call("setMyCommands", {"commands": json.dumps(commands)})
 
@@ -613,8 +614,25 @@ class BotService:
             self.api.document(chat_id, path, "OmniReborn raw candidate data")
         elif command == "/status":
             self.api.message(chat_id, status_message(self.settings, self.started))
+        elif command in ("/log", "/logs"):
+            log_path = self.settings.runtime / "streamer.log"
+            content = ""
+            if log_path.exists():
+                try:
+                    lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+                    content = "\n".join(lines[-45:])
+                except Exception as exc:
+                    content = f"Error reading log: {exc}"
+            if not content:
+                content = "No log entries found in streamer.log yet."
+            if len(content) <= 3800:
+                self.api.message(chat_id, f"📋 <b>Recent Collector Logs:</b>\n<pre>{html.escape(content)}</pre>")
+            else:
+                audit_file = self.settings.runtime / "audit_recent.log"
+                audit_file.write_text(content, encoding="utf-8")
+                self.api.document(chat_id, audit_file, "OmniReborn audit logs")
         else:
-            self.api.message(chat_id, "Commands: /leads /dashboard /dbxlsx /dbcsv /status")
+            self.api.message(chat_id, "Commands: /leads /dashboard /dbxlsx /dbcsv /status /log")
 
     def handle_update(self, update):
         message = update.get("message") or {}

@@ -62,6 +62,49 @@ if db_path.exists():
         .drop_duplicates(subset=['chain_id', 'ca_lower'], keep='last')
     )
     merged = pd.merge(merged, df_live, on=['chain_id', 'ca_lower'], how='left')
+
+    # Ensure all tokens in SQLite (including newly ingested Arc tokens) are included
+    existing_pairs = set(zip(merged['chain_id'], merged['ca_lower']))
+    with sqlite3.connect(db_path) as connection:
+        df_db_all = pd.read_sql_query(
+            '''SELECT t.ca, LOWER(t.ca) AS ca_lower, COALESCE(t.chain_id, 4663) AS chain_id,
+                      COALESCE(t.chain, CASE WHEN t.chain_id=5042 THEN 'ARC' ELSE 'RBH' END) AS chain,
+                      COALESCE(t.symbol, 'TOKEN') AS symbol,
+                      COALESCE(t.name, t.symbol, 'Token') AS name,
+                      t.token_live_at, t.ath_usd AS ath,
+                      t.website, t.x_handle AS x,
+                      COALESCE(tm.candidate_team_name, 'unclustered') AS inferred_team,
+                      COALESCE(tm.best_match_pct, 20.0) AS candidate_score,
+                      COALESCE(tm.best_match_ca, '') AS best_match_ca,
+                      CASE
+                          WHEN tm.best_match_pct >= 65 THEN 'HIGH_LEAD'
+                          WHEN tm.best_match_pct >= 45 THEN 'PROBABLE_LEAD'
+                          WHEN tm.best_match_pct >= 30 THEN 'WATCH'
+                          ELSE 'TRACKED'
+                      END AS confidence,
+                      tm.match_reasons AS evidence
+               FROM tokens t
+               LEFT JOIN token_matches tm ON LOWER(t.ca) = LOWER(tm.ca)''',
+            connection,
+        )
+    extra_rows = []
+    for _, row in df_db_all.iterrows():
+        cid = int(row['chain_id'])
+        cal = str(row['ca_lower'])
+        if (cid, cal) not in existing_pairs:
+            rec = dict(row)
+            ev = rec.get('evidence')
+            rec['evidence'] = '[]'
+            if isinstance(ev, str) and 'evidence' in ev:
+                try:
+                    parsed_ev = json.loads(ev).get('evidence', [])
+                    rec['evidence'] = json.dumps(parsed_ev)
+                except Exception:
+                    pass
+            extra_rows.append(rec)
+    if extra_rows:
+        df_extra = pd.DataFrame(extra_rows)
+        merged = pd.concat([merged, df_extra], ignore_index=True)
 else:
     for column in ('live_chain', 'live_name', 'live_token_live', 'live_ath', 'live_website', 'live_x'):
         merged[column] = None
@@ -1133,6 +1176,94 @@ html_content = f"""<!DOCTYPE html>
             border-top: 1px solid var(--border-color);
             margin-top: 40px;
         }}
+        .chain-header-bar {{
+            background: #0f131d;
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }}
+        .chain-header-left {{
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }}
+        .chain-selector-title {{
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }}
+        .chain-pill-group {{
+            display: inline-flex;
+            background: #07090e;
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            gap: 4px;
+        }}
+        .chain-btn {{
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 700;
+            padding: 7px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }}
+        .chain-btn:hover {{
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.06);
+        }}
+        .chain-btn.active.chain-all {{
+            background: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 0 12px rgba(37, 99, 235, 0.5);
+        }}
+        .chain-btn.active.chain-rbh {{
+            background: #9333ea;
+            color: #ffffff;
+            box-shadow: 0 0 12px rgba(147, 51, 234, 0.5);
+        }}
+        .chain-btn.active.chain-arc {{
+            background: #0284c7;
+            color: #ffffff;
+            box-shadow: 0 0 12px rgba(2, 132, 199, 0.5);
+        }}
+        .chain-badge {{
+            background: rgba(0, 0, 0, 0.35);
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-size: 11px;
+        }}
+        .chain-context-indicator {{
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }}
+        .param-chain-banner {{
+            background: #131b2e;
+            border: 1px solid #1e3a8a;
+            border-radius: 8px;
+            padding: 12px 18px;
+            margin-bottom: 18px;
+            font-size: 13px;
+            color: #93c5fd;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }}
     </style>
 </head>
 <body>
@@ -1159,6 +1290,30 @@ html_content = f"""<!DOCTYPE html>
         </div>
     </div>
 
+    <!-- Prominent Top-Level Chain Hierarchy Switcher -->
+    <div class="chain-header-bar">
+        <div class="chain-header-left">
+            <span class="chain-selector-title">ACTIVE FORENSICS CHAIN:</span>
+            <div class="chain-pill-group">
+                <button class="chain-btn active chain-all" id="top-chain-all" onclick="selectTopChain('ALL')">
+                    <span>🌐 All Chains</span>
+                    <span class="chain-badge" id="top-badge-all">{len(candidates_data)}</span>
+                </button>
+                <button class="chain-btn chain-rbh" id="top-chain-4663" onclick="selectTopChain('4663')">
+                    <span>🟣 Robinhood (4663)</span>
+                    <span class="chain-badge" id="top-badge-4663">{len([c for c in candidates_data if c['chain_id'] == 4663])}</span>
+                </button>
+                <button class="chain-btn chain-arc" id="top-chain-5042" onclick="selectTopChain('5042')">
+                    <span>🔷 Arc (5042)</span>
+                    <span class="chain-badge" id="top-badge-5042">{len([c for c in candidates_data if c['chain_id'] == 5042])}</span>
+                </button>
+            </div>
+        </div>
+        <div class="chain-context-indicator" id="top-chain-desc">
+            🌐 Viewing combined dual-chain cross-forensic evidence
+        </div>
+    </div>
+
     <div class="container">
 
         <!-- Global Toast Notification -->
@@ -1167,37 +1322,37 @@ html_content = f"""<!DOCTYPE html>
             <button class="btn btn-secondary" style="padding: 3px 8px; font-size: 11px;" onclick="closeToast()">✕ Dismiss</button>
         </div>
 
-        <!-- Global Stats Grid (Auto-updated on weight changes) -->
+        <!-- Global Stats Grid (Auto-updated on chain selection and weight changes) -->
         <div class="stats-grid">
             <div class="stat-card" style="--stat-accent: #64748b;">
-                <div class="title">Universe Tokens</div>
-                <div class="val">248</div>
-                <div class="subtext">75 qualified anchor coins</div>
+                <div class="title" id="stat-universe-title">Universe Tokens</div>
+                <div class="val" id="stat-universe-val">{len(candidates_data)}</div>
+                <div class="subtext" id="stat-universe-sub">Candidate & registry coins</div>
             </div>
             <div class="stat-card" style="--stat-accent: #2ecc71;">
                 <div class="title">High Leads (Score ≥65)</div>
-                <div class="val" id="stat-high-leads" style="color: #2ecc71;">24</div>
+                <div class="val" id="stat-high-leads" style="color: #2ecc71;">0</div>
                 <div class="subtext">Nearest sibling match ≥65%</div>
             </div>
             <div class="stat-card" style="--stat-accent: #3b82f6;">
                 <div class="title">Probable Leads (Score ≥45)</div>
-                <div class="val" id="stat-prob-leads" style="color: #60a5fa;">24</div>
+                <div class="val" id="stat-prob-leads" style="color: #60a5fa;">0</div>
                 <div class="subtext">Multi-parameter relative match</div>
             </div>
             <div class="stat-card" style="--stat-accent: #f59e0b;">
                 <div class="title">Watch Candidates</div>
-                <div class="val" id="stat-watch-leads" style="color: #fbbf24;">69</div>
+                <div class="val" id="stat-watch-leads" style="color: #fbbf24;">0</div>
                 <div class="subtext">Shared habit & bytecode traces</div>
             </div>
             <div class="stat-card" style="--stat-accent: #ef4444;">
                 <div class="title">Flagged Rugs (ATH ≤ $5k)</div>
-                <div class="val" id="stat-rug-leads" style="color: #ef4444;">2</div>
+                <div class="val" id="stat-rug-leads" style="color: #ef4444;">0</div>
                 <div class="subtext">Highlighted in 40% red</div>
             </div>
             <div class="stat-card" style="--stat-accent: #10b981;">
-                <div class="title">Top Runner Peak ATH</div>
-                <div class="val" style="color: #34d399;">$18,099,822</div>
-                <div class="subtext">$MANCER • team astro</div>
+                <div class="title" id="stat-runner-title">Top Runner Peak ATH</div>
+                <div class="val" id="stat-runner-val" style="color: #34d399;">$0</div>
+                <div class="subtext" id="stat-runner-sub">-</div>
             </div>
         </div>
 
@@ -1264,6 +1419,12 @@ html_content = f"""<!DOCTYPE html>
 
         <!-- ==================== PAGE 2: PARAMETER WEIGHTS & SCORING ==================== -->
         <div class="page-content" id="page-params">
+
+            <!-- Active Chain Context for Tuning -->
+            <div class="param-chain-banner" id="param-chain-banner">
+                <span>⚡ Active Tuning Context: <b>🌐 All Chains</b></span>
+                <span style="font-size: 11px; opacity: 0.85;">Switch chain using the top bar to inspect chain-specific habit denominations</span>
+            </div>
 
             <!-- Numerical Habit Tolerance Buffer Setting -->
             <div class="buffer-card">
@@ -1506,28 +1667,113 @@ html_content = f"""<!DOCTYPE html>
         }}
 
         // Rescore all candidates with active weights
+        let activeChainFilter = 'ALL';
+
+        function selectTopChain(chainId) {{
+            activeChainFilter = chainId;
+
+            // Update top button active states
+            const keys = ['all', '4663', '5042'];
+            keys.forEach(k => {{
+                const btn = document.getElementById('top-chain-' + k);
+                if (!btn) return;
+                const matches = (k === 'all' && chainId === 'ALL') || (k === chainId);
+                if (matches) {{
+                    btn.className = 'chain-btn active ' + (k === 'all' ? 'chain-all' : k === '4663' ? 'chain-rbh' : 'chain-arc');
+                }} else {{
+                    btn.className = 'chain-btn';
+                }}
+            }});
+
+            // Update context descriptor
+            const desc = document.getElementById('top-chain-desc');
+            if (desc) {{
+                if (chainId === 'ALL') {{
+                    desc.innerHTML = '🌐 Viewing combined dual-chain cross-forensic evidence';
+                }} else if (chainId === '4663') {{
+                    desc.innerHTML = '🟣 Viewing Robinhood Chain (4663) • Native Gas/Value: ETH';
+                }} else if (chainId === '5042') {{
+                    desc.innerHTML = '🔷 Viewing Arc Chain (5042) • Native Gas/Value: USDC';
+                }}
+            }}
+
+            // Sync with table dropdown filter
+            const chainSelect = document.getElementById('leads-chain-filter');
+            if (chainSelect && chainSelect.value !== chainId) {{
+                chainSelect.value = chainId;
+            }}
+
+            // Update Page 2 parameter banner
+            const paramBanner = document.getElementById('param-chain-banner');
+            if (paramBanner) {{
+                if (chainId === 'ALL') {{
+                    paramBanner.innerHTML = '<span>⚡ Active Tuning Context: <b>🌐 All Chains</b></span><span style=\"font-size: 11px; opacity: 0.85;\">Tuning buffer & weights across both RBH & ARC</span>';
+                }} else if (chainId === '4663') {{
+                    paramBanner.innerHTML = '<span>⚡ Active Tuning Context: <b>🟣 Robinhood (4663)</b></span><span style=\"font-size: 11px; opacity: 0.85;\">Denominated in ETH • Pons/Uniswap v4 metrics</span>';
+                }} else if (chainId === '5042') {{
+                    paramBanner.innerHTML = '<span>⚡ Active Tuning Context: <b>🔷 Arc (5042)</b></span><span style=\"font-size: 11px; opacity: 0.85;\">Denominated in USDC • Arc DEX metrics</span>';
+                }}
+            }}
+
+            rescoreAllCandidates();
+        }}
+
+        // Rescore all candidates with active weights & calculate chain-filtered stats
         function rescoreAllCandidates() {{
             let highCount = 0;
             let probCount = 0;
             let watchCount = 0;
             let rugCount = 0;
+            let universeCount = 0;
+            let maxAth = 0.0;
+            let topRunnerStr = '-';
+
+            // Update top pill badges
+            const totalAll = currentCandidates.length;
+            const totalRbh = currentCandidates.filter(c => c.chain_id === 4663).length;
+            const totalArc = currentCandidates.filter(c => c.chain_id === 5042).length;
+
+            if (document.getElementById('top-badge-all')) document.getElementById('top-badge-all').textContent = totalAll;
+            if (document.getElementById('top-badge-4663')) document.getElementById('top-badge-4663').textContent = totalRbh;
+            if (document.getElementById('top-badge-5042')) document.getElementById('top-badge-5042').textContent = totalArc;
 
             currentCandidates.forEach(cand => {{
                 const res = calculateTokenScore(cand, activeWeights, activeBufferPct);
                 cand.score = res.score;
                 cand.confidence = res.confidence;
 
-                if (cand.is_rug) rugCount++;
-                if (cand.confidence === 'HIGH_LEAD') highCount++;
-                else if (cand.confidence === 'PROBABLE_LEAD') probCount++;
-                else if (cand.confidence === 'WATCH') watchCount++;
+                // Chain-aware stats calculation
+                const matchesChain = (activeChainFilter === 'ALL' || String(cand.chain_id) === activeChainFilter);
+                if (matchesChain) {{
+                    universeCount++;
+                    if (cand.is_rug) rugCount++;
+                    if (cand.confidence === 'HIGH_LEAD') highCount++;
+                    else if (cand.confidence === 'PROBABLE_LEAD') probCount++;
+                    else if (cand.confidence === 'WATCH') watchCount++;
+
+                    if (cand.ath > maxAth) {{
+                        maxAth = cand.ath;
+                        topRunnerStr = `$${{cand.symbol || 'TOKEN'}} • ${{cand.team || 'unclustered'}}`;
+                    }}
+                }}
             }});
 
             // Update stats grid
+            if (document.getElementById('stat-universe-val')) document.getElementById('stat-universe-val').textContent = universeCount;
+            if (document.getElementById('stat-universe-title')) {{
+                document.getElementById('stat-universe-title').textContent = (activeChainFilter === 'ALL') ? 'Universe Tokens' : (activeChainFilter === '4663' ? 'RBH Tokens' : 'Arc Tokens');
+            }}
             if (document.getElementById('stat-high-leads')) document.getElementById('stat-high-leads').textContent = highCount;
             if (document.getElementById('stat-prob-leads')) document.getElementById('stat-prob-leads').textContent = probCount;
             if (document.getElementById('stat-watch-leads')) document.getElementById('stat-watch-leads').textContent = watchCount;
             if (document.getElementById('stat-rug-leads')) document.getElementById('stat-rug-leads').textContent = rugCount;
+
+            if (document.getElementById('stat-runner-val')) {{
+                document.getElementById('stat-runner-val').textContent = maxAth > 0 ? ('$' + Math.round(maxAth).toLocaleString()) : '$0';
+            }}
+            if (document.getElementById('stat-runner-sub')) {{
+                document.getElementById('stat-runner-sub').textContent = topRunnerStr;
+            }}
 
             renderLeadsTable();
         }}
@@ -1539,7 +1785,7 @@ html_content = f"""<!DOCTYPE html>
             tbody.innerHTML = '';
 
             const searchTerm = (document.getElementById('leads-search') ? document.getElementById('leads-search').value.toLowerCase().trim() : '');
-            const chainFilter = (document.getElementById('leads-chain-filter') ? document.getElementById('leads-chain-filter').value : 'ALL');
+            const chainFilter = activeChainFilter;
             const tierFilter = (document.getElementById('leads-tier-filter') ? document.getElementById('leads-tier-filter').value : 'ALL');
             const teamFilter = (document.getElementById('leads-team-filter') ? document.getElementById('leads-team-filter').value.toLowerCase() : 'all');
             const rugFilter = (document.getElementById('leads-rug-filter') ? document.getElementById('leads-rug-filter').value : 'ALL');
@@ -1855,15 +2101,19 @@ html_content = f"""<!DOCTYPE html>
 
         // Search & Filter callbacks
         function filterLeadsTable() {{
+            const dropdown = document.getElementById('leads-chain-filter');
+            if (dropdown && dropdown.value !== activeChainFilter) {{
+                selectTopChain(dropdown.value);
+                return;
+            }}
             renderLeadsTable();
         }}
         function resetLeadsFilters() {{
             if (document.getElementById('leads-search')) document.getElementById('leads-search').value = '';
-            if (document.getElementById('leads-chain-filter')) document.getElementById('leads-chain-filter').value = 'ALL';
             if (document.getElementById('leads-tier-filter')) document.getElementById('leads-tier-filter').value = 'ALL';
             if (document.getElementById('leads-team-filter')) document.getElementById('leads-team-filter').value = 'ALL';
             if (document.getElementById('leads-rug-filter')) document.getElementById('leads-rug-filter').value = 'ALL';
-            renderLeadsTable();
+            selectTopChain('ALL');
         }}
         function filterParamsTable() {{
             renderParamsTable();
