@@ -480,7 +480,7 @@ def status_message(settings, started):
         + ", succeeded=" + str(counts.get("succeeded", 0))
         + "\nLatest collection: " + html.escape(latest)
         + "\nChains: " + html.escape(os.getenv("ENABLED_CHAIN_IDS", "4663,5042"))
-        + "\nCollection cadence: " + html.escape(os.getenv("COLLECTION_INTERVAL_SECONDS", "600")) + " seconds"
+        + "\nCollection cadence: " + html.escape(os.getenv("COLLECTION_INTERVAL_SECONDS", "300")) + " seconds"
         + "\nPhase 2 push alerts: " + ("enabled" if settings.push_alerts else "disabled")
     )
 

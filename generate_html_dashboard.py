@@ -852,6 +852,18 @@ html_content = f"""<!DOCTYPE html>
             font-size: 11px;
         }}
         .btn-gmgn:hover {{ background: #0284c7; }}
+        .btn-gmgn-disabled {{
+            background: #1e293b;
+            color: #64748b;
+            padding: 5px 9px;
+            font-size: 11px;
+            border: 1px solid #334155;
+            cursor: not-allowed;
+            opacity: 0.65;
+            border-radius: 4px;
+            display: inline-block;
+            text-decoration: none;
+        }}
         .btn-dex {{
             background: #10b981;
             color: #ffffff;
@@ -974,6 +986,27 @@ html_content = f"""<!DOCTYPE html>
             border-radius: 999px;
             font-size: 10px;
             font-weight: 800;
+        }}
+        .chain-pill.arc {{
+            background: rgba(56, 189, 248, 0.16);
+            color: #7dd3fc;
+            border-color: rgba(56, 189, 248, 0.4);
+        }}
+        .team-indicator-badge {{
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #38bdf8;
+            padding: 7px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }}
+        .team-indicator-badge b {{
+            color: #ffffff;
+            font-weight: 700;
         }}
         .ath-val {{
             color: #34d399;
@@ -1274,7 +1307,7 @@ html_content = f"""<!DOCTYPE html>
             <span class="logo-icon">⚡</span>
             <div>
                 <div class="brand-title">Robinhood + Arc Meme Coin Forensics</div>
-                <div class="brand-subtitle">Chain IDs: 4663 (RBH) / 5042 (Arc) • Pre-Launch Sniping vs Post-Launch Holding Intelligence</div>
+                <div class="brand-subtitle">Robinhood & Arc Chains • Pre-Launch Sniping vs Post-Launch Holding Intelligence</div>
             </div>
         </div>
 
@@ -1300,11 +1333,11 @@ html_content = f"""<!DOCTYPE html>
                     <span class="chain-badge" id="top-badge-all">{len(candidates_data)}</span>
                 </button>
                 <button class="chain-btn chain-rbh" id="top-chain-4663" onclick="selectTopChain('4663')">
-                    <span>🟣 Robinhood (4663)</span>
+                    <span>🟣 Robinhood</span>
                     <span class="chain-badge" id="top-badge-4663">{len([c for c in candidates_data if c['chain_id'] == 4663])}</span>
                 </button>
                 <button class="chain-btn chain-arc" id="top-chain-5042" onclick="selectTopChain('5042')">
-                    <span>🔷 Arc (5042)</span>
+                    <span>🔷 Arc</span>
                     <span class="chain-badge" id="top-badge-5042">{len([c for c in candidates_data if c['chain_id'] == 5042])}</span>
                 </button>
             </div>
@@ -1361,11 +1394,6 @@ html_content = f"""<!DOCTYPE html>
             <div class="filter-bar">
                 <div class="filter-group">
                     <input type="text" id="leads-search" class="search-input" placeholder="Search Symbol, Name, CA, or Sibling Token..." oninput="filterLeadsTable()">
-                    <select id="leads-chain-filter" class="select-input" onchange="filterLeadsTable()">
-                        <option value="ALL">All Chains</option>
-                        <option value="4663">Robinhood (4663)</option>
-                        <option value="5042">Arc (5042)</option>
-                    </select>
                     <select id="leads-tier-filter" class="select-input" onchange="filterLeadsTable()">
                         <option value="ALL">All Confidence Tiers</option>
                         <option value="HIGH_LEAD">High Leads Only</option>
@@ -1375,18 +1403,13 @@ html_content = f"""<!DOCTYPE html>
                     </select>
                     <select id="leads-team-filter" class="select-input" onchange="filterLeadsTable()">
                         <option value="ALL">All Teams</option>
-                        <option value="team astro">team astro</option>
-                        <option value="team gigalon">team gigalon</option>
-                        <option value="team intel">team intel</option>
-                        <option value="team nchip">team nchip</option>
-                        <option value="team robinary">team robinary</option>
-                        <option value="unclustered">unclustered</option>
                     </select>
                     <select id="leads-rug-filter" class="select-input" onchange="filterLeadsTable()">
                         <option value="ALL">Show All (Including Rugs)</option>
                         <option value="HIDE_RUGS">Hide Rug Tokens</option>
                         <option value="RUGS_ONLY">Rugs Only (Red Rows)</option>
                     </select>
+                    <span class="team-indicator-badge" id="team-indicator-badge" title="Identified dev teams in this view">👥 <b id="team-found-count">0</b> Teams Identified</span>
                 </div>
                 <div class="filter-group">
                     <span id="data-source-status" style="font-size: 12px; color: var(--text-muted);">Embedded safe snapshot</span>
@@ -1490,7 +1513,7 @@ html_content = f"""<!DOCTYPE html>
         </div>
 
         <div class="footer">
-            Robinhood + Arc (Chain IDs: 4663 / 5042) Forensic Tracking Engine • Data verified from RobinScan Multichain V2, Blockscout, and Telegram Scans
+            Robinhood + Arc Forensic Tracking Engine • Data verified from RobinScan Multichain V2, Blockscout, and Telegram Scans
         </div>
 
     </div>
@@ -1691,16 +1714,10 @@ html_content = f"""<!DOCTYPE html>
                 if (chainId === 'ALL') {{
                     desc.innerHTML = '🌐 Viewing combined dual-chain cross-forensic evidence';
                 }} else if (chainId === '4663') {{
-                    desc.innerHTML = '🟣 Viewing Robinhood Chain (4663) • Native Gas/Value: ETH';
+                    desc.innerHTML = '🟣 Viewing Robinhood Chain • Native Gas/Value: ETH';
                 }} else if (chainId === '5042') {{
-                    desc.innerHTML = '🔷 Viewing Arc Chain (5042) • Native Gas/Value: USDC';
+                    desc.innerHTML = '🔷 Viewing Arc Chain • Native Gas/Value: USDC';
                 }}
-            }}
-
-            // Sync with table dropdown filter
-            const chainSelect = document.getElementById('leads-chain-filter');
-            if (chainSelect && chainSelect.value !== chainId) {{
-                chainSelect.value = chainId;
             }}
 
             // Update Page 2 parameter banner
@@ -1709,13 +1726,58 @@ html_content = f"""<!DOCTYPE html>
                 if (chainId === 'ALL') {{
                     paramBanner.innerHTML = '<span>⚡ Active Tuning Context: <b>🌐 All Chains</b></span><span style=\"font-size: 11px; opacity: 0.85;\">Tuning buffer & weights across both RBH & ARC</span>';
                 }} else if (chainId === '4663') {{
-                    paramBanner.innerHTML = '<span>⚡ Active Tuning Context: <b>🟣 Robinhood (4663)</b></span><span style=\"font-size: 11px; opacity: 0.85;\">Denominated in ETH • Pons/Uniswap v4 metrics</span>';
+                    paramBanner.innerHTML = '<span>⚡ Active Tuning Context: <b>🟣 Robinhood</b></span><span style=\"font-size: 11px; opacity: 0.85;\">Denominated in ETH • Pons/Uniswap v4 metrics</span>';
                 }} else if (chainId === '5042') {{
-                    paramBanner.innerHTML = '<span>⚡ Active Tuning Context: <b>🔷 Arc (5042)</b></span><span style=\"font-size: 11px; opacity: 0.85;\">Denominated in USDC • Arc DEX metrics</span>';
+                    paramBanner.innerHTML = '<span>⚡ Active Tuning Context: <b>🔷 Arc</b></span><span style=\"font-size: 11px; opacity: 0.85;\">Denominated in USDC • Arc DEX metrics</span>';
                 }}
             }}
 
             rescoreAllCandidates();
+        }}
+
+        // Dynamic team filter builder & counter
+        function updateTeamFilter() {{
+            const teamSelect = document.getElementById('leads-team-filter');
+            const badge = document.getElementById('team-found-count');
+            if (!teamSelect) return;
+
+            const selectedTeam = teamSelect.value || 'ALL';
+
+            // Tally teams from currentCandidates for the active chain
+            const teamCounts = {{}};
+            currentCandidates.forEach(c => {{
+                if (activeChainFilter !== 'ALL' && String(c.chain_id) !== activeChainFilter) return;
+                const t = (c.team || 'unclustered').trim();
+                teamCounts[t] = (teamCounts[t] || 0) + 1;
+            }});
+
+            // Find all identified teams (excluding unclustered)
+            const identifiedTeams = Object.keys(teamCounts).filter(t => t.toLowerCase() !== 'unclustered' && t.length > 0);
+            identifiedTeams.sort((a, b) => teamCounts[b] - teamCounts[a]);
+
+            if (badge) {{
+                badge.textContent = identifiedTeams.length;
+            }}
+
+            // Build select options
+            let optionsHtml = `<option value="ALL">All Teams (${{identifiedTeams.length}} Identified)</option>`;
+            identifiedTeams.forEach(t => {{
+                const display = t.replace(/\\b\\w/g, ch => ch.toUpperCase());
+                optionsHtml += `<option value="${{escapeHtml(t.toLowerCase())}}">${{escapeHtml(display)}} (${{teamCounts[t]}} leads)</option>`;
+            }});
+
+            if (teamCounts['unclustered']) {{
+                optionsHtml += `<option value="unclustered">Unclustered (${{teamCounts['unclustered']}} tokens)</option>`;
+            }}
+
+            teamSelect.innerHTML = optionsHtml;
+
+            // Retain user's selection if still present in options
+            if (selectedTeam === 'ALL' || teamCounts[selectedTeam] !== undefined) {{
+                teamSelect.value = selectedTeam;
+            }} else {{
+                teamSelect.value = 'ALL';
+            }}
         }}
 
         // Rescore all candidates with active weights & calculate chain-filtered stats
@@ -1775,6 +1837,7 @@ html_content = f"""<!DOCTYPE html>
                 document.getElementById('stat-runner-sub').textContent = topRunnerStr;
             }}
 
+            updateTeamFilter();
             renderLeadsTable();
         }}
 
@@ -1858,10 +1921,14 @@ html_content = f"""<!DOCTYPE html>
                 const athClass = c.ath > 0 ? 'ath-val' : 'text-muted';
 
                 const isArc = c.chain_id === 5042;
+                const chainPillClass = isArc ? 'chain-pill arc' : 'chain-pill';
+                const chainPillLabel = isArc ? 'ARC' : 'RBH';
                 const gmgnUrl = isArc ? '' : `https://gmgn.ai/robinhood/token/${{c.ca}}`;
                 const dexUrl = `https://dexscreener.com/${{isArc ? 'arc' : 'robinhood'}}/${{c.ca}}`;
                 const scanUrl = `${{isArc ? 'https://explorer.arc.io/address/' : 'https://robinhoodchain.blockscout.com/address/'}}${{c.ca}}`;
-                const gmgnButton = gmgnUrl ? `<a href="${{gmgnUrl}}" target="_blank" rel="noopener noreferrer" class="btn btn-gmgn">GMGN</a>` : '';
+                const gmgnButton = !isArc
+                    ? `<a href="${{gmgnUrl}}" target="_blank" rel="noopener noreferrer" class="btn btn-gmgn" title="Open chart on GMGN.ai">GMGN</a>`
+                    : `<span class="btn-gmgn-disabled" title="GMGN does not index Arc chain yet">GMGN</span>`;
 
                 const sibSymbol = c.best_match_symbol ? `$${{c.best_match_symbol}}` : 'N/A';
                 const sibCaShort = c.best_match_ca ? `${{c.best_match_ca.substring(0, 6)}}...${{c.best_match_ca.substring(c.best_match_ca.length - 4)}}` : '';
@@ -1876,7 +1943,7 @@ html_content = f"""<!DOCTYPE html>
                     <td class="token-cell">
                         <div>
                             <span class="token-symbol">$${{c.symbol}}</span>
-                            <span class="chain-pill">${{c.chain}} ${{c.chain_id}}</span>
+                            <span class="${{chainPillClass}}">${{chainPillLabel}}</span>
                             <span class="token-name">${{c.name !== c.symbol ? c.name : ''}}</span>
                         </div>
                         <div class="token-ca">
@@ -1887,7 +1954,7 @@ html_content = f"""<!DOCTYPE html>
                     <td><span class="team-tag">${{c.team}}</span></td>
                     <td>
                         <span class="sibling-badge">${{sibSymbol}}</span>
-                        <span class="chain-pill">${{c.best_match_chain}}</span>
+                        <span class="chain-pill ${{c.best_match_chain_id === 5042 ? 'arc' : ''}}">${{c.best_match_chain}}</span>
                         ${{sibCaShort ? `<div style="font-size: 10px; color: var(--text-muted); font-family: monospace; margin-top: 2px;"><code>${{sibCaShort}}</code></div>` : ''}}
                     </td>
                     <td><span class="${{athClass}}">${{athFormatted}}</span></td>
@@ -2101,11 +2168,6 @@ html_content = f"""<!DOCTYPE html>
 
         // Search & Filter callbacks
         function filterLeadsTable() {{
-            const dropdown = document.getElementById('leads-chain-filter');
-            if (dropdown && dropdown.value !== activeChainFilter) {{
-                selectTopChain(dropdown.value);
-                return;
-            }}
             renderLeadsTable();
         }}
         function resetLeadsFilters() {{
@@ -2176,7 +2238,7 @@ snapshot_temp.write_text(json.dumps({
 }, indent=2, sort_keys=True), encoding="utf-8")
 os.replace(snapshot_temp, SNAPSHOT_PATH)
 
-for filename in ("team_leads_dashboard.html", "index.html"):
+for filename in ("team_leads_dashboard.html", "index.html", "local_dashboard.html"):
     target = OUTPUT_DIR / filename
     temporary = target.with_name(target.name + f".{os.getpid()}.tmp")
     temporary.write_text(html_content, encoding="utf-8")
