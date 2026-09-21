@@ -167,16 +167,161 @@
             padding: 14px 18px;
             margin-bottom: 18px;
             display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .filter-top-row {
+            display: flex;
             flex-wrap: wrap;
             gap: 12px;
             align-items: center;
             justify-content: space-between;
+            width: 100%;
         }
         .filter-group {
             display: flex;
             align-items: center;
             gap: 10px;
             flex-wrap: wrap;
+        }
+        .filter-sliders-row {
+            display: flex;
+            gap: 14px;
+            width: 100%;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            flex-wrap: wrap;
+        }
+        .range-filter-card {
+            background: #090d16;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 10px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1 1 420px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+        }
+        .range-filter-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .range-filter-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .range-filter-val-badge {
+            font-family: monospace;
+            font-size: 11px;
+            font-weight: 700;
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.12);
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .range-filter-val-badge.rug-badge {
+            color: #f59e0b;
+            background: rgba(245, 158, 11, 0.12);
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+        .range-controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+        @media (max-width: 900px) {
+            .range-controls-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .range-control-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(15, 23, 42, 0.7);
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid #1e293b;
+        }
+        .range-control-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            min-width: 28px;
+        }
+        .range-slider-input {
+            flex: 1;
+            cursor: pointer;
+            accent-color: #10b981;
+            height: 5px;
+        }
+        .range-slider-input.rug-slider {
+            accent-color: #f59e0b;
+        }
+        .range-val-pill {
+            font-size: 11px;
+            font-family: monospace;
+            font-weight: 700;
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            min-width: 52px;
+            text-align: center;
+            border: 1px solid #334155;
+        }
+        .range-footer-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .range-preset-btns {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .preset-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #cbd5e1;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .preset-btn:hover {
+            background: #334155;
+            color: #ffffff;
+            border-color: #475569;
+        }
+        .alive-checkbox-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            color: #cbd5e1;
+            cursor: pointer;
+            user-select: none;
+        }
+        .alive-checkbox-label input {
+            cursor: pointer;
+            accent-color: #10b981;
         }
         .search-input, .select-input {
             background: #0b0e14;
@@ -829,38 +974,96 @@
         <!-- ==================== PAGE 1: CANDIDATE LEADS TABLE ==================== -->
         <div class="page-content active" id="page-leads">
             <div class="filter-bar">
-                <div class="filter-group">
-                    <input type="text" id="leads-search" class="search-input" placeholder="Search Symbol, Name, CA, or Sibling Token..." oninput="filterLeadsTable()">
-                    <select id="leads-tier-filter" class="select-input" onchange="filterLeadsTable()">
-                        <option value="ALL">All Confidence Tiers</option>
-                        <option value="HIGH_LEAD">High Leads Only</option>
-                        <option value="PROBABLE_LEAD">Probable Leads Only</option>
-                        <option value="WATCH">Watch Leads Only</option>
-                        <option value="WEAK">Weak Leads Only</option>
-                    </select>
-                    <select id="leads-team-filter" class="select-input" onchange="filterLeadsTable()">
-                        <option value="ALL">All Teams</option>
-                    </select>
-                    <select id="leads-ath-filter" class="select-input" onchange="filterLeadsTable()">
-                        <option value="ALL">All ATH Amounts</option>
-                        <option value="1M">ATH ≥ $1M (Mega Runners)</option>
-                        <option value="500K">ATH ≥ $500K</option>
-                        <option value="100K">ATH ≥ $100K</option>
-                        <option value="50K">ATH ≥ $50K</option>
-                        <option value="10K">ATH ≥ $10K</option>
-                        <option value="SUB_10K">ATH &lt; $10K (Micro/Dead)</option>
-                    </select>
-                    <select id="leads-rug-filter" class="select-input" onchange="filterLeadsTable()">
-                        <option value="ALL">All Status (Alive & Rugged)</option>
-                        <option value="ALIVE_ONLY">🟢 Still Alive Only</option>
-                        <option value="RUG_ONLY">⏱️ Rugged Tokens Only</option>
-                    </select>
-                    <span class="team-indicator-badge" id="team-indicator-badge" title="Identified dev teams in this view">👥 <b id="team-found-count">0</b> Teams Identified</span>
+                <div class="filter-top-row">
+                    <div class="filter-group">
+                        <input type="text" id="leads-search" class="search-input" placeholder="Search Symbol, Name, CA, or Sibling Token..." oninput="filterLeadsTable()">
+                        <select id="leads-tier-filter" class="select-input" onchange="filterLeadsTable()">
+                            <option value="ALL">All Confidence Tiers</option>
+                            <option value="HIGH_LEAD">High Leads Only</option>
+                            <option value="PROBABLE_LEAD">Probable Leads Only</option>
+                            <option value="WATCH">Watch Leads Only</option>
+                            <option value="WEAK">Weak Leads Only</option>
+                        </select>
+                        <select id="leads-team-filter" class="select-input" onchange="filterLeadsTable()">
+                            <option value="ALL">All Teams</option>
+                        </select>
+                        <select id="leads-rug-filter" class="select-input" onchange="filterLeadsTable()">
+                            <option value="ALL">All Status (Alive & Rugged)</option>
+                            <option value="ALIVE_ONLY">🟢 Still Alive Only</option>
+                            <option value="RUG_ONLY">⏱️ Rugged Tokens Only</option>
+                        </select>
+                        <span class="team-indicator-badge" id="team-indicator-badge" title="Identified dev teams in this view">👥 <b id="team-found-count">0</b> Teams Identified</span>
+                    </div>
+                    <div class="filter-group">
+                        <span id="data-source-status" style="font-size: 12px; color: var(--text-muted);">Embedded safe snapshot</span>
+                        <span id="filtered-count-display" style="font-size: 12px; color: var(--text-secondary);">Showing 254 of 254 candidate leads</span>
+                        <button class="btn btn-secondary" onclick="resetLeadsFilters()">Reset Filters</button>
+                    </div>
                 </div>
-                <div class="filter-group">
-                    <span id="data-source-status" style="font-size: 12px; color: var(--text-muted);">Embedded safe snapshot</span>
-                    <span id="filtered-count-display" style="font-size: 12px; color: var(--text-secondary);">Showing 254 of 254 candidate leads</span>
-                    <button class="btn btn-secondary" onclick="resetLeadsFilters()">Reset Filters</button>
+
+                <div class="filter-sliders-row">
+                    <!-- ATH Min/Max Range Slider Card -->
+                    <div class="range-filter-card">
+                        <div class="range-filter-header">
+                            <span class="range-filter-title">💰 Peak ATH Range</span>
+                            <span id="ath-range-badge" class="range-filter-val-badge">$0 — Max</span>
+                        </div>
+                        <div class="range-controls-grid">
+                            <div class="range-control-item">
+                                <span class="range-control-label">Min</span>
+                                <input type="range" id="slider-ath-min" min="0" max="15" step="1" value="0" class="range-slider-input" oninput="onAthSliderChange('min')">
+                                <span id="ath-min-pill" class="range-val-pill">$0</span>
+                            </div>
+                            <div class="range-control-item">
+                                <span class="range-control-label">Max</span>
+                                <input type="range" id="slider-ath-max" min="0" max="15" step="1" value="15" class="range-slider-input" oninput="onAthSliderChange('max')">
+                                <span id="ath-max-pill" class="range-val-pill">Max</span>
+                            </div>
+                        </div>
+                        <div class="range-footer-row">
+                            <div class="range-preset-btns">
+                                <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 2px;">Presets:</span>
+                                <button type="button" class="preset-btn" onclick="setAthPreset(0, 15)">All</button>
+                                <button type="button" class="preset-btn" onclick="setAthPreset(8, 15)">≥ $1M</button>
+                                <button type="button" class="preset-btn" onclick="setAthPreset(5, 15)">≥ $100K</button>
+                                <button type="button" class="preset-btn" onclick="setAthPreset(3, 7)">$25K - $500K</button>
+                                <button type="button" class="preset-btn" onclick="setAthPreset(0, 2)">&lt; $10K</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Time to Rug Min/Max Range Slider Card -->
+                    <div class="range-filter-card">
+                        <div class="range-filter-header">
+                            <span class="range-filter-title">⏱️ Time to Rug Range</span>
+                            <span id="rug-range-badge" class="range-filter-val-badge rug-badge">0m — Max</span>
+                        </div>
+                        <div class="range-controls-grid">
+                            <div class="range-control-item">
+                                <span class="range-control-label">Min</span>
+                                <input type="range" id="slider-rug-min" min="0" max="15" step="1" value="0" class="range-slider-input rug-slider" oninput="onRugSliderChange('min')">
+                                <span id="rug-min-pill" class="range-val-pill">0m</span>
+                            </div>
+                            <div class="range-control-item">
+                                <span class="range-control-label">Max</span>
+                                <input type="range" id="slider-rug-max" min="0" max="15" step="1" value="15" class="range-slider-input rug-slider" oninput="onRugSliderChange('max')">
+                                <span id="rug-max-pill" class="range-val-pill">Max</span>
+                            </div>
+                        </div>
+                        <div class="range-footer-row">
+                            <div class="range-preset-btns">
+                                <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 2px;">Presets:</span>
+                                <button type="button" class="preset-btn" onclick="setRugPreset(0, 15)">All</button>
+                                <button type="button" class="preset-btn" onclick="setRugPreset(0, 3)">&lt; 5m Quick</button>
+                                <button type="button" class="preset-btn" onclick="setRugPreset(3, 6)">5m - 25m</button>
+                                <button type="button" class="preset-btn" onclick="setRugPreset(6, 15)">≥ 25m</button>
+                                <button type="button" class="preset-btn" onclick="setRugPreset(8, 15)">≥ 1h</button>
+                            </div>
+                            <label class="alive-checkbox-label" title="Keep alive tokens visible when filtering rug times">
+                                <input type="checkbox" id="rug-include-alive" onchange="filterLeadsTable()"> Include Still Alive
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1297,6 +1500,145 @@
             renderLeadsTable();
         }
 
+        const ATH_STEPS = [
+            { val: 0, label: "$0" },
+            { val: 5000, label: "$5K" },
+            { val: 10000, label: "$10K" },
+            { val: 25000, label: "$25K" },
+            { val: 50000, label: "$50K" },
+            { val: 100000, label: "$100K" },
+            { val: 250000, label: "$250K" },
+            { val: 500000, label: "$500K" },
+            { val: 1000000, label: "$1M" },
+            { val: 2500000, label: "$2.5M" },
+            { val: 5000000, label: "$5M" },
+            { val: 10000000, label: "$10M" },
+            { val: 25000000, label: "$25M" },
+            { val: 50000000, label: "$50M" },
+            { val: 100000000, label: "$100M" },
+            { val: Infinity, label: "Max" }
+        ];
+
+        const RUG_TIME_STEPS = [
+            { sec: 0, label: "0m" },
+            { sec: 60, label: "1m" },
+            { sec: 180, label: "3m" },
+            { sec: 300, label: "5m" },
+            { sec: 600, label: "10m" },
+            { sec: 900, label: "15m" },
+            { sec: 1500, label: "25m" },
+            { sec: 2700, label: "45m" },
+            { sec: 3600, label: "1h" },
+            { sec: 7200, label: "2h" },
+            { sec: 14400, label: "4h" },
+            { sec: 28800, label: "8h" },
+            { sec: 86400, label: "24h" },
+            { sec: 259200, label: "3d" },
+            { sec: 604800, label: "7d" },
+            { sec: Infinity, label: "Max" }
+        ];
+
+        let activeAthMinStep = 0;
+        let activeAthMaxStep = 15;
+        let activeRugMinStep = 0;
+        let activeRugMaxStep = 15;
+
+        function onAthSliderChange(changed) {
+            const minEl = document.getElementById('slider-ath-min');
+            const maxEl = document.getElementById('slider-ath-max');
+            if (!minEl || !maxEl) return;
+
+            let minIdx = parseInt(minEl.value, 10);
+            let maxIdx = parseInt(maxEl.value, 10);
+
+            if (changed === 'min' && minIdx > maxIdx) {
+                maxIdx = minIdx;
+                maxEl.value = maxIdx;
+            } else if (changed === 'max' && maxIdx < minIdx) {
+                minIdx = maxIdx;
+                minEl.value = minIdx;
+            }
+
+            activeAthMinStep = minIdx;
+            activeAthMaxStep = maxIdx;
+
+            updateAthDisplay();
+            renderLeadsTable();
+        }
+
+        function setAthPreset(minIdx, maxIdx, triggerRender = true) {
+            const minEl = document.getElementById('slider-ath-min');
+            const maxEl = document.getElementById('slider-ath-max');
+            if (minEl) minEl.value = minIdx;
+            if (maxEl) maxEl.value = maxIdx;
+            activeAthMinStep = minIdx;
+            activeAthMaxStep = maxIdx;
+            updateAthDisplay();
+            if (triggerRender) renderLeadsTable();
+        }
+
+        function updateAthDisplay() {
+            const minLabel = (ATH_STEPS[activeAthMinStep] || ATH_STEPS[0]).label;
+            const maxLabel = (ATH_STEPS[activeAthMaxStep] || ATH_STEPS[15]).label;
+            const minPill = document.getElementById('ath-min-pill');
+            const maxPill = document.getElementById('ath-max-pill');
+            const rangeBadge = document.getElementById('ath-range-badge');
+
+            if (minPill) minPill.textContent = minLabel;
+            if (maxPill) maxPill.textContent = maxLabel;
+            if (rangeBadge) {
+                rangeBadge.textContent = `${minLabel} — ${maxLabel}`;
+            }
+        }
+
+        function onRugSliderChange(changed) {
+            const minEl = document.getElementById('slider-rug-min');
+            const maxEl = document.getElementById('slider-rug-max');
+            if (!minEl || !maxEl) return;
+
+            let minIdx = parseInt(minEl.value, 10);
+            let maxIdx = parseInt(maxEl.value, 10);
+
+            if (changed === 'min' && minIdx > maxIdx) {
+                maxIdx = minIdx;
+                maxEl.value = maxIdx;
+            } else if (changed === 'max' && maxIdx < minIdx) {
+                minIdx = maxIdx;
+                minEl.value = minIdx;
+            }
+
+            activeRugMinStep = minIdx;
+            activeRugMaxStep = maxIdx;
+
+            updateRugDisplay();
+            renderLeadsTable();
+        }
+
+        function setRugPreset(minIdx, maxIdx, triggerRender = true) {
+            const minEl = document.getElementById('slider-rug-min');
+            const maxEl = document.getElementById('slider-rug-max');
+            if (minEl) minEl.value = minIdx;
+            if (maxEl) maxEl.value = maxIdx;
+            activeRugMinStep = minIdx;
+            activeRugMaxStep = maxIdx;
+            updateRugDisplay();
+            if (triggerRender) renderLeadsTable();
+        }
+
+        function updateRugDisplay() {
+            const minLabel = (RUG_TIME_STEPS[activeRugMinStep] || RUG_TIME_STEPS[0]).label;
+            const maxLabel = (RUG_TIME_STEPS[activeRugMaxStep] || RUG_TIME_STEPS[15]).label;
+            const minPill = document.getElementById('rug-min-pill');
+            const maxPill = document.getElementById('rug-max-pill');
+            const rangeBadge = document.getElementById('rug-range-badge');
+
+            if (minPill) minPill.textContent = minLabel;
+            if (maxPill) maxPill.textContent = maxLabel;
+            if (rangeBadge) {
+                rangeBadge.textContent = `${minLabel} — ${maxLabel}`;
+            }
+        }
+
         // Render Page 1: Leads Table
         function renderLeadsTable() {
             const tbody = document.getElementById('leads-tbody');
@@ -1307,8 +1649,13 @@
             const chainFilter = activeChainFilter;
             const tierFilter = (document.getElementById('leads-tier-filter') ? document.getElementById('leads-tier-filter').value : 'ALL');
             const teamFilter = (document.getElementById('leads-team-filter') ? document.getElementById('leads-team-filter').value.toLowerCase() : 'all');
-            const athFilter = (document.getElementById('leads-ath-filter') ? document.getElementById('leads-ath-filter').value : 'ALL');
             const rugFilter = (document.getElementById('leads-rug-filter') ? document.getElementById('leads-rug-filter').value : 'ALL');
+
+            const minAth = ATH_STEPS[activeAthMinStep] ? ATH_STEPS[activeAthMinStep].val : 0;
+            const maxAth = ATH_STEPS[activeAthMaxStep] ? ATH_STEPS[activeAthMaxStep].val : Infinity;
+            const minRugSec = RUG_TIME_STEPS[activeRugMinStep] ? RUG_TIME_STEPS[activeRugMinStep].sec : 0;
+            const maxRugSec = RUG_TIME_STEPS[activeRugMaxStep] ? RUG_TIME_STEPS[activeRugMaxStep].sec : Infinity;
+            const includeAlive = document.getElementById('rug-include-alive') ? document.getElementById('rug-include-alive').checked : true;
 
             // Filter
             let filtered = currentCandidates.filter(c => {
@@ -1320,13 +1667,22 @@
                 if (rugFilter === 'HIDE_RUGS' && c.is_rug) return false;
                 if (rugFilter === 'RUGS_ONLY' && !c.is_rug) return false;
 
+                // ATH Min/Max filter
                 const candAth = Number(c.ath) || 0;
-                if (athFilter === '1M' && candAth < 1000000) return false;
-                if (athFilter === '500K' && candAth < 500000) return false;
-                if (athFilter === '100K' && candAth < 100000) return false;
-                if (athFilter === '50K' && candAth < 50000) return false;
-                if (athFilter === '10K' && candAth < 10000) return false;
-                if (athFilter === 'SUB_10K' && candAth >= 10000) return false;
+                if (candAth < minAth) return false;
+                if (maxAth !== Infinity && candAth > maxAth) return false;
+
+                // Time to Rug Min/Max filter
+                if (c.is_alive) {
+                    if (minRugSec > 0 || maxRugSec !== Infinity) {
+                        if (!includeAlive) return false;
+                    }
+                } else {
+                    const candLife = (c.lifespan_sec !== null && c.lifespan_sec !== undefined) ? Number(c.lifespan_sec) : (c.ath <= 5000 ? 180 : 1500);
+                    if (candLife < minRugSec) return false;
+                    if (maxRugSec !== Infinity && candLife > maxRugSec) return false;
+                }
+
                 if (searchTerm) {
                     const symMatch = c.symbol.toLowerCase().includes(searchTerm);
                     const nameMatch = c.name.toLowerCase().includes(searchTerm);
@@ -1679,8 +2035,10 @@
             if (document.getElementById('leads-search')) document.getElementById('leads-search').value = '';
             if (document.getElementById('leads-tier-filter')) document.getElementById('leads-tier-filter').value = 'ALL';
             if (document.getElementById('leads-team-filter')) document.getElementById('leads-team-filter').value = 'ALL';
-            if (document.getElementById('leads-ath-filter')) document.getElementById('leads-ath-filter').value = 'ALL';
             if (document.getElementById('leads-rug-filter')) document.getElementById('leads-rug-filter').value = 'ALL';
+            setAthPreset(0, 15, false);
+            setRugPreset(0, 15, false);
+            if (document.getElementById('rug-include-alive')) document.getElementById('rug-include-alive').checked = true;
             selectTopChain('ALL');
         }
         function filterParamsTable() {
@@ -1723,6 +2081,8 @@
 
         // Initial setup
         window.addEventListener('DOMContentLoaded', () => {
+            updateAthDisplay();
+            updateRugDisplay();
             rescoreAllCandidates();
             renderParamsTable();
             loadRemoteCandidates();
