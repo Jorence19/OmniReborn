@@ -1,0 +1,18 @@
+[Unit]
+Description=Periodic DEX market data refresh for OmniReborn
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=omnireborn
+Group=omnireborn
+WorkingDirectory=/opt/omnireborn
+EnvironmentFile=/etc/omnireborn.env
+ExecStart=/opt/omnireborn/.venv/bin/python /opt/omnireborn/refresh_market_data.py --all
+ExecStartPost=/opt/omnireborn/.venv/bin/python /opt/omnireborn/generate_html_dashboard.py
+TimeoutStartSec=180
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

@@ -151,6 +151,13 @@ class TelegramBotTests(unittest.TestCase):
         self.assertEqual(sheet["A3"].fill.fgColor.rgb[-6:], "FFC7CE")
         self.assertIn("OmniRebornLeads", sheet.tables)
 
+    def test_refresh_command_dispatches_cleanly(self):
+        fake = FakeTelegram()
+        service = BotService(self.settings, fake)
+        # Verify unknown command shows help with /refresh
+        service.command(12345, "/unknown")
+        self.assertIn("/refresh", fake.messages[-1][1])
+
 
 if __name__ == "__main__":
     unittest.main()

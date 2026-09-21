@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sqlite3
 import time
 from datetime import datetime, timezone
@@ -182,8 +183,14 @@ def refresh(db_path: Path, threshold: float | None, batch_size: int, pause: floa
 
 
 def main() -> int:
+    default_db = os.getenv("FORENSICS_DB_PATH")
+    if not default_db:
+        if Path("data/forensics.db").exists():
+            default_db = "data/forensics.db"
+        else:
+            default_db = "forensics.db"
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--db", default="forensics.db")
+    parser.add_argument("--db", default=default_db)
     parser.add_argument(
         "--under-usd", type=float, default=1000.0,
         help="refresh rows whose current market cap is missing or below this value",

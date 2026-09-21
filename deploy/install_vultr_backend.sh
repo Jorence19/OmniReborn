@@ -48,6 +48,8 @@ units=(
   omnireborn-telegram.service
   omnireborn-telegram-watchdog.service
   omnireborn-telegram-watchdog.timer
+  omnireborn-market-refresh.service
+  omnireborn-market-refresh.timer
 )
 for unit in "${units[@]}"; do
   install -o root -g root -m 0644 "$APP_DIR/deploy/$unit" "/etc/systemd/system/$unit"
@@ -73,6 +75,7 @@ enabled_units=(
   omnireborn-watchdog.timer
   omnireborn-telegram-watchdog.timer
   omnireborn-backup.timer
+  omnireborn-market-refresh.timer
 )
 systemctl enable --now "${enabled_units[@]}"
 

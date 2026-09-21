@@ -647,8 +647,24 @@ class BotService:
                 audit_file = self.settings.runtime / "audit_recent.log"
                 audit_file.write_text(content, encoding="utf-8")
                 self.api.document(chat_id, audit_file, "OmniReborn audit logs")
+        elif command in ("/refresh", "/refreshmarket"):
+            self.api.message(chat_id, "⏳ Refreshing DEX market data for all tokens...")
+            try:
+                refresh_env = os.environ.copy()
+                subprocess.run(
+                    [sys.executable, str(ROOT / "refresh_market_data.py"), "--db", str(self.settings.db), "--all"],
+                    cwd=ROOT,
+                    env=refresh_env,
+                    check=True,
+                    timeout=120,
+                )
+                regenerate_dashboard(self.settings)
+                self.api.document(chat_id, self.settings.dashboard, "OmniReborn Phase 1 dashboard (Refreshed)")
+            except Exception as exc:
+                LOG.exception("Market refresh failed")
+                self.api.message(chat_id, "⚠️ Market refresh failed: " + html.escape(str(exc)))
         else:
-            self.api.message(chat_id, "Commands: /leads /dashboard /dbxlsx /dbcsv /status /log")
+            self.api.message(chat_id, "Commands: /leads /dashboard /refresh /dbxlsx /dbcsv /status /log")
 
     def handle_update(self, update):
         message = update.get("message") or {}
