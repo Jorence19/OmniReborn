@@ -834,33 +834,18 @@ html_content = f"""<!DOCTYPE html>
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 10px;
-            padding: 14px 18px;
-            margin-bottom: 18px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }}
-        .filter-top-row {{
+            padding: 10px 14px;
+            margin-bottom: 16px;
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 8px 12px;
             align-items: center;
             justify-content: space-between;
-            width: 100%;
         }}
         .filter-group {{
             display: flex;
             align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }}
-        .filter-ranges-bar {{
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            width: 100%;
-            padding-top: 10px;
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            gap: 8px;
             flex-wrap: wrap;
         }}
         .range-inline-group {{
@@ -1630,50 +1615,41 @@ html_content = f"""<!DOCTYPE html>
         <!-- ==================== PAGE 1: CANDIDATE LEADS TABLE ==================== -->
         <div class="page-content active" id="page-leads">
             <div class="filter-bar">
-                <div class="filter-top-row">
-                    <div class="filter-group">
-                        <input type="text" id="leads-search" class="search-input" placeholder="Search Symbol, Name, CA, or Sibling Token..." oninput="filterLeadsTable()">
-                        <select id="leads-tier-filter" class="select-input" onchange="filterLeadsTable()">
-                            <option value="ALL">All Confidence Tiers</option>
-                            <option value="HIGH_LEAD">High Leads Only</option>
-                            <option value="PROBABLE_LEAD">Probable Leads Only</option>
-                            <option value="WATCH">Watch Leads Only</option>
-                            <option value="WEAK">Weak Leads Only</option>
-                        </select>
-                        <select id="leads-team-filter" class="select-input" onchange="filterLeadsTable()">
-                            <option value="ALL">All Teams</option>
-                        </select>
-                        <select id="leads-rug-filter" class="select-input" onchange="filterLeadsTable()">
-                            <option value="ALL">All Status (Alive & Rugged)</option>
-                            <option value="ALIVE_ONLY">🟢 Still Alive Only</option>
-                            <option value="RUG_ONLY">⏱️ Rugged Tokens Only</option>
-                        </select>
-                        <span class="team-indicator-badge" id="team-indicator-badge" title="Identified dev teams in this view">👥 <b id="team-found-count">0</b> Teams Identified</span>
-                    </div>
-                    <div class="filter-group">
-                        <span id="data-source-status" style="font-size: 12px; color: var(--text-muted);">Embedded safe snapshot</span>
-                        <span id="filtered-count-display" style="font-size: 12px; color: var(--text-secondary);">Showing {len(candidates_data)} of {len(candidates_data)} candidate leads</span>
-                        <button class="btn btn-secondary" onclick="resetLeadsFilters()">Reset Filters</button>
-                    </div>
-                </div>
+                <div class="filter-group">
+                    <input type="text" id="leads-search" class="search-input" placeholder="Search Symbol, Name, CA, or Sibling..." oninput="filterLeadsTable()">
+                    <select id="leads-tier-filter" class="select-input" onchange="filterLeadsTable()">
+                        <option value="ALL">All Confidence Tiers</option>
+                        <option value="HIGH_LEAD">High Leads Only</option>
+                        <option value="PROBABLE_LEAD">Probable Leads Only</option>
+                        <option value="WATCH">Watch Leads Only</option>
+                        <option value="WEAK">Weak Leads Only</option>
+                    </select>
+                    <select id="leads-team-filter" class="select-input" onchange="filterLeadsTable()">
+                        <option value="ALL">All Teams</option>
+                    </select>
+                    <select id="leads-rug-filter" class="select-input" onchange="filterLeadsTable()">
+                        <option value="ALL">All Status (Alive & Rugged)</option>
+                        <option value="ALIVE_ONLY">🟢 Still Alive Only</option>
+                        <option value="RUG_ONLY">⏱️ Rugged Tokens Only</option>
+                    </select>
+                    <span class="team-indicator-badge" id="team-indicator-badge" title="Identified dev teams in this view">👥 <b id="team-found-count">0</b> Teams Identified</span>
 
-                <div class="filter-ranges-bar">
                     <!-- ATH: Min Box - Slider - Max Box -->
                     <div class="range-inline-group">
-                        <span class="range-inline-label">💰 Peak ATH:</span>
-                        <input type="text" id="ath-min-input" class="range-input-box" value="$0" placeholder="Min $" title="Type min ATH (e.g. 0, 10k, 100k, 1m)" onchange="onAthBoxChange('min', this.value)">
+                        <span class="range-inline-label">💰 ATH:</span>
+                        <input type="text" id="ath-min-input" class="range-input-box" value="$0" placeholder="Min" title="Type min ATH (e.g. 0, 10k, 100k, 1m)" onchange="onAthBoxChange('min', this.value)">
                         <div class="dual-range-track" id="ath-track-wrap">
                             <div class="dual-rail-bg"></div>
                             <div class="dual-rail-fill" id="ath-rail-fill"></div>
                             <input type="range" id="slider-ath-min" min="0" max="20" step="1" value="0" oninput="onAthSliderDual('min')">
                             <input type="range" id="slider-ath-max" min="0" max="20" step="1" value="20" oninput="onAthSliderDual('max')">
                         </div>
-                        <input type="text" id="ath-max-input" class="range-input-box" value="Max" placeholder="Max $" title="Type max ATH (e.g. 50k, 500k, 1m, max)" onchange="onAthBoxChange('max', this.value)">
+                        <input type="text" id="ath-max-input" class="range-input-box" value="Max" placeholder="Max" title="Type max ATH (e.g. 50k, 500k, 1m, max)" onchange="onAthBoxChange('max', this.value)">
                     </div>
 
                     <!-- Time to Rug: Min Box - Slider - Max Box -->
                     <div class="range-inline-group">
-                        <span class="range-inline-label">⏱️ Time to Rug:</span>
+                        <span class="range-inline-label">⏱️ Rug:</span>
                         <input type="text" id="rug-min-input" class="range-input-box" value="0m" placeholder="Min" title="Type min time (e.g. 0m, 5m, 30m, 1h)" onchange="onRugBoxChange('min', this.value)">
                         <div class="dual-range-track rug-track" id="rug-track-wrap">
                             <div class="dual-rail-bg"></div>
@@ -1686,6 +1662,12 @@ html_content = f"""<!DOCTYPE html>
                             <input type="checkbox" id="rug-include-alive" onchange="filterLeadsTable()"> Alive
                         </label>
                     </div>
+                </div>
+
+                <div class="filter-group">
+                    <span id="data-source-status" style="font-size: 12px; color: var(--text-muted);">Embedded safe snapshot</span>
+                    <span id="filtered-count-display" style="font-size: 12px; color: var(--text-secondary);">Showing {len(candidates_data)} of {len(candidates_data)} candidate leads</span>
+                    <button class="btn btn-secondary" onclick="resetLeadsFilters()">Reset Filters</button>
                 </div>
             </div>
 
