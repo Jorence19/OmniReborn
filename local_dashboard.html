@@ -184,140 +184,126 @@
             gap: 10px;
             flex-wrap: wrap;
         }
-        .filter-sliders-row {
+        .filter-ranges-bar {
             display: flex;
-            gap: 14px;
+            align-items: center;
+            gap: 16px;
             width: 100%;
-            padding-top: 12px;
+            padding-top: 10px;
             border-top: 1px solid rgba(255, 255, 255, 0.08);
             flex-wrap: wrap;
         }
-        .range-filter-card {
+        .range-inline-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
             background: #090d16;
             border: 1px solid #1e293b;
             border-radius: 8px;
-            padding: 10px 14px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            flex: 1 1 420px;
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+            padding: 5px 12px;
         }
-        .range-filter-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .range-filter-title {
+        .range-inline-label {
             font-size: 12px;
             font-weight: 700;
-            color: #f1f5f9;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .range-filter-val-badge {
-            font-family: monospace;
-            font-size: 11px;
-            font-weight: 700;
-            color: #10b981;
-            background: rgba(16, 185, 129, 0.12);
-            padding: 2px 8px;
-            border-radius: 4px;
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-        .range-filter-val-badge.rug-badge {
-            color: #f59e0b;
-            background: rgba(245, 158, 11, 0.12);
-            border-color: rgba(245, 158, 11, 0.3);
-        }
-        .range-controls-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            align-items: center;
-        }
-        @media (max-width: 900px) {
-            .range-controls-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        .range-control-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(15, 23, 42, 0.7);
-            padding: 5px 10px;
-            border-radius: 6px;
-            border: 1px solid #1e293b;
-        }
-        .range-control-label {
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            min-width: 28px;
-        }
-        .range-slider-input {
-            flex: 1;
-            cursor: pointer;
-            accent-color: #10b981;
-            height: 5px;
-        }
-        .range-slider-input.rug-slider {
-            accent-color: #f59e0b;
-        }
-        .range-val-pill {
-            font-size: 11px;
-            font-family: monospace;
-            font-weight: 700;
-            background: #1e293b;
-            color: #e2e8f0;
-            padding: 2px 6px;
-            border-radius: 4px;
-            min-width: 52px;
-            text-align: center;
-            border: 1px solid #334155;
-        }
-        .range-footer-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .range-preset-btns {
-            display: flex;
-            gap: 4px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-        .preset-btn {
-            background: #1e293b;
-            border: 1px solid #334155;
             color: #cbd5e1;
-            font-size: 10px;
-            font-weight: 600;
-            padding: 2px 7px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.15s ease;
+            white-space: nowrap;
         }
-        .preset-btn:hover {
-            background: #334155;
-            color: #ffffff;
-            border-color: #475569;
+        .range-input-box {
+            background: #0b0e14;
+            border: 1px solid #334155;
+            color: #f8fafc;
+            font-family: monospace;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 5px;
+            width: 74px;
+            text-align: center;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .range-input-box:focus {
+            border-color: #10b981;
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3);
+        }
+        .dual-range-track {
+            position: relative;
+            width: 130px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+        }
+        .dual-rail-bg {
+            position: absolute;
+            width: 100%;
+            height: 4px;
+            background: #1e293b;
+            border-radius: 2px;
+            z-index: 1;
+        }
+        .dual-rail-fill {
+            position: absolute;
+            height: 4px;
+            background: #10b981;
+            border-radius: 2px;
+            z-index: 2;
+        }
+        .dual-rail-fill.rug-fill {
+            background: #f59e0b;
+        }
+        .dual-range-track input[type="range"] {
+            position: absolute;
+            width: 100%;
+            height: 20px;
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            pointer-events: none;
+            -webkit-appearance: none;
+            appearance: none;
+            z-index: 3;
+        }
+        .dual-range-track input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            background: #10b981;
+            border: 2px solid #090d16;
+            cursor: pointer;
+            pointer-events: auto;
+            box-shadow: 0 0 3px rgba(0,0,0,0.6);
+            transition: transform 0.1s ease;
+        }
+        .dual-range-track input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.25);
+        }
+        .dual-range-track input[type="range"]::-moz-range-thumb {
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            background: #10b981;
+            border: 2px solid #090d16;
+            cursor: pointer;
+            pointer-events: auto;
+            box-shadow: 0 0 3px rgba(0,0,0,0.6);
+        }
+        .dual-range-track.rug-track input[type="range"]::-webkit-slider-thumb {
+            background: #f59e0b;
+        }
+        .dual-range-track.rug-track input[type="range"]::-moz-range-thumb {
+            background: #f59e0b;
         }
         .alive-checkbox-label {
             display: inline-flex;
             align-items: center;
             gap: 5px;
             font-size: 11px;
-            color: #cbd5e1;
+            color: #94a3b8;
             cursor: pointer;
             user-select: none;
+            margin-left: 4px;
         }
         .alive-checkbox-label input {
             cursor: pointer;
@@ -1001,68 +987,34 @@
                     </div>
                 </div>
 
-                <div class="filter-sliders-row">
-                    <!-- ATH Min/Max Range Slider Card -->
-                    <div class="range-filter-card">
-                        <div class="range-filter-header">
-                            <span class="range-filter-title">💰 Peak ATH Range</span>
-                            <span id="ath-range-badge" class="range-filter-val-badge">$0 — Max</span>
+                <div class="filter-ranges-bar">
+                    <!-- ATH: Min Box - Slider - Max Box -->
+                    <div class="range-inline-group">
+                        <span class="range-inline-label">💰 Peak ATH:</span>
+                        <input type="text" id="ath-min-input" class="range-input-box" value="$0" placeholder="Min $" title="Type min ATH (e.g. 0, 10k, 100k, 1m)" onchange="onAthBoxChange('min', this.value)">
+                        <div class="dual-range-track" id="ath-track-wrap">
+                            <div class="dual-rail-bg"></div>
+                            <div class="dual-rail-fill" id="ath-rail-fill"></div>
+                            <input type="range" id="slider-ath-min" min="0" max="20" step="1" value="0" oninput="onAthSliderDual('min')">
+                            <input type="range" id="slider-ath-max" min="0" max="20" step="1" value="20" oninput="onAthSliderDual('max')">
                         </div>
-                        <div class="range-controls-grid">
-                            <div class="range-control-item">
-                                <span class="range-control-label">Min</span>
-                                <input type="range" id="slider-ath-min" min="0" max="15" step="1" value="0" class="range-slider-input" oninput="onAthSliderChange('min')">
-                                <span id="ath-min-pill" class="range-val-pill">$0</span>
-                            </div>
-                            <div class="range-control-item">
-                                <span class="range-control-label">Max</span>
-                                <input type="range" id="slider-ath-max" min="0" max="15" step="1" value="15" class="range-slider-input" oninput="onAthSliderChange('max')">
-                                <span id="ath-max-pill" class="range-val-pill">Max</span>
-                            </div>
-                        </div>
-                        <div class="range-footer-row">
-                            <div class="range-preset-btns">
-                                <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 2px;">Presets:</span>
-                                <button type="button" class="preset-btn" onclick="setAthPreset(0, 15)">All</button>
-                                <button type="button" class="preset-btn" onclick="setAthPreset(8, 15)">≥ $1M</button>
-                                <button type="button" class="preset-btn" onclick="setAthPreset(5, 15)">≥ $100K</button>
-                                <button type="button" class="preset-btn" onclick="setAthPreset(3, 7)">$25K - $500K</button>
-                                <button type="button" class="preset-btn" onclick="setAthPreset(0, 2)">&lt; $10K</button>
-                            </div>
-                        </div>
+                        <input type="text" id="ath-max-input" class="range-input-box" value="Max" placeholder="Max $" title="Type max ATH (e.g. 50k, 500k, 1m, max)" onchange="onAthBoxChange('max', this.value)">
                     </div>
 
-                    <!-- Time to Rug Min/Max Range Slider Card -->
-                    <div class="range-filter-card">
-                        <div class="range-filter-header">
-                            <span class="range-filter-title">⏱️ Time to Rug Range</span>
-                            <span id="rug-range-badge" class="range-filter-val-badge rug-badge">0m — Max</span>
+                    <!-- Time to Rug: Min Box - Slider - Max Box -->
+                    <div class="range-inline-group">
+                        <span class="range-inline-label">⏱️ Time to Rug:</span>
+                        <input type="text" id="rug-min-input" class="range-input-box" value="0m" placeholder="Min" title="Type min time (e.g. 0m, 5m, 30m, 1h)" onchange="onRugBoxChange('min', this.value)">
+                        <div class="dual-range-track rug-track" id="rug-track-wrap">
+                            <div class="dual-rail-bg"></div>
+                            <div class="dual-rail-fill rug-fill" id="rug-rail-fill"></div>
+                            <input type="range" id="slider-rug-min" min="0" max="20" step="1" value="0" oninput="onRugSliderDual('min')">
+                            <input type="range" id="slider-rug-max" min="0" max="20" step="1" value="20" oninput="onRugSliderDual('max')">
                         </div>
-                        <div class="range-controls-grid">
-                            <div class="range-control-item">
-                                <span class="range-control-label">Min</span>
-                                <input type="range" id="slider-rug-min" min="0" max="15" step="1" value="0" class="range-slider-input rug-slider" oninput="onRugSliderChange('min')">
-                                <span id="rug-min-pill" class="range-val-pill">0m</span>
-                            </div>
-                            <div class="range-control-item">
-                                <span class="range-control-label">Max</span>
-                                <input type="range" id="slider-rug-max" min="0" max="15" step="1" value="15" class="range-slider-input rug-slider" oninput="onRugSliderChange('max')">
-                                <span id="rug-max-pill" class="range-val-pill">Max</span>
-                            </div>
-                        </div>
-                        <div class="range-footer-row">
-                            <div class="range-preset-btns">
-                                <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 2px;">Presets:</span>
-                                <button type="button" class="preset-btn" onclick="setRugPreset(0, 15)">All</button>
-                                <button type="button" class="preset-btn" onclick="setRugPreset(0, 3)">&lt; 5m Quick</button>
-                                <button type="button" class="preset-btn" onclick="setRugPreset(3, 6)">5m - 25m</button>
-                                <button type="button" class="preset-btn" onclick="setRugPreset(6, 15)">≥ 25m</button>
-                                <button type="button" class="preset-btn" onclick="setRugPreset(8, 15)">≥ 1h</button>
-                            </div>
-                            <label class="alive-checkbox-label" title="Keep alive tokens visible when filtering rug times">
-                                <input type="checkbox" id="rug-include-alive" onchange="filterLeadsTable()"> Include Still Alive
-                            </label>
-                        </div>
+                        <input type="text" id="rug-max-input" class="range-input-box" value="Max" placeholder="Max" title="Type max time (e.g. 5m, 25m, 2h, max)" onchange="onRugBoxChange('max', this.value)">
+                        <label class="alive-checkbox-label" title="Keep alive tokens visible when filtering rug times">
+                            <input type="checkbox" id="rug-include-alive" onchange="filterLeadsTable()"> Alive
+                        </label>
                     </div>
                 </div>
             </div>
@@ -1501,142 +1453,244 @@
         }
 
         const ATH_STEPS = [
-            { val: 0, label: "$0" },
-            { val: 5000, label: "$5K" },
-            { val: 10000, label: "$10K" },
-            { val: 25000, label: "$25K" },
-            { val: 50000, label: "$50K" },
-            { val: 100000, label: "$100K" },
-            { val: 250000, label: "$250K" },
-            { val: 500000, label: "$500K" },
-            { val: 1000000, label: "$1M" },
-            { val: 2500000, label: "$2.5M" },
-            { val: 5000000, label: "$5M" },
-            { val: 10000000, label: "$10M" },
-            { val: 25000000, label: "$25M" },
-            { val: 50000000, label: "$50M" },
-            { val: 100000000, label: "$100M" },
-            { val: Infinity, label: "Max" }
+            0, 1000, 2500, 5000, 10000, 25000, 50000, 75000, 100000, 150000,
+            250000, 500000, 750000, 1000000, 2000000, 5000000, 10000000, 25000000, 50000000, 100000000, Infinity
+        ];
+        const RUG_STEPS = [
+            0, 1, 2, 3, 5, 10, 15, 20, 25, 35, 45, 60, 90, 120, 240, 480, 1440, 2880, 4320, 10080, Infinity
         ];
 
-        const RUG_TIME_STEPS = [
-            { sec: 0, label: "0m" },
-            { sec: 60, label: "1m" },
-            { sec: 180, label: "3m" },
-            { sec: 300, label: "5m" },
-            { sec: 600, label: "10m" },
-            { sec: 900, label: "15m" },
-            { sec: 1500, label: "25m" },
-            { sec: 2700, label: "45m" },
-            { sec: 3600, label: "1h" },
-            { sec: 7200, label: "2h" },
-            { sec: 14400, label: "4h" },
-            { sec: 28800, label: "8h" },
-            { sec: 86400, label: "24h" },
-            { sec: 259200, label: "3d" },
-            { sec: 604800, label: "7d" },
-            { sec: Infinity, label: "Max" }
-        ];
+        let activeAthMin = 0;
+        let activeAthMax = Infinity;
+        let activeRugMinMins = 0;
+        let activeRugMaxMins = Infinity;
 
-        let activeAthMinStep = 0;
-        let activeAthMaxStep = 15;
-        let activeRugMinStep = 0;
-        let activeRugMaxStep = 15;
+        function findClosestStep(val, steps) {
+            if (val === Infinity || val >= steps[steps.length - 1]) return steps.length - 1;
+            if (val <= steps[0]) return 0;
+            let closestIdx = 0;
+            let minDiff = Infinity;
+            for (let i = 0; i < steps.length; i++) {
+                if (steps[i] === Infinity) continue;
+                const diff = Math.abs(steps[i] - val);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestIdx = i;
+                }
+            }
+            return closestIdx;
+        }
 
-        function onAthSliderChange(changed) {
-            const minEl = document.getElementById('slider-ath-min');
-            const maxEl = document.getElementById('slider-ath-max');
-            if (!minEl || !maxEl) return;
+        function parseAthInput(raw, isMax) {
+            if (!raw) return isMax ? Infinity : 0;
+            let s = String(raw).trim().toLowerCase().replace(/[$,]/g, '');
+            if (s === 'max' || s === 'inf' || s === 'all' || s === '') return Infinity;
+            if (s === 'min') return 0;
+            let mult = 1;
+            if (s.endsWith('k')) { mult = 1000; s = s.slice(0, -1); }
+            else if (s.endsWith('m')) { mult = 1000000; s = s.slice(0, -1); }
+            else if (s.endsWith('b')) { mult = 1000000000; s = s.slice(0, -1); }
+            const num = parseFloat(s);
+            if (isNaN(num)) return isMax ? Infinity : 0;
+            return Math.max(0, num * mult);
+        }
 
-            let minIdx = parseInt(minEl.value, 10);
-            let maxIdx = parseInt(maxEl.value, 10);
+        function formatAth(num) {
+            if (num === Infinity || num >= 250000000) return 'Max';
+            if (num <= 0) return '$0';
+            if (num >= 1000000) {
+                const m = num / 1000000;
+                return '$' + (Number.isInteger(m) ? m : m.toFixed(1)) + 'M';
+            }
+            if (num >= 1000) {
+                const k = num / 1000;
+                return '$' + (Number.isInteger(k) ? k : k.toFixed(1)) + 'K';
+            }
+            return '$' + Math.round(num);
+        }
 
-            if (changed === 'min' && minIdx > maxIdx) {
-                maxIdx = minIdx;
-                maxEl.value = maxIdx;
-            } else if (changed === 'max' && maxIdx < minIdx) {
-                minIdx = maxIdx;
-                minEl.value = minIdx;
+        function parseRugInput(raw, isMax) {
+            if (!raw) return isMax ? Infinity : 0;
+            let s = String(raw).trim().toLowerCase().replace(/mins?|minutes?/g, 'm');
+            if (s === 'max' || s === 'inf' || s === 'all' || s === '') return Infinity;
+            if (s === 'min') return 0;
+            let mult = 1;
+            if (s.endsWith('h') || s.endsWith('hr') || s.endsWith('hrs')) { mult = 60; s = s.replace(/hrs?|h/, ''); }
+            else if (s.endsWith('d') || s.endsWith('day') || s.endsWith('days')) { mult = 1440; s = s.replace(/days?|d/, ''); }
+            else if (s.endsWith('m')) { mult = 1; s = s.slice(0, -1); }
+            const num = parseFloat(s);
+            if (isNaN(num)) return isMax ? Infinity : 0;
+            return Math.max(0, num * mult);
+        }
+
+        function formatRug(mins) {
+            if (mins === Infinity || mins >= 10080) return 'Max';
+            if (mins <= 0) return '0m';
+            if (mins >= 1440) {
+                const d = mins / 1440;
+                return (Number.isInteger(d) ? d : d.toFixed(1)) + 'd';
+            }
+            if (mins >= 60) {
+                const h = mins / 60;
+                return (Number.isInteger(h) ? h : h.toFixed(1)) + 'h';
+            }
+            return Math.round(mins) + 'm';
+        }
+
+        function updateAthRailHighlight(minIdx, maxIdx) {
+            const fill = document.getElementById('ath-rail-fill');
+            if (!fill) return;
+            const leftPct = (minIdx / 20) * 100;
+            const widthPct = Math.max(0, ((maxIdx - minIdx) / 20) * 100);
+            fill.style.left = leftPct + '%';
+            fill.style.width = widthPct + '%';
+        }
+
+        function updateRugRailHighlight(minIdx, maxIdx) {
+            const fill = document.getElementById('rug-rail-fill');
+            if (!fill) return;
+            const leftPct = (minIdx / 20) * 100;
+            const widthPct = Math.max(0, ((maxIdx - minIdx) / 20) * 100);
+            fill.style.left = leftPct + '%';
+            fill.style.width = widthPct + '%';
+        }
+
+        function onAthSliderDual(which) {
+            const sMin = document.getElementById('slider-ath-min');
+            const sMax = document.getElementById('slider-ath-max');
+            if (!sMin || !sMax) return;
+            let minIdx = parseInt(sMin.value, 10);
+            let maxIdx = parseInt(sMax.value, 10);
+
+            if (which === 'min') {
+                sMin.style.zIndex = 4;
+                sMax.style.zIndex = 3;
+                if (minIdx > maxIdx) {
+                    maxIdx = minIdx;
+                    sMax.value = maxIdx;
+                }
+            } else {
+                sMax.style.zIndex = 4;
+                sMin.style.zIndex = 3;
+                if (maxIdx < minIdx) {
+                    minIdx = maxIdx;
+                    sMin.value = minIdx;
+                }
             }
 
-            activeAthMinStep = minIdx;
-            activeAthMaxStep = maxIdx;
+            activeAthMin = ATH_STEPS[minIdx];
+            activeAthMax = ATH_STEPS[maxIdx];
 
-            updateAthDisplay();
+            const bMin = document.getElementById('ath-min-input');
+            const bMax = document.getElementById('ath-max-input');
+            if (bMin) bMin.value = formatAth(activeAthMin);
+            if (bMax) bMax.value = formatAth(activeAthMax);
+
+            updateAthRailHighlight(minIdx, maxIdx);
             renderLeadsTable();
         }
 
-        function setAthPreset(minIdx, maxIdx, triggerRender = true) {
-            const minEl = document.getElementById('slider-ath-min');
-            const maxEl = document.getElementById('slider-ath-max');
-            if (minEl) minEl.value = minIdx;
-            if (maxEl) maxEl.value = maxIdx;
-            activeAthMinStep = minIdx;
-            activeAthMaxStep = maxIdx;
-            updateAthDisplay();
-            if (triggerRender) renderLeadsTable();
-        }
+        function onRugSliderDual(which) {
+            const sMin = document.getElementById('slider-rug-min');
+            const sMax = document.getElementById('slider-rug-max');
+            if (!sMin || !sMax) return;
+            let minIdx = parseInt(sMin.value, 10);
+            let maxIdx = parseInt(sMax.value, 10);
 
-        function updateAthDisplay() {
-            const minLabel = (ATH_STEPS[activeAthMinStep] || ATH_STEPS[0]).label;
-            const maxLabel = (ATH_STEPS[activeAthMaxStep] || ATH_STEPS[15]).label;
-            const minPill = document.getElementById('ath-min-pill');
-            const maxPill = document.getElementById('ath-max-pill');
-            const rangeBadge = document.getElementById('ath-range-badge');
-
-            if (minPill) minPill.textContent = minLabel;
-            if (maxPill) maxPill.textContent = maxLabel;
-            if (rangeBadge) {
-                rangeBadge.textContent = `${minLabel} — ${maxLabel}`;
-            }
-        }
-
-        function onRugSliderChange(changed) {
-            const minEl = document.getElementById('slider-rug-min');
-            const maxEl = document.getElementById('slider-rug-max');
-            if (!minEl || !maxEl) return;
-
-            let minIdx = parseInt(minEl.value, 10);
-            let maxIdx = parseInt(maxEl.value, 10);
-
-            if (changed === 'min' && minIdx > maxIdx) {
-                maxIdx = minIdx;
-                maxEl.value = maxIdx;
-            } else if (changed === 'max' && maxIdx < minIdx) {
-                minIdx = maxIdx;
-                minEl.value = minIdx;
+            if (which === 'min') {
+                sMin.style.zIndex = 4;
+                sMax.style.zIndex = 3;
+                if (minIdx > maxIdx) {
+                    maxIdx = minIdx;
+                    sMax.value = maxIdx;
+                }
+            } else {
+                sMax.style.zIndex = 4;
+                sMin.style.zIndex = 3;
+                if (maxIdx < minIdx) {
+                    minIdx = maxIdx;
+                    sMin.value = minIdx;
+                }
             }
 
-            activeRugMinStep = minIdx;
-            activeRugMaxStep = maxIdx;
+            activeRugMinMins = RUG_STEPS[minIdx];
+            activeRugMaxMins = RUG_STEPS[maxIdx];
 
-            updateRugDisplay();
+            const bMin = document.getElementById('rug-min-input');
+            const bMax = document.getElementById('rug-max-input');
+            if (bMin) bMin.value = formatRug(activeRugMinMins);
+            if (bMax) bMax.value = formatRug(activeRugMaxMins);
+
+            updateRugRailHighlight(minIdx, maxIdx);
             renderLeadsTable();
         }
 
-        function setRugPreset(minIdx, maxIdx, triggerRender = true) {
-            const minEl = document.getElementById('slider-rug-min');
-            const maxEl = document.getElementById('slider-rug-max');
-            if (minEl) minEl.value = minIdx;
-            if (maxEl) maxEl.value = maxIdx;
-            activeRugMinStep = minIdx;
-            activeRugMaxStep = maxIdx;
-            updateRugDisplay();
-            if (triggerRender) renderLeadsTable();
+        function onAthBoxChange(which, rawVal) {
+            const sMin = document.getElementById('slider-ath-min');
+            const sMax = document.getElementById('slider-ath-max');
+            const bMin = document.getElementById('ath-min-input');
+            const bMax = document.getElementById('ath-max-input');
+
+            if (which === 'min') {
+                const val = parseAthInput(rawVal, false);
+                activeAthMin = val;
+                if (activeAthMin > activeAthMax) {
+                    activeAthMax = activeAthMin;
+                    if (bMax) bMax.value = formatAth(activeAthMax);
+                }
+            } else {
+                const val = parseAthInput(rawVal, true);
+                activeAthMax = val;
+                if (activeAthMax < activeAthMin) {
+                    activeAthMin = activeAthMax;
+                    if (bMin) bMin.value = formatAth(activeAthMin);
+                }
+            }
+
+            const minIdx = findClosestStep(activeAthMin, ATH_STEPS);
+            const maxIdx = findClosestStep(activeAthMax, ATH_STEPS);
+            if (sMin) sMin.value = minIdx;
+            if (sMax) sMax.value = maxIdx;
+
+            if (bMin) bMin.value = formatAth(activeAthMin);
+            if (bMax) bMax.value = formatAth(activeAthMax);
+
+            updateAthRailHighlight(minIdx, maxIdx);
+            renderLeadsTable();
         }
 
-        function updateRugDisplay() {
-            const minLabel = (RUG_TIME_STEPS[activeRugMinStep] || RUG_TIME_STEPS[0]).label;
-            const maxLabel = (RUG_TIME_STEPS[activeRugMaxStep] || RUG_TIME_STEPS[15]).label;
-            const minPill = document.getElementById('rug-min-pill');
-            const maxPill = document.getElementById('rug-max-pill');
-            const rangeBadge = document.getElementById('rug-range-badge');
+        function onRugBoxChange(which, rawVal) {
+            const sMin = document.getElementById('slider-rug-min');
+            const sMax = document.getElementById('slider-rug-max');
+            const bMin = document.getElementById('rug-min-input');
+            const bMax = document.getElementById('rug-max-input');
 
-            if (minPill) minPill.textContent = minLabel;
-            if (maxPill) maxPill.textContent = maxLabel;
-            if (rangeBadge) {
-                rangeBadge.textContent = `${minLabel} — ${maxLabel}`;
+            if (which === 'min') {
+                const mins = parseRugInput(rawVal, false);
+                activeRugMinMins = mins;
+                if (activeRugMinMins > activeRugMaxMins) {
+                    activeRugMaxMins = activeRugMinMins;
+                    if (bMax) bMax.value = formatRug(activeRugMaxMins);
+                }
+            } else {
+                const mins = parseRugInput(rawVal, true);
+                activeRugMaxMins = mins;
+                if (activeRugMaxMins < activeRugMinMins) {
+                    activeRugMinMins = activeRugMaxMins;
+                    if (bMin) bMin.value = formatRug(activeRugMinMins);
+                }
             }
+
+            const minIdx = findClosestStep(activeRugMinMins, RUG_STEPS);
+            const maxIdx = findClosestStep(activeRugMaxMins, RUG_STEPS);
+            if (sMin) sMin.value = minIdx;
+            if (sMax) sMax.value = maxIdx;
+
+            if (bMin) bMin.value = formatRug(activeRugMinMins);
+            if (bMax) bMax.value = formatRug(activeRugMaxMins);
+
+            updateRugRailHighlight(minIdx, maxIdx);
+            renderLeadsTable();
         }
 
         // Render Page 1: Leads Table
@@ -1650,11 +1704,6 @@
             const tierFilter = (document.getElementById('leads-tier-filter') ? document.getElementById('leads-tier-filter').value : 'ALL');
             const teamFilter = (document.getElementById('leads-team-filter') ? document.getElementById('leads-team-filter').value.toLowerCase() : 'all');
             const rugFilter = (document.getElementById('leads-rug-filter') ? document.getElementById('leads-rug-filter').value : 'ALL');
-
-            const minAth = ATH_STEPS[activeAthMinStep] ? ATH_STEPS[activeAthMinStep].val : 0;
-            const maxAth = ATH_STEPS[activeAthMaxStep] ? ATH_STEPS[activeAthMaxStep].val : Infinity;
-            const minRugSec = RUG_TIME_STEPS[activeRugMinStep] ? RUG_TIME_STEPS[activeRugMinStep].sec : 0;
-            const maxRugSec = RUG_TIME_STEPS[activeRugMaxStep] ? RUG_TIME_STEPS[activeRugMaxStep].sec : Infinity;
             const includeAlive = document.getElementById('rug-include-alive') ? document.getElementById('rug-include-alive').checked : true;
 
             // Filter
@@ -1669,10 +1718,12 @@
 
                 // ATH Min/Max filter
                 const candAth = Number(c.ath) || 0;
-                if (candAth < minAth) return false;
-                if (maxAth !== Infinity && candAth > maxAth) return false;
+                if (candAth < activeAthMin) return false;
+                if (activeAthMax !== Infinity && candAth > activeAthMax) return false;
 
                 // Time to Rug Min/Max filter
+                const minRugSec = activeRugMinMins * 60;
+                const maxRugSec = activeRugMaxMins === Infinity ? Infinity : (activeRugMaxMins * 60);
                 if (c.is_alive) {
                     if (minRugSec > 0 || maxRugSec !== Infinity) {
                         if (!includeAlive) return false;
@@ -2036,9 +2087,26 @@
             if (document.getElementById('leads-tier-filter')) document.getElementById('leads-tier-filter').value = 'ALL';
             if (document.getElementById('leads-team-filter')) document.getElementById('leads-team-filter').value = 'ALL';
             if (document.getElementById('leads-rug-filter')) document.getElementById('leads-rug-filter').value = 'ALL';
-            setAthPreset(0, 15, false);
-            setRugPreset(0, 15, false);
+
+            // Reset ATH inputs & slider
+            activeAthMin = 0;
+            activeAthMax = Infinity;
+            if (document.getElementById('ath-min-input')) document.getElementById('ath-min-input').value = '$0';
+            if (document.getElementById('ath-max-input')) document.getElementById('ath-max-input').value = 'Max';
+            if (document.getElementById('slider-ath-min')) document.getElementById('slider-ath-min').value = 0;
+            if (document.getElementById('slider-ath-max')) document.getElementById('slider-ath-max').value = 20;
+            updateAthRailHighlight(0, 20);
+
+            // Reset Time to Rug inputs & slider
+            activeRugMinMins = 0;
+            activeRugMaxMins = Infinity;
+            if (document.getElementById('rug-min-input')) document.getElementById('rug-min-input').value = '0m';
+            if (document.getElementById('rug-max-input')) document.getElementById('rug-max-input').value = 'Max';
+            if (document.getElementById('slider-rug-min')) document.getElementById('slider-rug-min').value = 0;
+            if (document.getElementById('slider-rug-max')) document.getElementById('slider-rug-max').value = 20;
             if (document.getElementById('rug-include-alive')) document.getElementById('rug-include-alive').checked = true;
+            updateRugRailHighlight(0, 20);
+
             selectTopChain('ALL');
         }
         function filterParamsTable() {
@@ -2081,8 +2149,8 @@
 
         // Initial setup
         window.addEventListener('DOMContentLoaded', () => {
-            updateAthDisplay();
-            updateRugDisplay();
+            updateAthRailHighlight(0, 20);
+            updateRugRailHighlight(0, 20);
             rescoreAllCandidates();
             renderParamsTable();
             loadRemoteCandidates();
