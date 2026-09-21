@@ -11,18 +11,12 @@ User=omnireborn
 Group=omnireborn
 WorkingDirectory=/opt/omnireborn
 EnvironmentFile=/etc/omnireborn.env
-ExecStartPre=/opt/omnireborn/.venv/bin/python /opt/omnireborn/telegram_bot.py --check
 ExecStart=/opt/omnireborn/.venv/bin/python /opt/omnireborn/telegram_bot.py
 Restart=always
-RestartSec=15
+RestartSec=10
 TimeoutStartSec=120
 TimeoutStopSec=45
 KillSignal=SIGTERM
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/opt/omnireborn/data /opt/omnireborn/runtime
 UMask=0027
 
 [Install]

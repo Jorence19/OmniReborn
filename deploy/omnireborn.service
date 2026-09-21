@@ -11,19 +11,13 @@ User=omnireborn
 Group=omnireborn
 WorkingDirectory=/opt/omnireborn
 EnvironmentFile=/etc/omnireborn.env
-ExecStartPre=/opt/omnireborn/.venv/bin/python /opt/omnireborn/streamer.py --preflight
 ExecStart=/opt/omnireborn/.venv/bin/python /opt/omnireborn/streamer.py --stream --max-jobs 25
 ExecStopPost=/opt/omnireborn/.venv/bin/python /opt/omnireborn/backup_database.py --retention-days 14
 Restart=always
-RestartSec=15
+RestartSec=10
 TimeoutStartSec=120
 TimeoutStopSec=120
 KillSignal=SIGTERM
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/opt/omnireborn/data /opt/omnireborn/runtime /var/backups/omnireborn
 UMask=0027
 
 [Install]
