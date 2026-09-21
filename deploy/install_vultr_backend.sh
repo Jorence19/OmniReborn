@@ -26,7 +26,11 @@ python3 -m venv "$APP_DIR/.venv"
 "$APP_DIR/.venv/bin/pip" install --upgrade pip
 "$APP_DIR/.venv/bin/pip" install -r "$APP_DIR/requirements.txt"
 
-if [[ ! -f "$APP_DIR/data/forensics.db" && -f "$APP_DIR/forensics.db" ]]; then
+LATEST_BACKUP=$(ls -t "$BACKUP_DIR"/forensics_*.db 2>/dev/null | head -n 1 || true)
+if [[ -n "$LATEST_BACKUP" && -f "$LATEST_BACKUP" && ! -f "$APP_DIR/data/forensics.db" ]]; then
+  echo "Restoring database from latest backup: $LATEST_BACKUP"
+  install -o "$APP_USER" -g "$APP_USER" -m 0640 "$LATEST_BACKUP" "$APP_DIR/data/forensics.db"
+elif [[ ! -f "$APP_DIR/data/forensics.db" && -f "$APP_DIR/forensics.db" ]]; then
   install -o "$APP_USER" -g "$APP_USER" -m 0640 "$APP_DIR/forensics.db" "$APP_DIR/data/forensics.db"
 fi
 if [[ ! -f /etc/omnireborn.env ]]; then
