@@ -48,6 +48,7 @@ class ForensicDatabase:
                 "chain_id": "INTEGER NOT NULL DEFAULT 4663",
                 "is_qualified": "INTEGER DEFAULT 0",
                 "is_training_anchor": "INTEGER DEFAULT 0",
+                "is_graduated": "INTEGER DEFAULT 0", "graduation_evidence": "TEXT",
                 "qualification_reasons": "TEXT",
                 "ath_source": "TEXT",
                 "current_market_cap_usd": "REAL",
@@ -110,14 +111,14 @@ class ForensicDatabase:
         sql = """
         INSERT INTO tokens (
             ca, chain_id, chain, symbol, name, launchpad, token_live_at, migrated_at,
-            time_to_graduate_sec, is_migrated, is_dex_paid, is_qualified, is_training_anchor,
+            time_to_graduate_sec, is_migrated, is_dex_paid, is_graduated, graduation_evidence, is_qualified, is_training_anchor,
             qualification_reasons, ath_usd, ath_source, current_market_cap_usd,
             observed_peak_market_cap_usd, fdv_usd, current_liquidity_usd,
             market_pair_url, market_data_at, peak_liquidity_usd, x_handle,
             website, description
         ) VALUES (
             :ca, :chain_id, :chain, :symbol, :name, :launchpad, :token_live_at, :migrated_at,
-            :time_to_graduate_sec, :is_migrated, :is_dex_paid, :is_qualified, :is_training_anchor,
+            :time_to_graduate_sec, :is_migrated, :is_dex_paid, :is_graduated, :graduation_evidence, :is_qualified, :is_training_anchor,
             :qualification_reasons, :ath_usd, :ath_source, :current_market_cap_usd,
             :observed_peak_market_cap_usd, :fdv_usd, :current_liquidity_usd,
             :market_pair_url, :market_data_at, :peak_liquidity_usd, :x_handle,
@@ -134,6 +135,8 @@ class ForensicDatabase:
             time_to_graduate_sec = COALESCE(excluded.time_to_graduate_sec, tokens.time_to_graduate_sec),
             is_migrated = MAX(tokens.is_migrated, excluded.is_migrated),
             is_dex_paid = MAX(tokens.is_dex_paid, excluded.is_dex_paid),
+            is_graduated = MAX(tokens.is_graduated, excluded.is_graduated),
+            graduation_evidence = COALESCE(excluded.graduation_evidence, tokens.graduation_evidence),
             is_qualified = MAX(tokens.is_qualified, excluded.is_qualified),
             is_training_anchor = MAX(tokens.is_training_anchor, excluded.is_training_anchor),
             qualification_reasons = CASE
@@ -160,6 +163,9 @@ class ForensicDatabase:
         reasons = data.get("qualification_reasons")
         if reasons is not None and not isinstance(reasons, str):
             reasons = json.dumps(reasons, sort_keys=True)
+        graduation_evidence = data.get("graduation_evidence")
+        if graduation_evidence is not None and not isinstance(graduation_evidence, str):
+            graduation_evidence = json.dumps(graduation_evidence, sort_keys=True)
         chain_id = int(data.get("chain_id") or 4663)
         default_chain = {4663: "RBH", 5042: "ARC", 8453: "BASE", 1: "ETH"}.get(
             chain_id, str(chain_id)
@@ -175,6 +181,8 @@ class ForensicDatabase:
             "time_to_graduate_sec": self._optional_int(data.get("time_to_graduate_sec")),
             "is_migrated": int(bool(data.get("is_migrated"))),
             "is_dex_paid": int(bool(data.get("is_dex_paid"))),
+            "is_graduated": int(bool(data.get("is_graduated"))),
+            "graduation_evidence": graduation_evidence,
             "is_qualified": int(bool(data.get("is_qualified"))),
             "is_training_anchor": int(bool(data.get("is_training_anchor"))),
             "qualification_reasons": reasons,

@@ -71,6 +71,9 @@ class CollectorError(RuntimeError):
 class IncompleteProfileError(CollectorError):
     pass
 
+class NonGraduatedDiscoveryError(CollectorError):
+    pass
+
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -262,6 +265,24 @@ class QueueStore:
                  source, json.dumps(log, sort_keys=True)))
             return cursor.rowcount == 1
 
+    def record_discovery(self, item: Dict[str, Any], status: str, reason: str):
+        """Persist raw discovery evidence even when it is not eligible for enrichment."""
+        ca = validate_address(item.get("ca") or item.get("tokenAddress"))
+        chain_id = int(item["chain_id"])
+        source = "+".join(sorted(item.get("sources") or [item.get("source") or "unknown"]))
+        with self.db.get_connection() as conn:
+            conn.execute(
+                """INSERT INTO discovery_observations
+                   (chain_id, ca, source, graduation_status, graduation_reason, payload_json)
+                   VALUES (?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(chain_id, ca, source) DO UPDATE SET
+                     graduation_status=excluded.graduation_status,
+                     graduation_reason=excluded.graduation_reason,
+                     payload_json=excluded.payload_json,
+                     last_seen_at=datetime('now')""",
+                (chain_id, ca, source, status, reason, json.dumps(item, sort_keys=True, default=str)),
+            )
+
 
 def merge_discovery(target: Dict[str, Dict[str, Any]], item: Dict[str, Any]):
     dex_chain_id = str(item.get("dex_chain_id") or item.get("chainId") or "").lower()
@@ -305,6 +326,84 @@ def fetch_live_dexpaid_tokens() -> List[Dict[str, Any]]:
     if successes == 0:
         raise CollectorError("all DexScreener discovery surfaces failed: " + "; ".join(failures))
     return list(merged.values())
+
+
+def _number(value: Any) -> float:
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def is_confirmed_dex_pair(pair: Dict[str, Any], ca: str) -> bool:
+    """A graduation pair must identify the token as its base asset and have on-chain pair metadata."""
+    if not isinstance(pair, dict):
+        return False
+    base = str((pair.get("baseToken") or {}).get("address") or "").lower()
+    return (
+        base == validate_address(ca)
+        and bool(pair.get("pairAddress"))
+        and bool(pair.get("pairCreatedAt"))
+    )
+
+
+def confirmed_market_pairs(chain_id: int, addresses: List[str]) -> Tuple[Dict[str, Dict[str, Any]], set[str]]:
+    """Fetch up to 30 tokens per DexScreener request and fail closed on lookup errors."""
+    spec = CHAIN_METADATA[chain_id]
+    normalized = sorted({validate_address(address) for address in addresses})
+    found: Dict[str, Dict[str, Any]] = {}
+    failed: set[str] = set()
+    for offset in range(0, len(normalized), 30):
+        batch = normalized[offset:offset + 30]
+        try:
+            payload = request_json(
+                "https://api.dexscreener.com/tokens/v1/"
+                + str(spec["dex_chain_id"]) + "/" + ",".join(batch)
+            )
+        except Exception as exc:
+            LOG.warning("Graduation-pair lookup failed for %s %s-token batch: %s", spec["tag"], len(batch), exc)
+            failed.update(batch)
+            continue
+        for pair in payload if isinstance(payload, list) else []:
+            if not isinstance(pair, dict):
+                continue
+            base = str((pair.get("baseToken") or {}).get("address") or "").lower()
+            if base not in batch or not is_confirmed_dex_pair(pair, base):
+                continue
+            previous = found.get(base)
+            if previous is None or _number((pair.get("liquidity") or {}).get("usd")) > _number((previous.get("liquidity") or {}).get("usd")):
+                found[base] = pair
+    return found, failed
+
+
+def select_graduated_dex_discoveries(store: QueueStore, discoveries: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
+    """Keep only Arc entries with verified DEX graduation; RBH graduation comes from PoolManager events."""
+    arc_items = [item for item in discoveries if int(item["chain_id"]) == 5042]
+    arc_pairs, lookup_failed = confirmed_market_pairs(5042, [item["ca"] for item in arc_items]) if arc_items else ({}, set())
+    selected: List[Dict[str, Any]] = []
+    counts = {"graduated": 0, "rejected": 0, "unverified": 0}
+    for item in discoveries:
+        chain_id = int(item["chain_id"])
+        ca = validate_address(item["ca"])
+        if chain_id == 5042:
+            pair = arc_pairs.get(ca)
+            if pair:
+                enriched = dict(item)
+                enriched["sources"] = sorted(set(item.get("sources") or []) | {"arc_dex_pair"})
+                enriched["graduation_pair"] = pair
+                store.record_discovery(enriched, "graduated", "arc_confirmed_dex_pair")
+                selected.append(enriched)
+                counts["graduated"] += 1
+            else:
+                status = "unverified" if ca in lookup_failed else "rejected"
+                reason = "arc_pair_lookup_failed" if status == "unverified" else "arc_no_confirmed_dex_pair"
+                store.record_discovery(item, status, reason)
+                counts[status] += 1
+        else:
+            # Paid/profile surfaces are useful audit evidence but cannot prove Robinhood graduation.
+            store.record_discovery(item, "rejected", "robinhood_requires_uniswap_v4_initialize")
+            counts["rejected"] += 1
+    return selected, counts
 
 
 def backfill_historical_tokens(days: int = 10) -> List[Dict[str, Any]]:
@@ -463,12 +562,13 @@ def fetch_market_profile(ca: str, chain_id: int) -> Dict[str, Any]:
     spec = CHAIN_METADATA.get(chain_id)
     if not spec:
         raise CollectorError(f"unsupported market chain {chain_id}")
+    ca = validate_address(ca)
     payload = request_json(f"https://api.dexscreener.com/tokens/v1/{spec['dex_chain_id']}/{ca}")
-    pairs = payload if isinstance(payload, list) else []
+    pairs = [pair for pair in (payload if isinstance(payload, list) else [])
+             if is_confirmed_dex_pair(pair, ca)]
     if not pairs:
         return {}
-    return max(pairs, key=lambda pair: float((pair.get("liquidity") or {}).get("usd") or 0))
-
+    return max(pairs, key=lambda pair: _number((pair.get("liquidity") or {}).get("usd")))
 def market_fields(pair: Dict[str, Any]) -> Dict[str, Any]:
     base, info = pair.get("baseToken") or {}, pair.get("info") or {}
     websites, socials = info.get("websites") or [], info.get("socials") or []
@@ -502,25 +602,41 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
         raise CollectorError(f"job targets disabled or unsupported chain {chain_id}")
     spec = CHAIN_METADATA[chain_id]
     source = str(job.get("source") or "stream")
-    LOG.info("enriching %s on %s from %s (attempt %s)",
+    source_parts = {part for part in source.split("+") if part}
+    rbh_migration = chain_id == CHAIN_ID and "uniswap_v4_initialize" in source_parts
+    arc_dex_pair = chain_id == 5042 and "arc_dex_pair" in source_parts
+    if not (rbh_migration or arc_dex_pair):
+        raise NonGraduatedDiscoveryError(
+            f"graduated-only gate rejected {spec['tag']} source(s): {', '.join(sorted(source_parts)) or 'unknown'}"
+        )
+
+    # Arc's graduation evidence is a live base-token DEX pair. Verify it before expensive RPC/explorer work.
+    pair = fetch_market_profile(ca, chain_id) if arc_dex_pair else {}
+    if arc_dex_pair and not pair:
+        raise NonGraduatedDiscoveryError("Arc graduation pair is no longer confirmed")
+
+    LOG.info("enriching graduated %s on %s from %s (attempt %s)",
              ca, spec["tag"], source, job.get("attempts"))
     profile = extract_full_token_metadata(ca, chain_id=chain_id)
     gaps = required_profile_gaps(profile)
     if gaps:
         raise IncompleteProfileError("explorer/RPC profile incomplete: " + ", ".join(gaps))
     canonical_ca = persist_profile(db, profile, qualified=False)
-    pair = fetch_market_profile(ca, chain_id)
+    if rbh_migration:
+        pair = fetch_market_profile(ca, chain_id)
     market = market_fields(pair) if pair else {}
-    source_parts = {part for part in source.split("+") if part}
-    dex_paid = bool(source_parts & DEX_PAID_SOURCES)
-    migrated = chain_id == CHAIN_ID and "uniswap_v4_initialize" in source_parts
-    qualified = bool(dex_paid or migrated)
-    qualification_gates = [
-        gate for gate, passed in (("dex_paid", dex_paid), ("migrated", migrated)) if passed
-    ]
+    paid_surface_observed = bool(source_parts & DEX_PAID_SOURCES)
+    graduation_gate = "robinhood_uniswap_v4_initialize" if rbh_migration else "arc_confirmed_dex_pair"
+    graduation_evidence = {
+        "gate": graduation_gate,
+        "chain_id": chain_id,
+        "source_parts": sorted(source_parts),
+        "market_pair_url": pair.get("url") if pair else None,
+        "pair_created_at": pair.get("pairCreatedAt") if pair else None,
+    }
     canonical_ca = db.upsert_token({
         "ca": canonical_ca, "chain_id": chain_id, "chain": spec["tag"],
-        "launchpad": "Uniswap v4" if migrated else None,
+        "launchpad": "Uniswap v4" if rbh_migration else "Arc DEX",
         "symbol": market.get("symbol") or profile.get("token_symbol"),
         "name": market.get("name") or profile.get("token_name"),
         "token_live_at": market.get("token_live_at"),
@@ -533,11 +649,12 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
         "peak_liquidity_usd": market.get("peak_liquidity_usd"),
         "website": market.get("website") or profile.get("website_url"),
         "x_handle": market.get("x_handle") or profile.get("twitter_url"),
-        "description": profile.get("description"), "is_migrated": migrated,
-        "is_dex_paid": dex_paid, "is_qualified": qualified,
+        "description": profile.get("description"), "is_migrated": rbh_migration,
+        "is_dex_paid": paid_surface_observed, "is_graduated": True,
+        "graduation_evidence": graduation_evidence, "is_qualified": True,
         "is_training_anchor": False,
         "qualification_reasons": {
-            "gates": qualification_gates, "discovery_sources": sorted(source_parts),
+            "gates": [graduation_gate], "discovery_sources": sorted(source_parts),
             "profile_complete": True, "market_found": bool(pair),
             "training_anchor": False, "chain_id": chain_id,
             "native_symbol": spec["native_symbol"],
@@ -557,47 +674,45 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
     return {
         "ca": canonical_ca, "chain_id": chain_id, "chain": spec["tag"],
         "symbol": market.get("symbol") or profile.get("token_symbol"),
-        "market_found": bool(pair), "is_qualified": qualified,
-        "is_training_anchor": False, "qualification_gates": qualification_gates,
+        "market_found": bool(pair), "is_qualified": True,
+        "is_graduated": True, "is_training_anchor": False,
+        "qualification_gates": [graduation_gate],
     }
-
 def process_queue(db: ForensicDatabase, store: QueueStore, max_jobs: int = 10, concurrency: int = 4) -> Dict[str, int]:
     worker_id = f"{socket.gethostname()}:{os.getpid()}:{uuid.uuid4().hex[:8]}"
-    counts = {"succeeded": 0, "failed": 0, "claimed": 0}
+    counts = {"succeeded": 0, "failed": 0, "skipped": 0, "claimed": 0}
     jobs = store.claim(worker_id, limit=max(1, max_jobs))
     counts["claimed"] = len(jobs)
     if not jobs:
         return counts
 
-    def _execute_job(job: Dict[str, Any]) -> bool:
+    def _execute_job(job: Dict[str, Any]) -> str:
         if STOP_REQUESTED:
-            return False
+            return "skipped"
         try:
             ingest_and_enrich_job(db, job)
             store.succeed(job["ca"], job["chain_id"])
-            return True
+            return "succeeded"
+        except NonGraduatedDiscoveryError as exc:
+            # Legacy paid-only jobs are retired without consuming retries or polluting Phase 1.
+            store.succeed(job["ca"], job["chain_id"])
+            LOG.info("skipped non-graduated job %s (chain %s): %s", job.get("ca"), job.get("chain_id"), exc)
+            return "skipped"
         except Exception as exc:
             store.fail(job, exc)
             LOG.warning("job %s (chain %s) failed: %s", job.get("ca"), job.get("chain_id"), exc)
-            return False
+            return "failed"
 
     workers = min(max(1, concurrency), len(jobs))
     if workers > 1:
         with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
             futures = [executor.submit(_execute_job, j) for j in jobs]
-            for f in concurrent.futures.as_completed(futures):
-                if f.result():
-                    counts["succeeded"] += 1
-                else:
-                    counts["failed"] += 1
+            for future in concurrent.futures.as_completed(futures):
+                counts[future.result()] += 1
     else:
         for job in jobs:
-            if _execute_job(job):
-                counts["succeeded"] += 1
-            else:
-                counts["failed"] += 1
+            counts[_execute_job(job)] += 1
     return counts
-
 def atomic_write_json(path: Path, payload: Dict[str, Any]):
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_name(path.name + f".{os.getpid()}.tmp")
@@ -626,10 +741,11 @@ def regenerate_outputs(db: ForensicDatabase):
     )
 
 def discover_once(store: QueueStore, include_chain: bool = True) -> Dict[str, Any]:
-    dex = fetch_live_dexpaid_tokens()
+    raw_dex = fetch_live_dexpaid_tokens()
+    dex, graduation = select_graduated_dex_discoveries(store, raw_dex)
     dex_counts: Dict[str, int] = {}
     for item in dex:
-        source = "+".join(sorted(item.get("sources") or ["dex_live"]))
+        source = "+".join(sorted(item.get("sources") or ["arc_dex_pair"]))
         chain_id = int(item["chain_id"])
         store.enqueue(item["ca"], source, item, chain_id=chain_id, priority=50)
         tag = str(CHAIN_METADATA[chain_id]["tag"])
@@ -641,8 +757,11 @@ def discover_once(store: QueueStore, include_chain: bool = True) -> Dict[str, An
         except Exception as exc:
             LOG.error("Robinhood Chain Uniswap v4 scan failed (skipping for this cycle): %s", exc)
             rbh_chain = {"error": str(exc), "logs": 0, "tokens": 0}
-    return {"dex_tokens": len(dex), "dex_by_chain": dex_counts, "robinhood_v4": rbh_chain}
-
+    return {
+        "dex_tokens": len(dex), "dex_seen": len(raw_dex),
+        "dex_by_chain": dex_counts, "graduation_gate": graduation,
+        "robinhood_v4": rbh_chain,
+    }
 def run_cycle(db: ForensicDatabase, store: QueueStore, max_jobs: int, include_chain: bool = True) -> Dict[str, Any]:
     run_id = None
     started_at = iso_utc()
@@ -684,19 +803,22 @@ def backfill(db: ForensicDatabase, store: QueueStore, days: int, max_jobs: int,
         scan_uniswap_v4_initialize(store, days=days, from_block=from_block)
         if CHAIN_ID in ENABLED_CHAIN_IDS else {"logs": 0, "tokens": 0}
     )
-    dex = backfill_historical_tokens(days)
+    raw_dex = backfill_historical_tokens(days)
+    dex, graduation = select_graduated_dex_discoveries(store, raw_dex)
     for item in dex:
         store.enqueue(
-            item["ca"], "dex_search_backfill", item,
+            item["ca"], "+".join(sorted(item.get("sources") or ["arc_dex_pair"])), item,
             chain_id=int(item["chain_id"]), priority=80,
         )
     processing = process_queue(db, store, max_jobs=max_jobs)
     if processing["succeeded"]:
         regenerate_outputs(db)
-    result = {"robinhood_v4": rbh_chain, "dex_tokens": len(dex), "processing": processing}
+    result = {
+        "robinhood_v4": rbh_chain, "dex_tokens": len(dex), "dex_seen": len(raw_dex),
+        "graduation_gate": graduation, "processing": processing,
+    }
     write_health("ok", store, mode="backfill", **result)
     return result
-
 def preflight(db: ForensicDatabase, store: QueueStore) -> Tuple[bool, Dict[str, Any]]:
     checks: Dict[str, Dict[str, Any]] = {}
 

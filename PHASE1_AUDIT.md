@@ -6,14 +6,15 @@ Learn as many auditable developer fingerprints and repeatable habits as possible
 
 ## Qualification boundary
 
-Qualification and training are intentionally separate:
+Phase 1 is graduated-only:
 
-- `is_qualified=1` means the token passed a recorded evidence gate after its required on-chain profile was collected. Current automatic gates are a verified DEX paid/profile/ads discovery or a Robinhood Uniswap v4 migration event.
-- `is_training_anchor=1` means the token has a trusted team label and may teach the fingerprint matcher. Only labeled ground truth or an explicit operator `--qualified` action creates an anchor.
-- A live Arc token can therefore be qualified and visible without teaching the model an unverified team identity. Search-only backfill never counts as DEX paid.
+- `is_graduated=1` is required for every non-anchor token included in scoring, exports, dashboard rows, and Telegram leads.
+- Robinhood requires a recorded Uniswap v4 PoolManager `Initialize` event for the token.
+- Arc requires a DexScreener-confirmed DEX pair where the token is the base asset and the pair supplies both a pair address and creation timestamp.
+- Paid boosts, ads, profiles, and search results are retained in `discovery_observations` for audit, but cannot qualify or trigger expensive forensic enrichment by themselves.
+- `is_training_anchor=1` remains separate trusted historical ground truth. Anchors train the fingerprint matcher but are not automatically labeled as graduated.
 
-This prevents the pipeline from training on its own guesses while still reporting genuine qualified discoveries.
-
+This prevents paid-listing noise from teaching or contaminating the developer-fingerprint model while preserving the raw discovery trail for later review.
 ## What was corrected
 
 - Missing gas, nonce, value, and bundle observations no longer become zero-valued habits.

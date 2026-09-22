@@ -467,20 +467,26 @@ def persist_profile(db: ForensicDatabase, profile: Dict[str, Any], *, qualified:
 
 
 def build_report(db: ForensicDatabase, qualified_only: bool = True) -> Dict[str, Any]:
-    universe = db.get_all_historical_tokens()
+    all_rows = db.get_all_historical_tokens()
+    # Trusted labeled anchors remain available to teach fingerprints. Every non-anchor must
+    # carry verified graduation evidence before it can influence the Phase 1 universe.
+    universe = [
+        row for row in all_rows
+        if int(row.get("is_training_anchor") or 0) == 1
+        or int(row.get("is_graduated") or 0) == 1
+    ] if qualified_only else all_rows
     rows = [row for row in universe if int(row.get("is_training_anchor") or 0) == 1] if qualified_only else universe
     catalog = discover_fingerprints(rows, universe)
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "scope": "training_anchors_to_all_tokens" if qualified_only else "all_tokens",
+        "scope": "training_anchors_to_graduated_tokens" if qualified_only else "all_tokens",
         "token_count": len(rows),
         "universe_token_count": len(universe),
+        "excluded_ungraduated_token_count": len(all_rows) - len(universe),
         "fingerprint_catalog": catalog,
         "team_habits": build_team_habits(rows),
         "candidate_tokens": scan_candidate_tokens(rows, universe, catalog) if qualified_only else [],
     }
-
-
 def write_report_artifacts(report: Dict[str, Any], output_path: str) -> List[str]:
     """Write JSON and CSVs atomically so readers never observe partial files."""
     output = Path(output_path)

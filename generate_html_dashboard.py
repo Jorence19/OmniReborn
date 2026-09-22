@@ -105,7 +105,8 @@ if db_path.exists():
                       t.market_pair_url AS live_market_pair_url,
                       t.market_data_at AS live_market_data_at
                FROM tokens t
-               LEFT JOIN token_matches tm ON LOWER(t.ca) = LOWER(tm.ca)''',
+               LEFT JOIN token_matches tm ON LOWER(t.ca) = LOWER(tm.ca)
+               WHERE COALESCE(t.is_graduated, 0)=1 OR COALESCE(t.is_training_anchor, 0)=1''',
             connection,
         )
     extra_rows = []

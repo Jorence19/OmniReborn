@@ -105,5 +105,15 @@ class Phase1ReportTests(unittest.TestCase):
             self.assertEqual(report["token_count"], 1)
 
 
+    def test_graduated_only_report_excludes_ungraduated_nonanchors(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = ForensicDatabase(str(Path(directory) / "test.db"))
+            db.upsert_token({"ca": "0x" + "1" * 40, "is_training_anchor": True, "is_qualified": True})
+            db.upsert_token({"ca": "0x" + "2" * 40, "is_graduated": True, "is_qualified": True})
+            db.upsert_token({"ca": "0x" + "3" * 40, "is_qualified": True})
+            report = build_report(db, qualified_only=True)
+            self.assertEqual(report["universe_token_count"], 2)
+            self.assertEqual(report["excluded_ungraduated_token_count"], 1)
+
 if __name__ == "__main__":
     unittest.main()

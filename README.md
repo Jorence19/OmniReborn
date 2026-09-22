@@ -5,7 +5,7 @@
 
 ## Primary architecture: Pure Vultr + Telegram (Phase 1)
 
-Phase 1 is a **10-minute forensic collection and team-identification pipeline**, not a real-time sniper. The collector, durable SQLite queue, Telegram command bot, watchdogs, and backups run on Vultr; no public web server is required. Telegram push alerts are disabled by default and reserved for the later Phase 2 monitoring/anticipation system. See [VULTR_TELEGRAM_DEPLOYMENT.md](VULTR_TELEGRAM_DEPLOYMENT.md).
+Phase 1 is a **10-minute forensic collection and team-identification pipeline**, not a real-time sniper. It admits only verified graduated tokens: Robinhood Uniswap v4 PoolManager migrations and Arc confirmed DEX-base pairs; paid listings remain audit-only. The collector, durable SQLite queue, Telegram command bot, watchdogs, and backups run on Vultr; no public web server is required. Telegram push alerts are disabled by default and reserved for the later Phase 2 monitoring/anticipation system. See [VULTR_TELEGRAM_DEPLOYMENT.md](VULTR_TELEGRAM_DEPLOYMENT.md).
 
 Commands: /leads, /dashboard, /dbxlsx, /dbcsv, and /status.
 

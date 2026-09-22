@@ -16,7 +16,9 @@ CREATE TABLE IF NOT EXISTS tokens (
     migrated_at TEXT,               -- Graduation timestamp (Pons -> Uni v4)
     time_to_graduate_sec INTEGER,   -- Graduation Velocity (fast < 3m = bundle cabal)
     is_migrated INTEGER DEFAULT 0,  -- Gate A
-    is_dex_paid INTEGER DEFAULT 0,  -- Gate B
+    is_dex_paid INTEGER DEFAULT 0,  -- Paid visibility only; never a graduation gate
+    is_graduated INTEGER DEFAULT 0, -- Verified chain-specific graduation evidence
+    graduation_evidence TEXT,       -- JSON proof; paid visibility alone is never sufficient
     is_qualified INTEGER DEFAULT 0, -- Passed an auditable evidence gate; safe to show as qualified
     is_training_anchor INTEGER DEFAULT 0, -- Trusted labeled reference; never inferred from discovery
     qualification_reasons TEXT,     -- JSON evidence for why this token qualified
@@ -205,6 +207,19 @@ CREATE TABLE IF NOT EXISTS stream_state (
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Raw market-surface observations are retained even when they fail the graduated-only gate.
+CREATE TABLE IF NOT EXISTS discovery_observations (
+    chain_id INTEGER NOT NULL,
+    ca TEXT NOT NULL,
+    source TEXT NOT NULL,
+    graduation_status TEXT NOT NULL CHECK(graduation_status IN ('graduated','rejected','unverified')),
+    graduation_reason TEXT,
+    payload_json TEXT NOT NULL,
+    first_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (chain_id, ca, source)
+);
+
 -- Event provenance makes overlapping/reorg-safe scans idempotent.
 CREATE TABLE IF NOT EXISTS chain_events (
     chain_id INTEGER NOT NULL,
@@ -254,6 +269,7 @@ CREATE INDEX IF NOT EXISTS idx_exec_funder2 ON execution_profiles(funder_2hop);
 CREATE INDEX IF NOT EXISTS idx_bytecode_template ON bytecode_profiles(template_hash);
 CREATE INDEX IF NOT EXISTS idx_bytecode_normalized ON bytecode_profiles(normalized_bytecode_hash);
 CREATE INDEX IF NOT EXISTS idx_tokens_qualified ON tokens(is_qualified);
+CREATE INDEX IF NOT EXISTS idx_tokens_graduated ON tokens(is_graduated);
 CREATE INDEX IF NOT EXISTS idx_tokens_training_anchor ON tokens(is_training_anchor);
 CREATE INDEX IF NOT EXISTS idx_tokens_chain ON tokens(chain_id, token_live_at);
 CREATE INDEX IF NOT EXISTS idx_matches_team ON token_matches(candidate_team_id);
@@ -262,6 +278,7 @@ CREATE INDEX IF NOT EXISTS idx_branding_favicon ON branding_profiles(favicon_has
 CREATE INDEX IF NOT EXISTS idx_tokens_migrated ON tokens(is_migrated);
 CREATE INDEX IF NOT EXISTS idx_watchlist_target ON snipe_watchlists(target_value);
 CREATE INDEX IF NOT EXISTS idx_ingestion_due ON ingestion_jobs(status, next_attempt_at, priority);
+CREATE INDEX IF NOT EXISTS idx_discovery_observations_status ON discovery_observations(chain_id, graduation_status, last_seen_at);
 CREATE INDEX IF NOT EXISTS idx_chain_events_block ON chain_events(chain_id, block_number);
 CREATE INDEX IF NOT EXISTS idx_telegram_alerts_sent ON telegram_alerts(sent_at);
 
@@ -280,6 +297,8 @@ SELECT
     t.time_to_graduate_sec,
     t.is_migrated,
     t.is_dex_paid,
+    t.is_graduated,
+    t.graduation_evidence,
     t.is_qualified,
     t.is_training_anchor,
     t.qualification_reasons,
