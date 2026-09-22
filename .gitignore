@@ -14,3 +14,4 @@ runtime/
 backups/
 data/
 *.tmp
+dashboard_candidates.json

@@ -13,12 +13,13 @@ OUTPUT_DIR = Path(os.getenv("DASHBOARD_OUTPUT_DIR", APP_DIR)).resolve()
 SNAPSHOT_PATH = Path(os.getenv(
     "API_SNAPSHOT_PATH", APP_DIR / "runtime" / "dashboard_candidates.json"
 )).resolve()
-DASHBOARD_API_URL = os.getenv("DASHBOARD_API_URL", "").strip()
-if DASHBOARD_API_URL and (
-    not DASHBOARD_API_URL.startswith("https://")
-    or not DASHBOARD_API_URL.endswith("/api/candidates")
+DASHBOARD_API_URL = os.getenv("DASHBOARD_API_URL", "/api/candidates").strip()
+if DASHBOARD_API_URL and not (
+    DASHBOARD_API_URL.startswith("/")
+    or DASHBOARD_API_URL.startswith("http://")
+    or DASHBOARD_API_URL.startswith("https://")
 ):
-    raise ValueError("DASHBOARD_API_URL must be an HTTPS /api/candidates endpoint")
+    raise ValueError("DASHBOARD_API_URL must be an endpoint starting with /, http://, or https://")
 df_cand = pd.read_csv(DATA_DIR / "phase1_fingerprint_report_candidates.csv")
 df_tg = pd.read_csv(APP_DIR / "tgscan_rbh_1789559702282.csv")
 CHAIN_NAMES = {4663: "RBH", 5042: "ARC"}
@@ -1740,8 +1741,11 @@ html_content = f"""<!DOCTYPE html>
                     </div>
                 </div>
 
-                <div class="filter-group">
-                    <span id="data-source-status" style="font-size: 12px; color: var(--text-muted);">Embedded safe snapshot</span>
+                <div class="filter-group" style="align-items: center; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span id="data-source-status" style="font-size: 12px; color: var(--text-muted);">Embedded safe snapshot</span>
+                        <button class="btn btn-secondary" id="btn-manual-sync" onclick="loadRemoteCandidates()" style="padding: 3px 8px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;" title="Refresh live data now">🔄 Sync</button>
+                    </div>
                     <span id="filtered-count-display" style="font-size: 12px; color: var(--text-secondary);">Showing {len(candidates_data)} of {len(candidates_data)} candidate leads</span>
                     <button class="btn btn-secondary" onclick="resetLeadsFilters()">Reset Filters</button>
                 </div>
@@ -1966,10 +1970,12 @@ html_content = f"""<!DOCTYPE html>
         async function loadRemoteCandidates() {{
             if (!CANDIDATES_API_URL) return;
             const status = document.getElementById('data-source-status');
+            const syncBtn = document.getElementById('btn-manual-sync');
+            if (syncBtn) syncBtn.classList.add('spin');
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 8000);
             try {{
-                if (status) status.textContent = 'Loading Vultr API...';
+                if (status && status.textContent === 'Embedded safe snapshot') status.textContent = 'Connecting...';
                 const response = await fetch(CANDIDATES_API_URL, {{
                     method: 'GET',
                     headers: {{'Accept': 'application/json'}},
@@ -1987,13 +1993,15 @@ html_content = f"""<!DOCTYPE html>
                 currentCandidates = validated;
                 const badge = document.getElementById('badge-leads-count');
                 if (badge) badge.textContent = currentCandidates.length;
-                if (status) status.textContent = 'Live API • ' + (payload.generated_at || 'current snapshot');
+                const timeStr = payload.generated_at ? new Date(payload.generated_at).toLocaleTimeString() : new Date().toLocaleTimeString();
+                if (status) status.innerHTML = `<span style="color: var(--accent-green);">🟢 Live</span> • ${{timeStr}}`;
                 rescoreAllCandidates();
             }} catch (error) {{
-                if (status) status.textContent = 'API unavailable • embedded snapshot active';
+                if (status) status.innerHTML = `<span style="color: var(--text-muted);">Offline snapshot</span>`;
                 console.warn('Candidate API unavailable; using embedded snapshot.', error);
             }} finally {{
                 clearTimeout(timeout);
+                if (syncBtn) syncBtn.classList.remove('spin');
             }}
         }}
 
@@ -2935,6 +2943,8 @@ html_content = f"""<!DOCTYPE html>
             rescoreAllCandidates();
             renderParamsTable();
             loadRemoteCandidates();
+            // Auto-sync live candidates every 30 seconds
+            setInterval(loadRemoteCandidates, 30000);
         }});
     </script>
 </body>
@@ -2958,6 +2968,17 @@ for filename in ("team_leads_dashboard.html", "index.html", "local_dashboard.htm
     temporary = target.with_name(target.name + f".{os.getpid()}.tmp")
     temporary.write_text(html_content, encoding="utf-8")
     os.replace(temporary, target)
+
+# Also publish dashboard_candidates.json in OUTPUT_DIR for direct static Nginx serving
+web_snapshot = OUTPUT_DIR / "dashboard_candidates.json"
+web_snapshot_tmp = web_snapshot.with_name(web_snapshot.name + f".{os.getpid()}.tmp")
+web_snapshot_tmp.write_text(json.dumps({
+    "schema_version": 1,
+    "generated_at": generated_at,
+    "count": len(candidates_data),
+    "candidates": candidates_data,
+}, indent=2, sort_keys=True), encoding="utf-8")
+os.replace(web_snapshot_tmp, web_snapshot)
 
 # Also update evmdash2.html in Telegram Desktop downloads for instant access
 tg_desktop_path = Path(r"C:\Users\Rence\Downloads\Telegram Desktop\evmdash2.html")
