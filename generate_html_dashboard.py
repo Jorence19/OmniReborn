@@ -62,6 +62,7 @@ if db_path.exists():
                       market_pair_url AS live_market_pair_url,
                       market_data_at AS live_market_data_at,
                       COALESCE(is_qualified, 0) AS live_is_qualified,
+                      COALESCE(is_graduated, 0) AS live_is_graduated,
                       COALESCE(is_training_anchor, 0) AS live_is_training_anchor,
                       COALESCE(is_dex_paid, 0) AS live_is_dex_paid
                FROM tokens''',
@@ -74,7 +75,15 @@ if db_path.exists():
     )
     merged = pd.merge(merged, df_live, on=['chain_id', 'ca_lower'], how='left')
 
-    # Ensure all tokens in SQLite (including newly ingested Arc tokens) are included
+    # CSV and Telegram exports are historical context, never an eligibility source.
+    # A dashboard candidate must be a trusted anchor or have a currently recorded,
+    # chain-specific graduation proof in SQLite. This prevents stale exports from
+    # reintroducing records a revalidation pass has demoted.
+    live_graduated = pd.to_numeric(merged['live_is_graduated'], errors='coerce').fillna(0).astype(int)
+    live_anchor = pd.to_numeric(merged['live_is_training_anchor'], errors='coerce').fillna(0).astype(int)
+    merged = merged.loc[(live_graduated == 1) | (live_anchor == 1)].copy()
+
+    # Ensure all tokens in SQLite (including newly ingested Arc tokens) are included.
     existing_pairs = set(zip(merged['chain_id'], merged['ca_lower']))
     with sqlite3.connect(db_path) as connection:
         df_db_all = pd.read_sql_query(
@@ -95,6 +104,7 @@ if db_path.exists():
                       END AS confidence,
                       tm.match_reasons AS evidence,
                       COALESCE(t.is_qualified, 0) AS live_is_qualified,
+                      COALESCE(t.is_graduated, 0) AS live_is_graduated,
                       COALESCE(t.is_training_anchor, 0) AS live_is_training_anchor,
                       COALESCE(t.is_dex_paid, 0) AS live_is_dex_paid,
                       t.ath_source AS live_ath_source,
