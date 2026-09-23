@@ -200,6 +200,22 @@ CREATE TABLE IF NOT EXISTS ingestion_jobs (
     PRIMARY KEY (ca, chain_id)
 );
 
+-- Raw Telegram forwarded notices are provenance only. They become jobs only
+-- after their chain/source is recognized, and still pass the full graduation gate.
+CREATE TABLE IF NOT EXISTS forwarded_token_intake (
+    intake_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id INTEGER NOT NULL,
+    message_id INTEGER NOT NULL,
+    ca TEXT NOT NULL,
+    chain_id INTEGER,
+    source_kind TEXT NOT NULL,
+    source_text TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'held',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(chat_id, message_id, ca)
+);
+
 -- Resumable block cursors and other collector checkpoints.
 CREATE TABLE IF NOT EXISTS stream_state (
     state_key TEXT PRIMARY KEY,
@@ -278,6 +294,7 @@ CREATE INDEX IF NOT EXISTS idx_branding_favicon ON branding_profiles(favicon_has
 CREATE INDEX IF NOT EXISTS idx_tokens_migrated ON tokens(is_migrated);
 CREATE INDEX IF NOT EXISTS idx_watchlist_target ON snipe_watchlists(target_value);
 CREATE INDEX IF NOT EXISTS idx_ingestion_due ON ingestion_jobs(status, next_attempt_at, priority);
+CREATE INDEX IF NOT EXISTS idx_forwarded_token_intake_status ON forwarded_token_intake(status, chain_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_discovery_observations_status ON discovery_observations(chain_id, graduation_status, last_seen_at);
 CREATE INDEX IF NOT EXISTS idx_chain_events_block ON chain_events(chain_id, block_number);
 CREATE INDEX IF NOT EXISTS idx_telegram_alerts_sent ON telegram_alerts(sent_at);

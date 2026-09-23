@@ -27,6 +27,7 @@ from config import CHAIN_METADATA, RPC_ENDPOINTS, ROBIN_ETHERSCAN_API_KEY
 from database import ForensicDatabase
 from forensics import extract_full_token_metadata
 from phase1 import build_report, persist_profile, write_report_artifacts
+from sources import is_source_enabled, load_source_switches
 
 APP_DIR = Path(__file__).resolve().parent
 RUNTIME_DIR = Path(os.getenv("RUNTIME_DIR", APP_DIR / "runtime")).resolve()
@@ -53,6 +54,7 @@ DEX_CHAIN_TO_ID = {
     for chain_id in ENABLED_CHAIN_IDS
 }
 ADDRESS_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
+TX_HASH_RE = re.compile(r"^0x[0-9a-fA-F]{64}$")
 DEX_ENDPOINTS = {
     "dex_boost_latest": "https://api.dexscreener.com/token-boosts/latest/v1",
     "dex_boost_top": "https://api.dexscreener.com/token-boosts/top/v1",
@@ -69,6 +71,10 @@ class CollectorError(RuntimeError):
     pass
 
 class IncompleteProfileError(CollectorError):
+    pass
+
+class DexIndexPendingError(IncompleteProfileError):
+    """A valid chain event whose matching market pair has not indexed yet."""
     pass
 
 class NonGraduatedDiscoveryError(CollectorError):
@@ -133,6 +139,47 @@ def validate_address(value: str) -> str:
     if not ADDRESS_RE.fullmatch(clean):
         raise ValueError(f"Invalid EVM address: {value!r}")
     return clean
+
+def configured_addresses(value: str, *, setting: str) -> frozenset[str]:
+    addresses = set()
+    for item in str(value or "").split(","):
+        item = item.strip()
+        if item:
+            try:
+                addresses.add(validate_address(item))
+            except ValueError as exc:
+                raise RuntimeError(f"{setting} contains an invalid EVM address: {item!r}") from exc
+    return frozenset(addresses)
+
+# Wrapped native asset is a pool quote asset, never a migrated-token candidate.
+RBH_QUOTE_ASSET_ADDRESSES = configured_addresses(
+    os.getenv("RBH_QUOTE_ASSET_ADDRESSES", "0x0bd7d308f8e1639fab988df18a8011f41eacad73"),
+    setting="RBH_QUOTE_ASSET_ADDRESSES",
+)
+try:
+    RBH_PAIR_TIME_TOLERANCE_SECONDS = max(0, int(os.getenv("RBH_PAIR_TIME_TOLERANCE_SECONDS", "600")))
+    RBH_DEX_INDEX_GRACE_SECONDS = max(0, int(os.getenv("RBH_DEX_INDEX_GRACE_SECONDS", "600")))
+except ValueError as exc:
+    raise RuntimeError("Robinhood pair timing settings must be non-negative integers") from exc
+
+def is_rbh_quote_asset(ca: str) -> bool:
+    return validate_address(ca) in RBH_QUOTE_ASSET_ADDRESSES
+
+# Observed and independently labeled Robinhood graduation paths. A V4 pool alone is
+# generic DEX activity; each path below also requires its protocol-specific event.
+FORWARDED_RBH_LOOKBACK_BLOCKS = max(100, int(os.getenv("FORWARDED_RBH_LOOKBACK_BLOCKS", "5000")))
+FORWARDED_INTAKE_GRACE_SECONDS = max(60, int(os.getenv("FORWARDED_INTAKE_GRACE_SECONDS", "900")))
+
+RBH_MIGRATION_PATHS = {
+    ("0x65af70b69a36e6e6ab6263ac1fe6d378c9d0740d", "0x3d9ab7c9"): {
+        "event_topic0": "0xf0a2493b501685967f6c728cec9ee3e3f745018b6de376818d4448b9533fc4a8",
+        "token_topic_index": 1,
+    },
+    ("0x7ab338fde039feb0da5a38d90d1a08fff1c31af0", "0x39ecce49"): {
+        "event_topic0": "0x2ed5a8749a7e3a68a074750cc77850912a0708dc62ab7ea42b0c3e5beb36f017",
+        "token_topic_index": 3,
+    },
+}
 
 class SingleInstanceLock(AbstractContextManager):
     def __init__(self, path: Path):
@@ -543,11 +590,25 @@ def scan_uniswap_v4_initialize(store: QueueStore, *, days: Optional[int] = None,
             if len(topics) < 4:
                 continue
             tokens = [v for v in (topic_address(topics[2]), topic_address(topics[3])) if v]
-            primary = tokens[0] if len(tokens) == 1 else None
+            tx_hash = str(log.get("transactionHash") or "").lower()
+            try:
+                migration_evidence = rbh_migration_tokens(tx_hash, rpc_url=rpc_url)
+            except Exception as exc:
+                # Keep the cursor behind this range via overlap and retry next cycle rather than
+                # admitting an unverified generic pool when the receipt lookup is unavailable.
+                LOG.warning("migration evidence lookup failed for %s: %s", tx_hash or "unknown transaction", exc)
+                continue
+            candidates = [
+                token for token in tokens
+                if not is_rbh_quote_asset(token) and token in migration_evidence
+            ]
+            primary = candidates[0] if len(candidates) == 1 else None
             if store.record_event(log, primary, "uniswap_v4_initialize", chain_id=CHAIN_ID):
                 event_count += 1
-            for token in tokens:
-                store.enqueue(token, "uniswap_v4_initialize", log, chain_id=CHAIN_ID, priority=20)
+            for token in candidates:
+                payload = dict(log)
+                payload["migration_evidence"] = migration_evidence[token]
+                store.enqueue(token, "uniswap_v4_initialize", payload, chain_id=CHAIN_ID, priority=20)
                 token_count += 1
         store.set_state(state_key, end + 1)
         current_minimum = store.get_state(minimum_key)
@@ -558,7 +619,9 @@ def scan_uniswap_v4_initialize(store: QueueStore, *, days: Optional[int] = None,
             current_chunk = min(chunk_size, current_chunk * 2)
     return {"from_block": original_start, "to_block": safe_head, "logs": event_count, "tokens": token_count}
 
-def fetch_market_profile(ca: str, chain_id: int) -> Dict[str, Any]:
+def fetch_market_profile(ca: str, chain_id: int, *, event_timestamp: Optional[int] = None,
+                         pair_time_tolerance_seconds: Optional[int] = None) -> Dict[str, Any]:
+    """Return a confirmed base-token pair, optionally tied to a specific chain event."""
     spec = CHAIN_METADATA.get(chain_id)
     if not spec:
         raise CollectorError(f"unsupported market chain {chain_id}")
@@ -566,9 +629,104 @@ def fetch_market_profile(ca: str, chain_id: int) -> Dict[str, Any]:
     payload = request_json(f"https://api.dexscreener.com/tokens/v1/{spec['dex_chain_id']}/{ca}")
     pairs = [pair for pair in (payload if isinstance(payload, list) else [])
              if is_confirmed_dex_pair(pair, ca)]
+    if event_timestamp is not None:
+        tolerance = RBH_PAIR_TIME_TOLERANCE_SECONDS if pair_time_tolerance_seconds is None else max(0, pair_time_tolerance_seconds)
+        pairs = [pair for pair in pairs
+                 if abs((int(pair["pairCreatedAt"]) // 1000) - int(event_timestamp)) <= tolerance]
     if not pairs:
         return {}
     return max(pairs, key=lambda pair: _number((pair.get("liquidity") or {}).get("usd")))
+
+def rbh_migration_tokens(tx_hash: str, *, rpc_url: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
+    """Return tokens proven by a known launchpad migration event in this transaction."""
+    tx_hash = str(tx_hash or "").lower()
+    if not TX_HASH_RE.fullmatch(tx_hash):
+        return {}
+    endpoint = rpc_url or RPC_ENDPOINTS.get(CHAIN_ID)
+    if not endpoint:
+        raise CollectorError(f"no RPC configured for chain {CHAIN_ID}")
+    transaction = rpc_call_strict(endpoint, "eth_getTransactionByHash", [tx_hash])
+    destination = str((transaction or {}).get("to") or "").lower()
+    selector = str((transaction or {}).get("input") or "").lower()[:10]
+    path = RBH_MIGRATION_PATHS.get((destination, selector))
+    if not path:
+        return {}
+    receipt = rpc_call_strict(endpoint, "eth_getTransactionReceipt", [tx_hash])
+    matches: Dict[str, Dict[str, Any]] = {}
+    for log in (receipt or {}).get("logs") or []:
+        topics = log.get("topics") or []
+        token_index = path["token_topic_index"]
+        if (
+            str(log.get("address") or "").lower() != destination
+            or not topics
+            or str(topics[0]).lower() != path["event_topic0"]
+            or len(topics) <= token_index
+        ):
+            continue
+        token = topic_address(topics[token_index])
+        if token:
+            matches[token] = {
+                "router": destination,
+                "selector": selector,
+                "migration_event_topic0": path["event_topic0"],
+                "token_topic_index": token_index,
+                "transaction_hash": tx_hash,
+            }
+    return matches
+
+def find_forwarded_rbh_migration(ca: str) -> Optional[Dict[str, Any]]:
+    """Find a recent token-bound Robinhood migration from a forwarded address."""
+    ca = validate_address(ca)
+    rpc_url = RPC_ENDPOINTS.get(CHAIN_ID)
+    if not rpc_url:
+        raise CollectorError(f"no RPC configured for chain {CHAIN_ID}")
+    head = int(rpc_call_strict(rpc_url, "eth_blockNumber", []), 16)
+    padded = "0x" + "0" * 24 + ca[2:]
+    start = max(0, head - FORWARDED_RBH_LOOKBACK_BLOCKS)
+    logs: List[Dict[str, Any]] = []
+    for topics in ([INITIALIZE_TOPIC0, None, padded], [INITIALIZE_TOPIC0, None, None, padded]):
+        found = rpc_call_strict(rpc_url, "eth_getLogs", [{
+            "fromBlock": hex(start), "toBlock": hex(head), "address": POOL_MANAGER, "topics": topics,
+        }]) or []
+        logs.extend(log for log in found if isinstance(log, dict))
+    for log in sorted(logs, key=lambda item: int(item.get("blockNumber") or "0x0", 16), reverse=True):
+        tx_hash = str(log.get("transactionHash") or "")
+        if ca in rbh_migration_tokens(tx_hash, rpc_url=rpc_url):
+            return log
+    return None
+
+
+def forwarded_age_seconds(payload: Dict[str, Any]) -> int:
+    value = str(payload.get("forwarded_at") or "")
+    try:
+        received = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return max(0, int((utcnow() - received.astimezone(timezone.utc)).total_seconds()))
+    except ValueError:
+        return FORWARDED_INTAKE_GRACE_SECONDS + 1
+
+def source_payload_dict(job: Dict[str, Any]) -> Dict[str, Any]:
+    raw_payload = job.get("source_payload") or {}
+    if isinstance(raw_payload, str):
+        try:
+            raw_payload = json.loads(raw_payload)
+        except ValueError as exc:
+            raise NonGraduatedDiscoveryError("Robinhood event payload is invalid") from exc
+    if not isinstance(raw_payload, dict):
+        raise NonGraduatedDiscoveryError("Robinhood event payload is not an object")
+    return raw_payload
+def rbh_event_details(job: Dict[str, Any]) -> Tuple[int, int]:
+    raw_payload = source_payload_dict(job)
+    if raw_payload.get("blockNumber") is None:
+        raise NonGraduatedDiscoveryError("Robinhood graduation event has no block number")
+    raw_block = raw_payload["blockNumber"]
+    try:
+        block_number = int(raw_block, 16) if isinstance(raw_block, str) and raw_block.startswith("0x") else int(raw_block)
+    except (TypeError, ValueError) as exc:
+        raise NonGraduatedDiscoveryError("Robinhood graduation event block number is invalid") from exc
+    rpc_url = RPC_ENDPOINTS.get(CHAIN_ID)
+    if not rpc_url:
+        raise CollectorError(f"no RPC configured for chain {CHAIN_ID}")
+    return block_number, block_timestamp(rpc_url, block_number)
 def market_fields(pair: Dict[str, Any]) -> Dict[str, Any]:
     base, info = pair.get("baseToken") or {}, pair.get("info") or {}
     websites, socials = info.get("websites") or [], info.get("socials") or []
@@ -603,36 +761,76 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
     spec = CHAIN_METADATA[chain_id]
     source = str(job.get("source") or "stream")
     source_parts = {part for part in source.split("+") if part}
-    rbh_migration = chain_id == CHAIN_ID and "uniswap_v4_initialize" in source_parts
-    arc_dex_pair = chain_id == 5042 and "arc_dex_pair" in source_parts
+    forwarded_rbh = chain_id == CHAIN_ID and "forwarded_pons_migration" in source_parts
+    forwarded_arc = chain_id == 5042 and "forwarded_arc_token" in source_parts
+    rbh_migration = chain_id == CHAIN_ID and ("uniswap_v4_initialize" in source_parts or forwarded_rbh)
+    arc_dex_pair = chain_id == 5042 and ("arc_dex_pair" in source_parts or forwarded_arc)
     if not (rbh_migration or arc_dex_pair):
         raise NonGraduatedDiscoveryError(
             f"graduated-only gate rejected {spec['tag']} source(s): {', '.join(sorted(source_parts)) or 'unknown'}"
         )
 
-    # Arc's graduation evidence is a live base-token DEX pair. Verify it before expensive RPC/explorer work.
-    pair = fetch_market_profile(ca, chain_id) if arc_dex_pair else {}
-    if arc_dex_pair and not pair:
-        raise NonGraduatedDiscoveryError("Arc graduation pair is no longer confirmed")
+    event_block, event_timestamp = None, None
+    if rbh_migration:
+        if is_rbh_quote_asset(ca):
+            raise NonGraduatedDiscoveryError("Robinhood pool quote asset is not a migrated token")
+        if forwarded_rbh:
+            forwarded_payload = source_payload_dict(job)
+            migration_log = find_forwarded_rbh_migration(ca)
+            if not migration_log:
+                age = forwarded_age_seconds(forwarded_payload)
+                if age <= FORWARDED_INTAKE_GRACE_SECONDS:
+                    raise DexIndexPendingError(f"waiting for forwarded Robinhood migration evidence ({age}s old)")
+                raise NonGraduatedDiscoveryError("forwarded Robinhood address has no known recent migration event")
+            job = dict(job)
+            job["source_payload"] = migration_log
+        event_block, event_timestamp = rbh_event_details(job)
+        payload = source_payload_dict(job)
+        migration_evidence = rbh_migration_tokens(str(payload.get("transactionHash") or ""))
+        if ca not in migration_evidence:
+            raise NonGraduatedDiscoveryError(
+                "Robinhood V4 event lacks a token-bound, known launchpad migration event"
+            )
+        # A PoolManager Initialize event alone contains both pool currencies. Require a known
+        # token-bound migration event and a base-asset DEX pair created near that exact event.
+        pair = fetch_market_profile(ca, chain_id, event_timestamp=event_timestamp)
+        if not pair:
+            event_age = max(0, int(utcnow().timestamp()) - event_timestamp)
+            if event_age <= RBH_DEX_INDEX_GRACE_SECONDS:
+                raise DexIndexPendingError(
+                    f"waiting for DEX index of Robinhood event block {event_block} ({event_age}s old)"
+                )
+            raise NonGraduatedDiscoveryError(
+                f"Robinhood event block {event_block} has no time-matched DEX base-token pair"
+            )
+    else:
+        # Arc's graduation evidence is a live base-token DEX pair. Verify it before expensive RPC/explorer work.
+        pair = fetch_market_profile(ca, chain_id)
+        if not pair:
+            raise NonGraduatedDiscoveryError("Arc graduation pair is no longer confirmed")
 
     LOG.info("enriching graduated %s on %s from %s (attempt %s)",
              ca, spec["tag"], source, job.get("attempts"))
     profile = extract_full_token_metadata(ca, chain_id=chain_id)
+    raw_payload = source_payload_dict(job)
+    if not profile.get("deployer_address") and raw_payload.get("dev_wallet"):
+        profile["deployer_address"] = raw_payload["dev_wallet"]
     gaps = required_profile_gaps(profile)
     if gaps:
         raise IncompleteProfileError("explorer/RPC profile incomplete: " + ", ".join(gaps))
     canonical_ca = persist_profile(db, profile, qualified=False)
-    if rbh_migration:
-        pair = fetch_market_profile(ca, chain_id)
-    market = market_fields(pair) if pair else {}
+    market = market_fields(pair)
     paid_surface_observed = bool(source_parts & DEX_PAID_SOURCES)
-    graduation_gate = "robinhood_uniswap_v4_initialize" if rbh_migration else "arc_confirmed_dex_pair"
+    graduation_gate = "robinhood_token_bound_launchpad_event_plus_fresh_dex_pair" if rbh_migration else "arc_confirmed_dex_pair"
     graduation_evidence = {
         "gate": graduation_gate,
         "chain_id": chain_id,
         "source_parts": sorted(source_parts),
-        "market_pair_url": pair.get("url") if pair else None,
-        "pair_created_at": pair.get("pairCreatedAt") if pair else None,
+        "event_block": event_block,
+        "event_timestamp": event_timestamp,
+        "migration_path": migration_evidence.get(ca) if rbh_migration else None,
+        "market_pair_url": pair.get("url"),
+        "pair_created_at": pair.get("pairCreatedAt"),
     }
     canonical_ca = db.upsert_token({
         "ca": canonical_ca, "chain_id": chain_id, "chain": spec["tag"],
@@ -740,16 +938,19 @@ def regenerate_outputs(db: ForensicDatabase):
         },
     )
 
-def discover_once(store: QueueStore, include_chain: bool = True) -> Dict[str, Any]:
-    raw_dex = fetch_live_dexpaid_tokens()
-    dex, graduation = select_graduated_dex_discoveries(store, raw_dex)
+def discover_once(store: QueueStore, include_chain: bool = True, include_dex: bool = True) -> Dict[str, Any]:
+    raw_dex, dex = [], []
     dex_counts: Dict[str, int] = {}
-    for item in dex:
-        source = "+".join(sorted(item.get("sources") or ["arc_dex_pair"]))
-        chain_id = int(item["chain_id"])
-        store.enqueue(item["ca"], source, item, chain_id=chain_id, priority=50)
-        tag = str(CHAIN_METADATA[chain_id]["tag"])
-        dex_counts[tag] = dex_counts.get(tag, 0) + 1
+    graduation = {"graduated": 0, "rejected": 0, "unverified": 0}
+    if include_dex:
+        raw_dex = fetch_live_dexpaid_tokens()
+        dex, graduation = select_graduated_dex_discoveries(store, raw_dex)
+        for item in dex:
+            source = "+".join(sorted(item.get("sources") or ["arc_dex_pair"]))
+            chain_id = int(item["chain_id"])
+            store.enqueue(item["ca"], source, item, chain_id=chain_id, priority=50)
+            tag = str(CHAIN_METADATA[chain_id]["tag"])
+            dex_counts[tag] = dex_counts.get(tag, 0) + 1
     rbh_chain = {"logs": 0, "tokens": 0}
     if include_chain and CHAIN_ID in ENABLED_CHAIN_IDS:
         try:
@@ -762,6 +963,14 @@ def discover_once(store: QueueStore, include_chain: bool = True) -> Dict[str, An
         "dex_by_chain": dex_counts, "graduation_gate": graduation,
         "robinhood_v4": rbh_chain,
     }
+
+def discovery_mode() -> str:
+    """Return the explicitly configured discovery mode."""
+    mode = os.getenv("DISCOVERY_MODE", "forwarded_only").strip().lower()
+    if mode not in {"forwarded_only", "hybrid"}:
+        raise CollectorError("DISCOVERY_MODE must be 'forwarded_only' or 'hybrid'")
+    return mode
+
 def run_cycle(db: ForensicDatabase, store: QueueStore, max_jobs: int, include_chain: bool = True) -> Dict[str, Any]:
     run_id = None
     started_at = iso_utc()
@@ -775,7 +984,29 @@ def run_cycle(db: ForensicDatabase, store: QueueStore, max_jobs: int, include_ch
     except Exception as exc:
         LOG.warning("Failed to record run start in ingestion_runs: %s", exc)
 
-    discovery = discover_once(store, include_chain=include_chain)
+    switches = load_source_switches(RUNTIME_DIR)
+    dex_enabled = switches.get("dexscreener_scan", False)
+    rpc_enabled = switches.get("rbh_rpc_scan", False)
+
+    mode = discovery_mode()
+    if not (dex_enabled or rpc_enabled):
+        discovery = {
+            "mode": mode,
+            "dex_tokens": 0,
+            "dex_seen": 0,
+            "dex_by_chain": {},
+            "graduation_gate": {"graduated": 0, "rejected": 0, "unverified": 0},
+            "robinhood_v4": {"logs": 0, "tokens": 0},
+        }
+    else:
+        discovery = {
+            "mode": mode,
+            **discover_once(
+                store,
+                include_chain=include_chain and rpc_enabled,
+                include_dex=dex_enabled,
+            ),
+        }
     concurrency = int(os.getenv("COLLECTOR_CONCURRENCY", "4"))
     processing = process_queue(db, store, max_jobs=max_jobs, concurrency=concurrency)
     if processing["succeeded"]:

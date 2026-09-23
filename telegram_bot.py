@@ -18,6 +18,17 @@ from urllib.parse import quote
 
 import requests
 
+from database import ForensicDatabase
+from source_intake import forwarded_text, parse_forwarded_tokens
+from sources import (
+    SOURCE_DEFINITIONS,
+    is_source_enabled,
+    load_source_switches,
+    normalize_source_name,
+    set_source_switch,
+)
+from streamer import QueueStore
+
 ROOT = Path(__file__).resolve().parent
 LOG = logging.getLogger("omnireborn.telegram")
 CHAINS = {4663: "RBH", 5042: "ARC"}
@@ -176,6 +187,8 @@ class Telegram:
             {"command": "dbcsv", "description": "Download raw candidate CSV"},
             {"command": "status", "description": "Collector and queue health"},
             {"command": "log", "description": "Audit recent collector and queue logs"},
+            {"command": "ingest", "description": "Queue addresses from a forwarded token notice"},
+            {"command": "sources", "description": "Manage intake & discovery sources"},
         ]
         self.call("setMyCommands", {"commands": json.dumps(commands)})
 
@@ -244,9 +257,86 @@ def ensure_schema(path):
             );
             CREATE INDEX IF NOT EXISTS idx_telegram_alerts_sent
                 ON telegram_alerts(sent_at);
+            CREATE TABLE IF NOT EXISTS forwarded_token_intake(
+                intake_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                chat_id INTEGER NOT NULL,
+                message_id INTEGER NOT NULL,
+                ca TEXT NOT NULL,
+                chain_id INTEGER,
+                source_kind TEXT NOT NULL,
+                source_text TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'held',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(chat_id, message_id, ca)
+            );
+            CREATE INDEX IF NOT EXISTS idx_forwarded_token_intake_status
+                ON forwarded_token_intake(status, chain_id, created_at);
             """
         )
 
+
+def enabled_chain_ids():
+    try:
+        return {int(value.strip()) for value in os.getenv("ENABLED_CHAIN_IDS", "4663,5042").split(",") if value.strip()}
+    except ValueError as exc:
+        raise ValueError("ENABLED_CHAIN_IDS must contain comma-separated integers") from exc
+
+
+def queue_forwarded_notice(settings, chat_id, message):
+    """Audit a forwarded notice and queue only configured supported chains and enabled sources."""
+    text = forwarded_text(message)
+    tokens = parse_forwarded_tokens(text)
+    if not tokens:
+        return {"queued": [], "held": [], "reason": "No EVM contract address found."}
+    db = ForensicDatabase(str(settings.db))
+    queue = QueueStore(db)
+    enabled = enabled_chain_ids()
+    queued, held = [], []
+    message_id = int(message.get("message_id") or 0)
+    source_text = text[:8000]
+
+    kind_to_switch = {
+        "forwarded_pons_migration": "pons_forward",
+        "forwarded_arc_token": "arc_forward",
+        "forwarded_bsc_token": "bsc_forward",
+    }
+
+    for token in tokens:
+        switch_key = kind_to_switch.get(token.source_kind)
+        switch_enabled = is_source_enabled(switch_key, runtime_dir=settings.runtime) if switch_key else False
+        chain_supported = token.chain_id in enabled and token.chain_id in CHAINS
+        supported = chain_supported and switch_enabled and token.source_kind in {"forwarded_pons_migration", "forwarded_arc_token"}
+        status = "queued" if supported else "held"
+        with connect(settings.db) as connection:
+            connection.execute(
+                """INSERT INTO forwarded_token_intake(chat_id,message_id,ca,chain_id,source_kind,source_text,status)
+                   VALUES(?,?,?,?,?,?,?)
+                   ON CONFLICT(chat_id,message_id,ca) DO UPDATE SET
+                     updated_at=CURRENT_TIMESTAMP, status=excluded.status""",
+                (chat_id, message_id, token.ca, token.chain_id, token.source_kind, source_text, status),
+            )
+        if supported:
+            queue.enqueue(
+                token.ca, token.source_kind,
+                {
+                    "forwarded_at": now(),
+                    "forwarded_chat_id": chat_id,
+                    "forwarded_message_id": message_id,
+                    "source_kind": token.source_kind,
+                    "source_text": source_text,
+                    "dev_wallet": token.dev_wallet,
+                    "pair_address": token.pair_address,
+                    "symbol": token.symbol,
+                    "name": token.name,
+                    "metadata": token.metadata,
+                },
+                chain_id=token.chain_id, priority=5,
+            )
+            queued.append(token)
+        else:
+            held.append(token)
+    return {"queued": queued, "held": held, "reason": ""}
 
 def load_candidates(settings):
     source = settings.snapshot if settings.snapshot.exists() else settings.report
@@ -499,6 +589,14 @@ def status_message(settings, started, data_error=""):
         + "\nLatest collection: " + html.escape(latest)
         + "\nCandidate data: " + html.escape(data_state)
         + "\nChains: " + html.escape(os.getenv("ENABLED_CHAIN_IDS", "4663,5042"))
+        + "\nDiscovery mode: " + html.escape(os.getenv("DISCOVERY_MODE", "forwarded_only"))
+        + "\nActive sources: " + html.escape(
+            ", ".join(
+                SOURCE_DEFINITIONS[k]["label"]
+                for k, v in load_source_switches(runtime_dir=settings.runtime).items()
+                if v and k in SOURCE_DEFINITIONS
+            ) or "None (idle)"
+        )
         + "\nCollection cadence: " + html.escape(os.getenv("COLLECTION_INTERVAL_SECONDS", "300")) + " seconds"
         + "\nPhase 2 push alerts: " + ("enabled" if settings.push_alerts else "disabled")
     )
@@ -615,7 +713,7 @@ class BotService:
         self.error = ""
         return rows
 
-    def command(self, chat_id, body):
+    def command(self, chat_id, body, message=None):
         command = body.split()[0].split("@")[0].lower()
         if command == "/leads":
             rows = self.candidate_rows("/leads")
@@ -645,6 +743,61 @@ class BotService:
             if not path.exists():
                 raise FileNotFoundError("candidate CSV unavailable")
             self.api.document(chat_id, path, "OmniReborn raw candidate data")
+        elif command in ("/ingest", "/intake"):
+            result = queue_forwarded_notice(self.settings, chat_id, message or {"text": body})
+            if result["reason"]:
+                self.api.message(chat_id, "⚠️ " + html.escape(result["reason"]))
+            else:
+                queued = result["queued"]
+                held = result["held"]
+                lines = ["<b>Forwarded source intake</b>"]
+                if queued:
+                    for item in queued:
+                        tag = CHAINS.get(item.chain_id, str(item.chain_id))
+                        extra = []
+                        if item.symbol:
+                            extra.append(f"${item.symbol}")
+                        if item.dev_wallet:
+                            extra.append(f"Dev: <code>{item.dev_wallet[:8]}...</code>")
+                        extra_str = f" ({', '.join(extra)})" if extra else ""
+                        lines.append(f"Queued for full forensic verification: <code>{html.escape(item.ca)}</code> [{tag}]{extra_str}")
+                if held:
+                    for item in held:
+                        tag = str(item.chain_id or "unknown")
+                        extra = []
+                        if item.dev_wallet:
+                            extra.append(f"Dev: <code>{item.dev_wallet[:8]}...</code>")
+                        extra_str = f" ({', '.join(extra)})" if extra else ""
+                        lines.append(f"Held without enrichment (disabled/unsupported): <code>{html.escape(item.ca)}</code> [{tag}]{extra_str}")
+                lines.append("Forwarded text is intake evidence only; qualification still requires chain verification.")
+                self.api.message(chat_id, "\n".join(lines))
+        elif command in ("/sources", "/source"):
+            parts = body.split()
+            if len(parts) >= 2:
+                target_source = normalize_source_name(parts[1])
+                if not target_source:
+                    avail = ", ".join(SOURCE_DEFINITIONS.keys())
+                    self.api.message(chat_id, f"⚠️ Unknown source <code>{html.escape(parts[1])}</code>.\nAvailable: {avail}")
+                    return
+                if len(parts) >= 3:
+                    new_state = parts[2].strip().lower() in {"1", "true", "yes", "on", "enable"}
+                else:
+                    curr = is_source_enabled(target_source, runtime_dir=self.settings.runtime)
+                    new_state = not curr
+                set_source_switch(target_source, new_state, runtime_dir=self.settings.runtime)
+                icon = "🟢 ON" if new_state else "⚪ OFF"
+                label = SOURCE_DEFINITIONS[target_source]["label"]
+                self.api.message(chat_id, f"✅ <b>{html.escape(label)}</b> is now <b>{icon}</b>")
+                return
+
+            switches = load_source_switches(runtime_dir=self.settings.runtime)
+            lines = ["<b>⚙️ OmniReborn Intake & Discovery Sources</b>\n"]
+            for key, defn in SOURCE_DEFINITIONS.items():
+                state = switches.get(key, False)
+                icon = "🟢 ON" if state else "⚪ OFF"
+                lines.append(f"• <b>{html.escape(defn['label'])}:</b> {icon}\n  <i>{html.escape(defn['description'])}</i> (toggle: <code>/sources {key} {'off' if state else 'on'}</code>)")
+            lines.append("\n<i>Toggle any source: <code>/sources &lt;name&gt; [on|off]</code></i>")
+            self.api.message(chat_id, "\n".join(lines))
         elif command == "/status":
             self.api.message(chat_id, status_message(self.settings, self.started, self.error))
         elif command in ("/log", "/logs"):
@@ -681,7 +834,7 @@ class BotService:
                 LOG.exception("Market refresh failed")
                 self.api.message(chat_id, "⚠️ Market refresh failed: " + html.escape(str(exc)))
         else:
-            self.api.message(chat_id, "Commands: /leads /dashboard /refresh /dbxlsx /dbcsv /status /log")
+            self.api.message(chat_id, "Commands: /leads /dashboard /refresh /dbxlsx /dbcsv /ingest /sources /status /log")
     def handle_update(self, update):
         message = update.get("message") or {}
         chat_id = (message.get("chat") or {}).get("id")
@@ -691,7 +844,7 @@ class BotService:
             return
         if body.startswith("/"):
             try:
-                self.command(int(chat_id), body)
+                self.command(int(chat_id), body, message)
             except Exception as exc:
                 LOG.exception("Command failed")
                 self.api.message(

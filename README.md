@@ -7,7 +7,7 @@
 
 Phase 1 is a **10-minute forensic collection and team-identification pipeline**, not a real-time sniper. It admits only verified graduated tokens: Robinhood Uniswap v4 PoolManager migrations and Arc confirmed DEX-base pairs; paid listings remain audit-only. The collector, durable SQLite queue, Telegram command bot, watchdogs, and backups run on Vultr; no public web server is required. Telegram push alerts are disabled by default and reserved for the later Phase 2 monitoring/anticipation system. See [VULTR_TELEGRAM_DEPLOYMENT.md](VULTR_TELEGRAM_DEPLOYMENT.md).
 
-Commands: /leads, /dashboard, /dbxlsx, /dbcsv, and /status.
+Commands: /leads, /dashboard, /dbxlsx, /dbcsv, /ingest, and /status. Reply to a forwarded Pons/Arc notice with /ingest; plain addresses and referral links are both parsed. Unsupported or ambiguous chains are retained in the intake audit table but are not enriched.
 
 
 ---

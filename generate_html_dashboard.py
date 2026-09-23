@@ -2605,7 +2605,7 @@ html_content = f"""<!DOCTYPE html>
                         <div>
                             <span class="token-symbol">$${{c.symbol}}</span>
                             <span class="${{chainPillClass}}">${{chainPillLabel}}</span>
-                            ${{c.is_qualified ? `<span class="qualification-pill" title="Passed an auditable migrated or DEX-paid evidence gate; this is not a team-training label">QUALIFIED</span>` : ''}}
+                            ${{c.is_qualified ? `<span class="qualification-pill" title="Passed a recorded, chain-specific graduation gate; paid listings alone never qualify">QUALIFIED</span>` : ''}}
                             <span class="token-name">${{c.name !== c.symbol ? c.name : ''}}</span>
                         </div>
                         <div class="token-ca">

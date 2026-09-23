@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -160,16 +161,68 @@ class GuardrailTests(unittest.TestCase):
                 "funding_lineage": [], "hardcoded_addresses": [],
                 "storage_address_candidates": [],
             }
-            job = {"ca": ca, "chain_id": 4663, "source": "uniswap_v4_initialize", "attempts": 1}
+            event_timestamp = 1789305800
+            job = {
+                "ca": ca, "chain_id": 4663, "source": "uniswap_v4_initialize", "attempts": 1,
+                "source_payload": json.dumps({"blockNumber": "0x64"}),
+            }
+            pair = {
+                "pairAddress": "0x" + "a" * 40, "pairCreatedAt": event_timestamp * 1000,
+                "baseToken": {"address": ca, "symbol": "TST", "name": "Test"},
+            }
             with patch("streamer.extract_full_token_metadata", return_value=profile), \
-                 patch("streamer.fetch_market_profile", return_value={}):
+                 patch("streamer.block_timestamp", return_value=event_timestamp), \
+                 patch("streamer.rbh_migration_tokens", return_value={ca: {"router": "test"}}), \
+                 patch("streamer.fetch_market_profile", return_value=pair) as market:
                 ingest_and_enrich_job(db, job)
+            market.assert_called_once_with(ca, 4663, event_timestamp=event_timestamp)
             with db.get_connection() as conn:
                 row = conn.execute(
                     "SELECT is_qualified, is_graduated, is_training_anchor, is_dex_paid, is_migrated "
                     "FROM tokens WHERE ca=?", (ca,)
                 ).fetchone()
             self.assertEqual(tuple(row), (1, 1, 0, 0, 1))
+    def test_robinhood_quote_asset_is_rejected_before_event_or_enrichment(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = ForensicDatabase(str(Path(directory) / "collector.db"))
+            quote_asset = next(iter(streamer.RBH_QUOTE_ASSET_ADDRESSES))
+            job = {"ca": quote_asset, "chain_id": 4663, "source": "uniswap_v4_initialize", "attempts": 1}
+            with patch("streamer.rbh_event_details") as event_details, \
+                 patch("streamer.extract_full_token_metadata") as extractor:
+                with self.assertRaisesRegex(streamer.NonGraduatedDiscoveryError, "quote asset"):
+                    ingest_and_enrich_job(db, job)
+            event_details.assert_not_called()
+            extractor.assert_not_called()
+
+    def test_robinhood_v4_event_without_known_launchpad_event_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = ForensicDatabase(str(Path(directory) / "collector.db"))
+            ca = "0x" + "e" * 40
+            job = {
+                "ca": ca, "chain_id": 4663, "source": "uniswap_v4_initialize",
+                "source_payload": json.dumps({"blockNumber": "0x64", "transactionHash": "0x" + "a" * 64}),
+            }
+            with patch("streamer.block_timestamp", return_value=1_000_000), \
+                 patch("streamer.rbh_migration_tokens", return_value={}) as migration, \
+                 patch("streamer.extract_full_token_metadata") as extractor:
+                with self.assertRaisesRegex(streamer.NonGraduatedDiscoveryError, "launchpad migration"):
+                    ingest_and_enrich_job(db, job)
+            migration.assert_called_once()
+            extractor.assert_not_called()
+    def test_robinhood_pair_must_be_created_near_the_pool_event(self):
+        ca = "0x" + "d" * 40
+        stale_pair = {
+            "pairAddress": "0x" + "a" * 40, "pairCreatedAt": 999_000 * 1000,
+            "baseToken": {"address": ca}, "liquidity": {"usd": 9_999},
+        }
+        fresh_pair = {
+            "pairAddress": "0x" + "b" * 40, "pairCreatedAt": 1_000_050 * 1000,
+            "baseToken": {"address": ca}, "liquidity": {"usd": 1},
+        }
+        with patch("streamer.request_json", return_value=[stale_pair, fresh_pair]):
+            pair = streamer.fetch_market_profile(ca, 4663, event_timestamp=1_000_000,
+                                                  pair_time_tolerance_seconds=60)
+        self.assertEqual(pair["pairAddress"], fresh_pair["pairAddress"])
     def test_paid_or_search_sources_are_rejected_before_enrichment(self):
         with tempfile.TemporaryDirectory() as directory:
             db = ForensicDatabase(str(Path(directory) / "collector.db"))
