@@ -203,7 +203,7 @@ class Telegram:
             timeout=timeout + 10,
         )
 
-    def message(self, chat_id, body, reply_markup=None):
+    def message(self, chat_id, body, reply_markup=None, reply_to_message_id=None):
         data = {
             "chat_id": chat_id,
             "text": body,
@@ -212,6 +212,8 @@ class Telegram:
         }
         if reply_markup is not None:
             data["reply_markup"] = json.dumps(reply_markup)
+        if reply_to_message_id is not None:
+            data["reply_to_message_id"] = int(reply_to_message_id)
         self.call("sendMessage", data)
 
     def answer_callback(self, callback_id, text=""):
@@ -776,9 +778,10 @@ class BotService:
                 raise FileNotFoundError("candidate CSV unavailable")
             self.api.document(chat_id, path, "OmniReborn raw candidate data")
         elif command in ("/ingest", "/intake"):
+            msg_id = message.get("message_id") if message else None
             result = queue_forwarded_notice(self.settings, chat_id, message or {"text": body})
             if result["reason"]:
-                self.api.message(chat_id, "⚠️ " + html.escape(result["reason"]))
+                self.api.message(chat_id, "⚠️ " + html.escape(result["reason"]), reply_to_message_id=msg_id)
             else:
                 queued = result["queued"]
                 held = result["held"]
@@ -809,7 +812,7 @@ class BotService:
                         extra_str = f" ({', '.join(extra)})" if extra else ""
                         lines.append(f"Held without enrichment (disabled/unsupported): <code>{html.escape(item.ca)}</code> [{tag}]{extra_str}")
                 lines.append("Forwarded text is intake evidence only; qualification still requires chain verification.")
-                self.api.message(chat_id, "\n".join(lines))
+                self.api.message(chat_id, "\n".join(lines), reply_to_message_id=msg_id)
         elif command in ("/sources", "/source"):
             parts = body.split()
             if len(parts) >= 2:
@@ -899,10 +902,18 @@ class BotService:
             return
         message = update.get("message") or {}
         chat_id = (message.get("chat") or {}).get("id")
-        body = clean(message.get("text"))
+        body = clean(message.get("text") or message.get("caption"))
         if chat_id not in self.settings.chats:
             LOG.warning("Ignored unauthorized chat_id=%s", chat_id)
             return
+        is_forwarded = bool(
+            message.get("forward_date")
+            or message.get("forward_from")
+            or message.get("forward_from_chat")
+            or message.get("forward_sender_name")
+            or message.get("forward_origin")
+        )
+        forwarded_tokens = parse_forwarded_tokens(forwarded_text(message)) if body else []
         if body.startswith("/"):
             try:
                 self.command(int(chat_id), body, message)
@@ -912,6 +923,16 @@ class BotService:
                     int(chat_id),
                     "⚠️ Command failed safely: " + html.escape(str(exc)),
                 )
+        elif forwarded_tokens or is_forwarded:
+            if forwarded_tokens or any(kw in body.lower() for kw in ("migration", "token", "contract", "launchpad", "uniswap", "pons", "gmgn")):
+                try:
+                    self.command(int(chat_id), "/ingest", message)
+                except Exception as exc:
+                    LOG.exception("Auto-intake failed")
+                    self.api.message(
+                        int(chat_id),
+                        "⚠️ Auto-intake failed safely: " + html.escape(str(exc)),
+                    )
 
     def cycle(self):
         rows = self.candidate_rows("background alert cycle")

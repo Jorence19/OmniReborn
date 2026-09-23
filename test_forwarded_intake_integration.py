@@ -184,6 +184,73 @@ class ForwardedIntakeIntegrationTests(unittest.TestCase):
         discover.assert_not_called()
         self.assertEqual(result["discovery"]["mode"], "forwarded_only")
 
+    def test_automatic_intake_from_forwarded_notice_without_slash_command(self):
+        ca = "0x5ab704ae6945f3bee6629b5c9f5709960b51f20e"
+        api = MagicMock()
+        service = BotService(self.settings, api=api)
+        update = {
+            "update_id": 101,
+            "message": {
+                "message_id": 777,
+                "chat": {"id": -1001},
+                "text": (
+                    "Pons 🌉\nUniswap Migration\nLARP | PLAYLARP\n"
+                    f"{ca}\nQuote : MSFT\nTax : 3%\n"
+                    f"[GMGN](https://gmgn.ai/robinhood/token/lZZ6fdDe_{ca})"
+                ),
+                "forward_date": 1727100000,
+                "forward_from_chat": {"id": -10099, "title": "Pons Channel"},
+            },
+        }
+        service.handle_update(update)
+        api.message.assert_called_once()
+        sent_chat_id, sent_body = api.message.call_args[0][:2]
+        self.assertEqual(sent_chat_id, -1001)
+        self.assertIn("Forwarded source intake", sent_body)
+        self.assertIn(ca, sent_body)
+        self.assertIn("[RBH]", sent_body)
+        self.assertIn("$LARP", sent_body)
+        self.assertEqual(api.message.call_args.kwargs.get("reply_to_message_id"), 777)
+        # Verify database record
+        conn = sqlite3.connect(self.db_path)
+        try:
+            row = conn.execute("SELECT ca, chain_id, status FROM forwarded_token_intake WHERE ca=?", (ca,)).fetchone()
+        finally:
+            conn.close()
+        self.assertIsNotNone(row)
+        self.assertEqual(row, (ca, 4663, "queued"))
+
+    def test_automatic_intake_from_pasted_notice_without_forward_metadata(self):
+        ca = "0x5ab704ae6945f3bee6629b5c9f5709960b51f20e"
+        api = MagicMock()
+        service = BotService(self.settings, api=api)
+        update = {
+            "update_id": 102,
+            "message": {
+                "message_id": 778,
+                "chat": {"id": -1001},
+                "text": f"Pons Migration\n{ca}\n$LARP on Robinhood",
+            },
+        }
+        service.handle_update(update)
+        api.message.assert_called_once()
+        self.assertIn("Forwarded source intake", api.message.call_args[0][1])
+        self.assertEqual(api.message.call_args.kwargs.get("reply_to_message_id"), 778)
+
+    def test_normal_chat_message_is_ignored(self):
+        api = MagicMock()
+        service = BotService(self.settings, api=api)
+        update = {
+            "update_id": 103,
+            "message": {
+                "message_id": 779,
+                "chat": {"id": -1001},
+                "text": "hello how is everyone doing today?",
+            },
+        }
+        service.handle_update(update)
+        api.message.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
