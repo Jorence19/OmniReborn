@@ -8,6 +8,7 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 from database import ForensicDatabase
+from streamer import QueueStore
 from telegram_bot import (
     BotService,
     Settings,
@@ -164,6 +165,17 @@ class TelegramBotTests(unittest.TestCase):
         self.assertIn("Candidate data: degraded", fake.messages[0][1])
         health = json.loads(self.settings.health.read_text(encoding="utf-8"))
         self.assertEqual(health["status"], "degraded")
+    def test_queue_restart_command_preserves_completed_records(self):
+        queue = QueueStore(ForensicDatabase(str(self.db_path)))
+        ca = "0x" + "1" * 40
+        queue.enqueue(ca, "test")
+        job = queue.claim("worker", limit=1)[0]
+        queue.fail(job, RuntimeError("retry"))
+        fake = FakeTelegram()
+        service = BotService(self.settings, fake)
+        service.command(-1001, "/queue restart")
+        self.assertIn("Restarted", fake.messages[-1][1])
+        self.assertEqual(queue.stats()["pending"], 1)
     def test_refresh_command_dispatches_cleanly(self):
         fake = FakeTelegram()
         service = BotService(self.settings, fake)

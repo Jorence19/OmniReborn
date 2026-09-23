@@ -42,6 +42,18 @@ class QueueTests(unittest.TestCase):
         jobs = self.store.claim("worker", limit=5)
         self.assertEqual({job["chain_id"] for job in jobs}, {4663, 5042})
 
+    def test_restart_incomplete_preserves_completed_jobs(self):
+        completed = "0x" + "2" * 40
+        retrying = "0x" + "3" * 40
+        self.store.enqueue(completed, "test")
+        self.store.enqueue(retrying, "test")
+        self.store.succeed(completed, 4663)
+        jobs = self.store.claim("worker", limit=2)
+        retry_job = next(job for job in jobs if job["ca"] == retrying)
+        self.store.fail(retry_job, RuntimeError("temporary"))
+        self.assertEqual(self.store.restart_incomplete(), 1)
+        self.assertEqual(self.store.stats()["succeeded"], 1)
+        self.assertEqual(self.store.stats()["pending"], 1)
     def test_expired_lease_is_recovered(self):
         self.store.enqueue(self.ca, "test")
         self.store.claim("dead-worker", limit=1)

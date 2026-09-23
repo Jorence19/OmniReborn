@@ -189,6 +189,7 @@ class Telegram:
             {"command": "log", "description": "Audit recent collector and queue logs"},
             {"command": "ingest", "description": "Queue addresses from a forwarded token notice"},
             {"command": "sources", "description": "Manage intake & discovery sources"},
+            {"command": "queue", "description": "View or safely restart unfinished token jobs"},
         ]
         self.call("setMyCommands", {"commands": json.dumps(commands)})
 
@@ -810,6 +811,30 @@ class BotService:
                         lines.append(f"Held without enrichment (disabled/unsupported): <code>{html.escape(item.ca)}</code> [{tag}]{extra_str}")
                 lines.append("Forwarded text is intake evidence only; qualification still requires chain verification.")
                 self.api.message(chat_id, "\n".join(lines))
+        elif command in ("/queue", "/queue_restart"):
+            action = body.split(maxsplit=1)[1].strip().lower() if len(body.split(maxsplit=1)) > 1 else "status"
+            queue = QueueStore(ForensicDatabase(str(self.settings.db)))
+            if action in {"restart", "reset"}:
+                restarted = queue.restart_incomplete()
+                self.api.message(
+                    chat_id,
+                    "✅ Restarted <b>" + str(restarted) + "</b> unfinished token job(s). "
+                    "Completed forensic records were preserved.",
+                )
+            elif action in {"status", "list"}:
+                stats = queue.stats()
+                self.api.message(
+                    chat_id,
+                    "<b>Token queue</b>\n"
+                    + "pending=" + str(stats["pending"])
+                    + ", retry=" + str(stats["retry"])
+                    + ", running=" + str(stats["running"])
+                    + ", dead=" + str(stats["dead"])
+                    + ", succeeded=" + str(stats["succeeded"])
+                    + "\nUse <code>/queue restart</code> to restart only unfinished jobs.",
+                )
+            else:
+                self.api.message(chat_id, "Usage: <code>/queue</code> or <code>/queue restart</code>")
         elif command in ("/sources", "/source"):
             parts = body.split()
             if len(parts) >= 2:
@@ -867,7 +892,7 @@ class BotService:
                 LOG.exception("Market refresh failed")
                 self.api.message(chat_id, "⚠️ Market refresh failed: " + html.escape(str(exc)))
         else:
-            self.api.message(chat_id, "Commands: /leads /dashboard /refresh /dbxlsx /dbcsv /ingest /sources /status /log")
+            self.api.message(chat_id, "Commands: /leads /dashboard /refresh /dbxlsx /dbcsv /ingest /sources /queue /status /log")
     def handle_source_callback(self, callback):
         message = callback.get("message") or {}
         chat_id = (message.get("chat") or {}).get("id")

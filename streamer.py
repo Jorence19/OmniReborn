@@ -285,6 +285,14 @@ class QueueStore:
             cursor = conn.execute("""UPDATE ingestion_jobs SET status='retry', attempts=0,
                 next_attempt_at=datetime('now'), last_error=NULL, updated_at=datetime('now') WHERE status='dead'""")
             return cursor.rowcount
+    def restart_incomplete(self) -> int:
+        """Make unfinished jobs eligible immediately without deleting forensic history."""
+        with self.db.get_connection() as conn:
+            cursor = conn.execute("""UPDATE ingestion_jobs
+                SET status='pending', attempts=0, next_attempt_at=datetime('now'),
+                    lease_until=NULL, worker_id=NULL, last_error=NULL, updated_at=datetime('now')
+                WHERE status IN ('pending', 'retry', 'running', 'dead')""")
+            return cursor.rowcount
     def stats(self) -> Dict[str, int]:
         with self.db.get_connection() as conn:
             rows = conn.execute("SELECT status, COUNT(*) n FROM ingestion_jobs GROUP BY status").fetchall()
