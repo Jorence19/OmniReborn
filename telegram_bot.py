@@ -171,6 +171,7 @@ class Telegram:
         commands = [
             {"command": "leads", "description": "Top candidate leads"},
             {"command": "dashboard", "description": "Download interactive dashboard"},
+            {"command": "refresh", "description": "Refresh DEX market observations"},
             {"command": "dbxlsx", "description": "Export formatted Excel workbook"},
             {"command": "dbcsv", "description": "Download raw candidate CSV"},
             {"command": "status", "description": "Collector and queue health"},
@@ -470,7 +471,7 @@ def regenerate_dashboard(settings):
     )
 
 
-def status_message(settings, started):
+def status_message(settings, started, data_error=""):
     counts = {}
     latest = "none"
     if settings.db.exists():
@@ -485,6 +486,7 @@ def status_message(settings, started):
                 latest = row["status"] + " (started " + row["started_at"] + ")"
     uptime = int(time.monotonic() - started)
     size_kb = settings.db.stat().st_size / 1024 if settings.db.exists() else 0
+    data_state = "ready" if not data_error else "degraded: " + data_error[:180]
     return (
         "<b>OmniReborn Phase 1 status</b>\n"
         + "Bot uptime: " + str(uptime // 3600) + "h " + str((uptime % 3600) // 60) + "m\n"
@@ -495,11 +497,11 @@ def status_message(settings, started):
         + ", dead=" + str(counts.get("dead", 0))
         + ", succeeded=" + str(counts.get("succeeded", 0))
         + "\nLatest collection: " + html.escape(latest)
+        + "\nCandidate data: " + html.escape(data_state)
         + "\nChains: " + html.escape(os.getenv("ENABLED_CHAIN_IDS", "4663,5042"))
         + "\nCollection cadence: " + html.escape(os.getenv("COLLECTION_INTERVAL_SECONDS", "300")) + " seconds"
         + "\nPhase 2 push alerts: " + ("enabled" if settings.push_alerts else "disabled")
     )
-
 
 class BotService:
     def __init__(self, settings, api=None):
@@ -603,10 +605,22 @@ class BotService:
                 sent += 1
         return sent
 
+    def candidate_rows(self, context):
+        try:
+            rows = load_candidates(self.settings)
+        except Exception as exc:
+            self.error = "candidate data unavailable: " + f"{type(exc).__name__}: {exc}"[:420]
+            LOG.warning("Candidate data unavailable during %s: %s", context, exc)
+            return None
+        self.error = ""
+        return rows
+
     def command(self, chat_id, body):
         command = body.split()[0].split("@")[0].lower()
-        rows = load_candidates(self.settings)
         if command == "/leads":
+            rows = self.candidate_rows("/leads")
+            if rows is None:
+                raise RuntimeError(self.error)
             self.api.message(
                 chat_id,
                 "<b>Top Phase 1 candidate leads</b>\n\n"
@@ -621,6 +635,9 @@ class BotService:
                 raise FileNotFoundError("dashboard unavailable")
             self.api.document(chat_id, self.settings.dashboard, "OmniReborn Phase 1 dashboard")
         elif command == "/dbxlsx":
+            rows = self.candidate_rows("/dbxlsx")
+            if rows is None:
+                raise RuntimeError(self.error)
             path = export_xlsx(rows, self.settings.runtime / "OmniReborn_Leads.xlsx")
             self.api.document(chat_id, path, "OmniReborn forensic leads")
         elif command == "/dbcsv":
@@ -629,7 +646,7 @@ class BotService:
                 raise FileNotFoundError("candidate CSV unavailable")
             self.api.document(chat_id, path, "OmniReborn raw candidate data")
         elif command == "/status":
-            self.api.message(chat_id, status_message(self.settings, self.started))
+            self.api.message(chat_id, status_message(self.settings, self.started, self.error))
         elif command in ("/log", "/logs"):
             log_path = self.settings.runtime / "streamer.log"
             content = ""
@@ -665,7 +682,6 @@ class BotService:
                 self.api.message(chat_id, "⚠️ Market refresh failed: " + html.escape(str(exc)))
         else:
             self.api.message(chat_id, "Commands: /leads /dashboard /refresh /dbxlsx /dbcsv /status /log")
-
     def handle_update(self, update):
         message = update.get("message") or {}
         chat_id = (message.get("chat") or {}).get("id")
@@ -684,8 +700,10 @@ class BotService:
                 )
 
     def cycle(self):
-        rows = load_candidates(self.settings)
-        self.send_new_alerts(rows)
+        rows = self.candidate_rows("background alert cycle")
+        if rows is not None:
+            self.send_new_alerts(rows)
+        # Poll commands even if reporting artifacts are unavailable or a dashboard build is in progress.
         for update in self.api.updates(
             self.offset, self.settings.poll
         ):
@@ -697,16 +715,16 @@ class BotService:
                 self.settings.state,
                 {"offset": self.offset, "updated_at": now()},
             )
-        self.error = ""
-        self.write_health()
+        self.write_health("healthy" if not self.error else "degraded")
 
     def run(self, once=False):
         with SingleInstance(self.settings.lock):
             ensure_schema(self.settings.db)
             self.api.configure()
-            rows = load_candidates(self.settings)
-            self.initialize_baseline(rows)
-            self.write_health("starting")
+            rows = self.candidate_rows("startup baseline")
+            if rows is not None:
+                self.initialize_baseline(rows)
+            self.write_health("starting" if rows is not None else "degraded")
             backoff = 1
             while True:
                 try:
@@ -726,7 +744,6 @@ class BotService:
                         raise
                     time.sleep(backoff)
                     backoff = min(backoff * 2, 60)
-
 
 def readiness(settings, online=True):
     missing = [

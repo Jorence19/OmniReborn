@@ -2,6 +2,7 @@ import json
 import sqlite3
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from openpyxl import load_workbook
@@ -151,6 +152,18 @@ class TelegramBotTests(unittest.TestCase):
         self.assertEqual(sheet["A3"].fill.fgColor.rgb[-6:], "FFC7CE")
         self.assertIn("OmniRebornLeads", sheet.tables)
 
+    def test_status_remains_responsive_when_candidate_data_is_unavailable(self):
+        fake = FakeTelegram()
+        fake.updates = lambda offset, timeout: [
+            {"update_id": 1, "message": {"chat": {"id": -1001}, "text": "/status"}}
+        ]
+        service = BotService(self.settings, fake)
+        with patch("telegram_bot.load_candidates", side_effect=FileNotFoundError("snapshot missing")):
+            service.cycle()
+        self.assertEqual(len(fake.messages), 1)
+        self.assertIn("Candidate data: degraded", fake.messages[0][1])
+        health = json.loads(self.settings.health.read_text(encoding="utf-8"))
+        self.assertEqual(health["status"], "degraded")
     def test_refresh_command_dispatches_cleanly(self):
         fake = FakeTelegram()
         service = BotService(self.settings, fake)
