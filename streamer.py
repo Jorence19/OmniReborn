@@ -771,8 +771,30 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
     source_parts = {part for part in source.split("+") if part}
     forwarded_rbh = chain_id == CHAIN_ID and "forwarded_pons_migration" in source_parts
     forwarded_arc = chain_id == 5042 and "forwarded_arc_token" in source_parts
+    manual_populate = "manual_populate" in source_parts
     rbh_migration = chain_id == CHAIN_ID and ("uniswap_v4_initialize" in source_parts or forwarded_rbh)
     arc_dex_pair = chain_id == 5042 and ("arc_dex_pair" in source_parts or forwarded_arc)
+    manual_arc_pair = None
+
+    # A manually supplied address is only a discovery hint. Recreate a strict
+    # graduation proof before it reaches the expensive enrichment path.
+    if manual_populate and not (rbh_migration or arc_dex_pair):
+        if chain_id == CHAIN_ID:
+            migration_log = find_forwarded_rbh_migration(ca)
+            if not migration_log:
+                raise NonGraduatedDiscoveryError(
+                    "manual Robinhood address has no recent known token-bound migration event"
+                )
+            job = dict(job)
+            job["source_payload"] = {**source_payload_dict(job), **migration_log}
+            rbh_migration = True
+        elif chain_id == 5042:
+            manual_arc_pair = fetch_market_profile(ca, chain_id)
+            if not manual_arc_pair:
+                raise NonGraduatedDiscoveryError(
+                    "manual Arc address has no confirmed DEX graduation pair"
+                )
+            arc_dex_pair = True
     if not (rbh_migration or arc_dex_pair):
         raise NonGraduatedDiscoveryError(
             f"graduated-only gate rejected {spec['tag']} source(s): {', '.join(sorted(source_parts)) or 'unknown'}"
@@ -815,7 +837,7 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
             )
     else:
         # Arc's graduation evidence is a live base-token DEX pair. Verify it before expensive RPC/explorer work.
-        pair = fetch_market_profile(ca, chain_id)
+        pair = manual_arc_pair or fetch_market_profile(ca, chain_id)
         if not pair:
             raise NonGraduatedDiscoveryError("Arc graduation pair is no longer confirmed")
 

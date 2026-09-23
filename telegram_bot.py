@@ -826,12 +826,28 @@ class BotService:
                     chat_id,
                     "⚠️ No valid EVM addresses found.\n"
                     "Usage: <code>/populate 0x111..., 0x222...</code>\n"
-                    "Or reply to a message containing addresses with <code>/populate</code>.",
+                    "Or reply to a message containing addresses with <code>/populate</code>.\n"
+                    "Use <code>/populate arc 0x...</code> or <code>/populate rbh 0x...</code> to force a chain.",
                 )
                 return
 
-            detected_chain = detect_chain(source_text) or 4663
-            chain_tag = CHAINS.get(detected_chain, str(detected_chain))
+            # Bare addresses are ambiguous, so Robinhood remains the default. Use
+            # `/populate arc ...` or `/populate rbh ...` to force a chain.
+            parts = body.split(maxsplit=2)
+            forced_chain = {
+                "rbh": 4663, "robinhood": 4663,
+                "arc": 5042, "bsc": 56, "bnb": 56,
+            }.get(parts[1].lower()) if len(parts) > 1 else None
+            detected_chain = forced_chain or detect_chain(source_text) or 4663
+            if detected_chain not in enabled_chain_ids() or detected_chain not in CHAINS:
+                self.api.message(
+                    chat_id,
+                    "⚠️ " + html.escape(str(CHAINS.get(detected_chain, f"Chain {detected_chain}")))
+                    + " manual population is not enabled. BSC notices are retained as held until its RPC, "
+                    "explorer, and chain-specific graduation gate are configured.",
+                )
+                return
+            chain_tag = CHAINS[detected_chain]
             db = ForensicDatabase(str(self.settings.db))
             queue = QueueStore(db)
 
@@ -842,7 +858,7 @@ class BotService:
             for ca in addrs:
                 with connect(self.settings.db) as conn:
                     existing_token = conn.execute(
-                        "SELECT is_qualified, is_graduated, symbol FROM tokens WHERE ca=? AND chain_id=?",
+                        "SELECT is_graduated, is_training_anchor, symbol FROM tokens WHERE ca=? AND chain_id=?",
                         (ca, detected_chain),
                     ).fetchone()
                     existing_job = conn.execute(
@@ -850,7 +866,7 @@ class BotService:
                         (ca, detected_chain),
                     ).fetchone()
 
-                if existing_token and (existing_token["is_qualified"] or existing_token["is_graduated"]):
+                if existing_token and (existing_token["is_graduated"] or existing_token["is_training_anchor"]):
                     sym = existing_token["symbol"] or "UNKNOWN"
                     already_active_addrs.append((ca, f"${sym} (on dashboard)"))
                 elif existing_job and existing_job["status"] in ("pending", "running"):

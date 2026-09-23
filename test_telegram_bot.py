@@ -206,13 +206,21 @@ class TelegramBotTests(unittest.TestCase):
     def test_populate_command_detects_already_active(self):
         ca = "0x3333333333333333333333333333333333333333"
         db = ForensicDatabase(str(self.db_path))
-        db.upsert_token({"ca": ca, "symbol": "TEST", "is_qualified": True, "chain": "RBH"})
+        db.upsert_token({"ca": ca, "symbol": "TEST", "is_qualified": True, "is_graduated": True, "chain": "RBH"})
         fake = FakeTelegram()
         service = BotService(self.settings, fake)
         service.command(-1001, f"/populate {ca}")
         self.assertIn("Already on dashboard", fake.messages[-1][1])
         self.assertIn("$TEST", fake.messages[-1][1])
 
+    def test_populate_bsc_is_held_until_chain_support_exists(self):
+        fake = FakeTelegram()
+        service = BotService(self.settings, fake)
+        ca = "0x4444444444444444444444444444444444444444"
+        with patch.dict("os.environ", {"ENABLED_CHAIN_IDS": "4663,5042"}):
+            service.command(-1001, f"/populate bsc {ca}")
+        self.assertIn("not enabled", fake.messages[-1][1])
+        self.assertEqual(QueueStore(ForensicDatabase(str(self.db_path))).stats()["pending"], 0)
     def test_populate_command_without_addresses_shows_usage(self):
         fake = FakeTelegram()
         service = BotService(self.settings, fake)

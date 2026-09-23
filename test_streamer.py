@@ -120,6 +120,71 @@ class GuardrailTests(unittest.TestCase):
                 ).fetchone()
             self.assertEqual(tuple(row), (5042, "ARC", 1, 1, 0, 0))
 
+    def test_manual_arc_population_requires_a_confirmed_pair(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = ForensicDatabase(str(Path(directory) / "collector.db"))
+            ca = "0x" + "c" * 40
+            profile = {
+                "ca": ca, "chain_id": 5042, "token_name": "Manual Arc", "token_symbol": "MARC",
+                "bytecode_sha256": "a" * 64, "normalized_bytecode_sha256": "b" * 64,
+                "deployer_address": "0x" + "3" * 40,
+                "creation_tx_hash": "0x" + "4" * 64,
+                "function_selectors": "a9059cbb", "method_ids_hash": "deadbeef",
+                "funding_lineage": [], "hardcoded_addresses": [],
+                "storage_address_candidates": [],
+            }
+            pair = {
+                "pairAddress": "0x" + "a" * 40, "pairCreatedAt": 1789305867000,
+                "baseToken": {"address": ca, "symbol": "MARC", "name": "Manual Arc"},
+            }
+            with patch("streamer.fetch_market_profile", return_value=pair) as market, \
+                 patch("streamer.extract_full_token_metadata", return_value=profile):
+                result = ingest_and_enrich_job(
+                    db, {"ca": ca, "chain_id": 5042, "source": "manual_populate", "attempts": 1},
+                )
+            market.assert_called_once_with(ca, 5042)
+            self.assertTrue(result["is_graduated"])
+
+    def test_manual_robinhood_population_rebuilds_token_bound_proof(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = ForensicDatabase(str(Path(directory) / "collector.db"))
+            ca = "0x" + "e" * 40
+            tx_hash = "0x" + "a" * 64
+            profile = {
+                "ca": ca, "token_name": "Manual RBH", "token_symbol": "MRBH",
+                "bytecode_sha256": "a" * 64, "normalized_bytecode_sha256": "b" * 64,
+                "deployer_address": "0x" + "3" * 40,
+                "creation_tx_hash": "0x" + "4" * 64,
+                "function_selectors": "a9059cbb", "method_ids_hash": "deadbeef",
+                "funding_lineage": [], "hardcoded_addresses": [],
+                "storage_address_candidates": [],
+            }
+            pair = {
+                "pairAddress": "0x" + "b" * 40, "pairCreatedAt": 1_000_000_000,
+                "baseToken": {"address": ca, "symbol": "MRBH", "name": "Manual RBH"},
+            }
+            log = {"blockNumber": "0x64", "transactionHash": tx_hash}
+            with patch("streamer.find_forwarded_rbh_migration", return_value=log) as find, \
+                 patch("streamer.block_timestamp", return_value=1_000_000), \
+                 patch("streamer.rbh_migration_tokens", return_value={ca: {"transaction_hash": tx_hash}}), \
+                 patch("streamer.fetch_market_profile", return_value=pair), \
+                 patch("streamer.extract_full_token_metadata", return_value=profile):
+                result = ingest_and_enrich_job(
+                    db, {"ca": ca, "chain_id": 4663, "source": "manual_populate", "attempts": 1},
+                )
+            find.assert_called_once_with(ca)
+            self.assertTrue(result["is_graduated"])
+    def test_manual_arc_population_without_a_pair_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = ForensicDatabase(str(Path(directory) / "collector.db"))
+            ca = "0x" + "d" * 40
+            with patch("streamer.fetch_market_profile", return_value={}), \
+                 patch("streamer.extract_full_token_metadata") as extractor:
+                with self.assertRaisesRegex(streamer.NonGraduatedDiscoveryError, "confirmed DEX graduation pair"):
+                    ingest_and_enrich_job(
+                        db, {"ca": ca, "chain_id": 5042, "source": "manual_populate", "attempts": 1},
+                    )
+            extractor.assert_not_called()
     def test_current_market_cap_is_never_written_as_ath(self):
         fields = market_fields({
             "baseToken": {"symbol": "LIVE", "name": "Live Token"},
