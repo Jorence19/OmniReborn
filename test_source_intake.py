@@ -29,6 +29,35 @@ class SourceIntakeTests(unittest.TestCase):
         tokens = parse_forwarded_tokens(notice)
         self.assertEqual([item.ca for item in tokens], [ca])
         self.assertEqual(tokens[0].source_kind, "forwarded_pons_migration")
+    def test_pons_template_extracts_source_observations_and_links(self):
+        ca = "0x2e799bda738df565fdedf4081659fad67ec4501b"
+        notice = (
+            "Pons 🌉\nUniswap Migration\nHOP | Hoodhop\n"
+            f"{ca}\nQuote : ETH\nTax : 2%\nSince Creation : 4 Minutes 59 Seconds\n"
+            f"https://www.ponsfamily.com/launchpad/{ca}\nhttps://x.com/HoodhopRH\n"
+            "https://hoodhop.online/\n"
+            f"https://gmgn.ai/robinhood/token/lZZ6fdDe_{ca}\n"
+            f"https://fomo.family/coin?address={ca}&chainId=4663\n"
+            f"https://dexscreener.com/robinhood/{ca}"
+        )
+        token = parse_forwarded_tokens(notice)[0]
+        self.assertEqual((token.symbol, token.name), ("HOP", "Hoodhop"))
+        self.assertEqual(token.metadata["reported_quote_asset"], "ETH")
+        self.assertEqual(token.metadata["reported_tax_percent"], 2.0)
+        self.assertEqual(token.metadata["reported_age_seconds"], 299)
+        self.assertEqual(token.metadata["source_x_url"], "https://x.com/HoodhopRH")
+        self.assertEqual(token.metadata["source_website"], "https://hoodhop.online/")
+
+    def test_bsc_template_extracts_name_and_symbol(self):
+        ca = "0xc495711f2d19436edfcd2609d9b4d82d42b97777"
+        notice = (
+            "NEW TOKEN MIGRATION DETECTED\n"
+            "Token Information:\nName: Muse AI (MUSE)\nSymbol: $MUSE\n"
+            f"Contract Address: {ca}\nhttps://bscscan.com/token/{ca}"
+        )
+        token = parse_forwarded_tokens(notice)[0]
+        self.assertEqual((token.name, token.symbol), ("Muse AI", "MUSE"))
+        self.assertEqual(token.chain_id, 56)
     def test_multi_address_notice_disambiguates_token_dev_and_pair(self):
         token_ca = "0x1111111111111111111111111111111111111111"
         dev_ca = "0x2222222222222222222222222222222222222222"
@@ -61,6 +90,16 @@ class SourceIntakeTests(unittest.TestCase):
         self.assertEqual(tokens[0].pair_address, pair_ca)
         self.assertEqual(tokens[0].chain_id, 5042)
 
+    def test_bsc_template_retains_non_ascii_symbol(self):
+        ca = "0xc8f4e066f5821fd18b9f2b678dee9f2c3d557777"
+        notice = (
+            "NEW TOKEN MIGRATION DETECTED\n"
+            "Name: goooo gaga (咕咕嘎嘎)\nSymbol: $咕咕嘎嘎\n"
+            f"Contract Address: {ca}\nhttps://bscscan.com/token/{ca}"
+        )
+        token = parse_forwarded_tokens(notice)[0]
+        self.assertEqual(token.symbol, "咕咕嘎嘎")
+        self.assertEqual(token.name, "goooo gaga")
     def test_dev_only_notice_treats_dev_as_seed(self):
         dev_ca = "0x2222222222222222222222222222222222222222"
         notice = f"Robinhood Dev wallet active: Dev: {dev_ca}"

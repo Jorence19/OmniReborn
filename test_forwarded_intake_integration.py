@@ -95,6 +95,24 @@ class ForwardedIntakeIntegrationTests(unittest.TestCase):
         self.assertEqual(result["queued"], [])
         self.assertEqual([item.ca for item in result["held"]], [ca])
 
+    def test_authorized_forward_is_ingested_without_a_second_listener(self):
+        ca = "0x2e799bda738df565fdedf4081659fad67ec4501b"
+        api = MagicMock()
+        service = BotService(self.settings, api=api)
+        service.handle_update({
+            "message": {
+                "message_id": 47,
+                "chat": {"id": -1001},
+                "forward_origin": {"type": "channel"},
+                "text": (
+                    "Pons Uniswap Migration\nHOP | Hoodhop\n"
+                    f"https://gmgn.ai/robinhood/token/lZZ6fdDe_{ca}"
+                ),
+            }
+        })
+        job = QueueStore(ForensicDatabase(str(self.db_path))).claim("test", limit=1)[0]
+        self.assertEqual((job["ca"], job["source"]), (ca, "forwarded_pons_migration"))
+        api.message.assert_called()
     def test_telegram_sources_command_displays_and_toggles(self):
         api = MagicMock()
         service = BotService(self.settings, api=api)
@@ -154,7 +172,7 @@ class ForwardedIntakeIntegrationTests(unittest.TestCase):
         log = {"blockNumber": "0x64", "transactionHash": "0x" + "b" * 64}
         job = {
             "ca": ca, "chain_id": 4663, "source": "forwarded_pons_migration",
-            "source_payload": json.dumps({"forwarded_at": streamer.iso_utc()}),
+            "source_payload": json.dumps({"forwarded_at": streamer.iso_utc(), "metadata": {"reported_tax_percent": 2.0, "reported_age_seconds": 59}}),
         }
         profile = {
             "ca": ca, "token_name": "Forwarded", "token_symbol": "FWD",
@@ -173,6 +191,15 @@ class ForwardedIntakeIntegrationTests(unittest.TestCase):
              patch("streamer.extract_full_token_metadata", return_value=profile) as extractor:
             ingest_and_enrich_job(ForensicDatabase(str(self.db_path)), job)
         extractor.assert_called_once_with(ca, chain_id=4663)
+        connection = sqlite3.connect(self.db_path)
+        try:
+            evidence = json.loads(connection.execute(
+                "SELECT graduation_evidence FROM tokens WHERE ca=?", (ca,)
+            ).fetchone()[0])
+        finally:
+            connection.close()
+        self.assertEqual(evidence["source_observations"]["reported_tax_percent"], 2.0)
+        self.assertEqual(evidence["source_observations"]["reported_age_seconds"], 59)
 
     def test_forwarded_only_does_not_call_api_discovery(self):
         db = ForensicDatabase(str(self.db_path))

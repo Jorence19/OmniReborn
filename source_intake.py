@@ -42,12 +42,18 @@ TICKER_LINE_RE = re.compile(
     re.MULTILINE,
 )
 SYMBOL_LABEL_RE = re.compile(
-    r"(?:symbol|ticker)\s*[:\-=]\s*[$]?([A-Za-z0-9_]{2,15})",
+    r"(?:symbol|ticker)\s*[:\-=]\s*[$]?([^\s,;|]{1,32})",
     re.IGNORECASE,
 )
 DOLLAR_TICKER_RE = re.compile(
-    r"\$([A-Za-z0-9_]{2,12})\b",
+    r"\$([^\s,;|]{1,32})",
 )
+PONS_QUOTE_RE = re.compile(r"\bQuote\s*:\s*([^\r\n]+)", re.IGNORECASE)
+PONS_TAX_RE = re.compile(r"\bTax\s*:\s*([0-9]+(?:\.[0-9]+)?)\s*%", re.IGNORECASE)
+PONS_AGE_RE = re.compile(r"\bSince\s+Creation\s*:\s*([^\r\n]+)", re.IGNORECASE)
+DURATION_PART_RE = re.compile(r"([0-9]+)\s*(seconds?|minutes?|hours?)\b", re.IGNORECASE)
+BSC_NAME_RE = re.compile(r"\bName\s*:\s*(.+?)(?:\s*\(([^()\r\n]{1,32})\))?\s*(?:\r?\n|\bSymbol\s*:)", re.IGNORECASE)
+URL_RE = re.compile(r"https?://[^\s\])>]+", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -97,6 +103,50 @@ def source_kind(text: str, chain_id: int | None) -> str:
     return "forwarded_unclassified"
 
 
+def template_metadata(text: str) -> dict[str, Any]:
+    """Extract supported forward-template fields as untrusted source provenance."""
+    raw = str(text or "")
+    metadata: dict[str, Any] = {}
+    quote = PONS_QUOTE_RE.search(raw)
+    if quote:
+        metadata["reported_quote_asset"] = quote.group(1).strip()
+    tax = PONS_TAX_RE.search(raw)
+    if tax:
+        metadata["reported_tax_percent"] = float(tax.group(1))
+    age = PONS_AGE_RE.search(raw)
+    if age:
+        seconds = 0
+        for amount, unit in DURATION_PART_RE.findall(age.group(1)):
+            multiplier = 1 if unit.lower().startswith("second") else 60 if unit.lower().startswith("minute") else 3600
+            seconds += int(amount) * multiplier
+        if seconds:
+            metadata["reported_age_seconds"] = seconds
+    bsc_name = BSC_NAME_RE.search(raw)
+    if bsc_name:
+        metadata["reported_name"] = bsc_name.group(1).strip()
+        if bsc_name.group(2):
+            metadata["reported_symbol"] = bsc_name.group(2).upper()
+    urls = []
+    for url in URL_RE.findall(raw):
+        clean = url.rstrip(".,;:}")
+        if clean not in urls:
+            urls.append(clean)
+    for url in urls:
+        lowered = url.lower()
+        if "ponsfamily.com" in lowered:
+            metadata.setdefault("pons_url", url)
+        elif "gmgn.ai" in lowered:
+            metadata.setdefault("gmgn_url", url)
+        elif "dexscreener.com" in lowered:
+            metadata.setdefault("dexscreener_url", url)
+        elif "fomo.family" in lowered:
+            metadata.setdefault("fomo_url", url)
+        elif "x.com/" in lowered or "twitter.com/" in lowered:
+            metadata.setdefault("source_x_url", url)
+        elif not any(domain in lowered for domain in ("bscscan.com", "arc-scan", "explorer.arc.io", "blockscout.com", "okx.com", "padre.gg", "defined.fi", "dextools.io", "axiom.trade", "t.me/")):
+            metadata.setdefault("source_website", url)
+    return metadata
+
 def parse_forwarded_tokens(text: str) -> list[ForwardedToken]:
     raw_text = str(text or "")
     chain_id = detect_chain(raw_text)
@@ -130,6 +180,7 @@ def parse_forwarded_tokens(text: str) -> list[ForwardedToken]:
     pair_address = pair_addresses[0] if pair_addresses else None
 
     # 4. Extract symbol and name if present
+    template = template_metadata(raw_text)
     symbol, name = None, None
     ticker_line_match = TICKER_LINE_RE.search(raw_text)
     if ticker_line_match:
@@ -143,6 +194,8 @@ def parse_forwarded_tokens(text: str) -> list[ForwardedToken]:
             dollar_match = DOLLAR_TICKER_RE.search(raw_text)
             if dollar_match:
                 symbol = dollar_match.group(1).strip().upper()
+    symbol = symbol or template.get("reported_symbol")
+    name = name or template.get("reported_name")
 
     # 5. Disambiguate token candidates
     non_token_addrs = set(dev_wallets) | set(pair_addresses)
@@ -173,7 +226,7 @@ def parse_forwarded_tokens(text: str) -> list[ForwardedToken]:
 
     results = []
     for ca in candidate_tokens:
-        meta = {}
+        meta = dict(template)
         if dev_wallet:
             meta["dev_wallet"] = dev_wallet
         if pair_address:
@@ -194,11 +247,25 @@ def parse_forwarded_tokens(text: str) -> list[ForwardedToken]:
 
 
 def forwarded_text(message: dict) -> str:
-    """Extract the source text from a command, its replied-to forward, or a caption."""
-    parts: Iterable[object] = (
-        (message.get("reply_to_message") or {}).get("text"),
-        (message.get("reply_to_message") or {}).get("caption"),
-        message.get("text"),
-        message.get("caption"),
+    """Extract text plus explicit Telegram text-link URLs from a forward or reply."""
+    parts: list[str] = []
+    for item in ((message.get("reply_to_message") or {}), message):
+        for field in ("text", "caption"):
+            value = item.get(field)
+            if value:
+                parts.append(str(value))
+        for field in ("entities", "caption_entities"):
+            for entity in item.get(field) or []:
+                if isinstance(entity, dict) and entity.get("url"):
+                    parts.append(str(entity["url"]))
+    return "\n".join(parts)
+
+
+def is_forwarded_message(message: dict) -> bool:
+    """True only for Telegram-forwarded messages, not ordinary group chatter."""
+    return bool(
+        message.get("forward_origin")
+        or message.get("forward_from")
+        or message.get("forward_from_chat")
+        or message.get("is_automatic_forward")
     )
-    return "\n".join(str(part) for part in parts if part)

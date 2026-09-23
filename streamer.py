@@ -783,7 +783,9 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
                     raise DexIndexPendingError(f"waiting for forwarded Robinhood migration evidence ({age}s old)")
                 raise NonGraduatedDiscoveryError("forwarded Robinhood address has no known recent migration event")
             job = dict(job)
-            job["source_payload"] = migration_log
+            # Keep the forwarded template fields as provenance while replacing
+            # only the event details with chain-verified data.
+            job["source_payload"] = {**forwarded_payload, **migration_log}
         event_block, event_timestamp = rbh_event_details(job)
         payload = source_payload_dict(job)
         migration_evidence = rbh_migration_tokens(str(payload.get("transactionHash") or ""))
@@ -813,6 +815,21 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
              ca, spec["tag"], source, job.get("attempts"))
     profile = extract_full_token_metadata(ca, chain_id=chain_id)
     raw_payload = source_payload_dict(job)
+    source_metadata = raw_payload.get("metadata") or {}
+    if not isinstance(source_metadata, dict):
+        source_metadata = {}
+    # Forwarded template fields supplement absent chain/explorer fields only.
+    # They remain provenance, not graduation evidence or market truth.
+    source_symbol = raw_payload.get("symbol") or source_metadata.get("reported_symbol")
+    source_name = raw_payload.get("name") or source_metadata.get("reported_name")
+    if not profile.get("token_symbol") and source_symbol:
+        profile["token_symbol"] = str(source_symbol)
+    if not profile.get("token_name") and source_name:
+        profile["token_name"] = str(source_name)
+    if not profile.get("website_url") and source_metadata.get("source_website"):
+        profile["website_url"] = str(source_metadata["source_website"])
+    if not profile.get("twitter_url") and source_metadata.get("source_x_url"):
+        profile["twitter_url"] = str(source_metadata["source_x_url"])
     if not profile.get("deployer_address") and raw_payload.get("dev_wallet"):
         profile["deployer_address"] = raw_payload["dev_wallet"]
     gaps = required_profile_gaps(profile)
@@ -829,6 +846,13 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
         "event_block": event_block,
         "event_timestamp": event_timestamp,
         "migration_path": migration_evidence.get(ca) if rbh_migration else None,
+        "source_observations": {
+            key: source_metadata[key] for key in (
+                "reported_quote_asset", "reported_tax_percent", "reported_age_seconds",
+                "pons_url", "gmgn_url", "fomo_url", "dexscreener_url",
+                "source_website", "source_x_url",
+            ) if key in source_metadata
+        },
         "market_pair_url": pair.get("url"),
         "pair_created_at": pair.get("pairCreatedAt"),
     }

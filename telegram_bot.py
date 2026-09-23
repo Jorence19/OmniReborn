@@ -19,7 +19,7 @@ from urllib.parse import quote
 import requests
 
 from database import ForensicDatabase
-from source_intake import forwarded_text, parse_forwarded_tokens
+from source_intake import forwarded_text, is_forwarded_message, parse_forwarded_tokens
 from sources import (
     SOURCE_DEFINITIONS,
     is_source_enabled,
@@ -911,6 +911,17 @@ class BotService:
                 self.api.message(
                     int(chat_id),
                     "⚠️ Command failed safely: " + html.escape(str(exc)),
+                )
+        elif is_forwarded_message(message) and parse_forwarded_tokens(forwarded_text(message)):
+            # The production bot is the sole long-poll listener. Forwarding a
+            # recognized notice into the authorized group ingests it directly.
+            try:
+                self.command(int(chat_id), "/ingest", message)
+            except Exception as exc:
+                LOG.exception("Automatic forwarded intake failed")
+                self.api.message(
+                    int(chat_id),
+                    "⚠️ Forwarded intake failed safely: " + html.escape(str(exc)),
                 )
 
     def cycle(self):
