@@ -21,7 +21,7 @@ TOKEN_LABEL_RE = re.compile(
 )
 
 GMGN_TOKEN_URL_RE = re.compile(
-    r"gmgn\.ai/[a-zA-Z0-9_\-]+/token/(?:ref_)?(0x[0-9a-fA-F]{40})",
+    r"gmgn\.ai/[a-zA-Z0-9_\-]+/token/[^/?#]*?(0x[0-9a-fA-F]{40})",
     re.IGNORECASE,
 )
 DEXSCREENER_TOKEN_URL_RE = re.compile(
@@ -111,9 +111,7 @@ def parse_forwarded_tokens(text: str) -> list[ForwardedToken]:
 
     # 2. Check for labeled pair addresses
     pair_addresses = [m.group(1).lower() for m in PAIR_LABEL_RE.finditer(raw_text)]
-    for m in DEXSCREENER_PAIR_URL_RE.finditer(raw_text):
-        pair_addresses.append(m.group(1).lower())
-    pair_address = pair_addresses[0] if pair_addresses else None
+    chart_addresses = [m.group(1).lower() for m in DEXSCREENER_PAIR_URL_RE.finditer(raw_text)]
 
     # 3. Check for explicitly labeled token addresses or token URLs
     explicit_tokens = [m.group(1).lower() for m in TOKEN_LABEL_RE.finditer(raw_text)]
@@ -123,6 +121,13 @@ def parse_forwarded_tokens(text: str) -> list[ForwardedToken]:
         explicit_tokens.append(m.group(1).lower())
     for m in EXPLORER_TOKEN_URL_RE.finditer(raw_text):
         explicit_tokens.append(m.group(1).lower())
+
+    # A DexScreener /chain/0x… link is ambiguous: it can represent either a
+    # token page or a pair page. Treat it as a pair only when another address
+    # identifies the token; otherwise keep the sole address eligible.
+    if explicit_tokens or len(set(all_addresses) - set(chart_addresses)):
+        pair_addresses.extend(address for address in chart_addresses if address not in explicit_tokens)
+    pair_address = pair_addresses[0] if pair_addresses else None
 
     # 4. Extract symbol and name if present
     symbol, name = None, None

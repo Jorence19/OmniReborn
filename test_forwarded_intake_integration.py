@@ -109,6 +109,19 @@ class ForwardedIntakeIntegrationTests(unittest.TestCase):
         service.command(-1001, "/sources rbh_rpc_scan off")
         self.assertFalse(is_source_enabled("rbh_rpc_scan", runtime_dir=self.settings.runtime))
 
+    def test_telegram_sources_inline_button_callback_is_authorized_and_persistent(self):
+        api = MagicMock()
+        service = BotService(self.settings, api=api)
+        service.handle_update({
+            "callback_query": {
+                "id": "callback-1",
+                "data": "source:pons_forward:off",
+                "message": {"chat": {"id": -1001}},
+            }
+        })
+        self.assertFalse(is_source_enabled("pons_forward", runtime_dir=self.settings.runtime))
+        api.answer_callback.assert_called_once_with("callback-1", "Source updated")
+        self.assertIn("reply_markup", api.message.call_args.kwargs)
     def test_bsc_notice_is_held_without_enqueuing_unsupported_chain(self):
         ca = "0x0dac078a7511c3587dc3aad2c0991950093d7777"
         result = queue_forwarded_notice(
@@ -119,6 +132,23 @@ class ForwardedIntakeIntegrationTests(unittest.TestCase):
         self.assertEqual([item.ca for item in result["held"]], [ca])
         self.assertEqual(QueueStore(ForensicDatabase(str(self.db_path))).stats()["pending"], 0)
 
+    def test_dev_only_notice_is_audited_without_a_token_job(self):
+        dev_ca = "0x2222222222222222222222222222222222222222"
+        result = queue_forwarded_notice(
+            self.settings, -1001,
+            {"message_id": 46, "text": f"Pons Robinhood Dev: {dev_ca}"},
+        )
+        self.assertEqual(result["queued"], [])
+        self.assertEqual([item.ca for item in result["dev_seeds"]], [dev_ca])
+        self.assertEqual(QueueStore(ForensicDatabase(str(self.db_path))).stats()["pending"], 0)
+        connection = sqlite3.connect(self.db_path)
+        try:
+            status = connection.execute(
+                "SELECT status FROM forwarded_token_intake WHERE ca=?", (dev_ca,)
+            ).fetchone()[0]
+        finally:
+            connection.close()
+        self.assertEqual(status, "dev_seed")
     def test_forwarded_pons_token_still_needs_chain_evidence_and_full_profile(self):
         ca = "0x" + "2" * 40
         log = {"blockNumber": "0x64", "transactionHash": "0x" + "b" * 64}

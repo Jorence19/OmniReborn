@@ -198,21 +198,24 @@ class Telegram:
             {
                 "offset": offset,
                 "timeout": timeout,
-                "allowed_updates": json.dumps(["message"]),
+                "allowed_updates": json.dumps(["message", "callback_query"]),
             },
             timeout=timeout + 10,
         )
 
-    def message(self, chat_id, body):
-        self.call(
-            "sendMessage",
-            {
-                "chat_id": chat_id,
-                "text": body,
-                "parse_mode": "HTML",
-                "link_preview_options": json.dumps({"is_disabled": True}),
-            },
-        )
+    def message(self, chat_id, body, reply_markup=None):
+        data = {
+            "chat_id": chat_id,
+            "text": body,
+            "parse_mode": "HTML",
+            "link_preview_options": json.dumps({"is_disabled": True}),
+        }
+        if reply_markup is not None:
+            data["reply_markup"] = json.dumps(reply_markup)
+        self.call("sendMessage", data)
+
+    def answer_callback(self, callback_id, text=""):
+        self.call("answerCallbackQuery", {"callback_query_id": callback_id, "text": text})
 
     def document(self, chat_id, path, caption):
         with path.open("rb") as document:
@@ -292,7 +295,7 @@ def queue_forwarded_notice(settings, chat_id, message):
     db = ForensicDatabase(str(settings.db))
     queue = QueueStore(db)
     enabled = enabled_chain_ids()
-    queued, held = [], []
+    queued, held, dev_seeds = [], [], []
     message_id = int(message.get("message_id") or 0)
     source_text = text[:8000]
 
@@ -306,8 +309,12 @@ def queue_forwarded_notice(settings, chat_id, message):
         switch_key = kind_to_switch.get(token.source_kind)
         switch_enabled = is_source_enabled(switch_key, runtime_dir=settings.runtime) if switch_key else False
         chain_supported = token.chain_id in enabled and token.chain_id in CHAINS
-        supported = chain_supported and switch_enabled and token.source_kind in {"forwarded_pons_migration", "forwarded_arc_token"}
-        status = "queued" if supported else "held"
+        is_dev_seed = bool(token.metadata.get("is_dev_seed"))
+        supported = (
+            not is_dev_seed and chain_supported and switch_enabled
+            and token.source_kind in {"forwarded_pons_migration", "forwarded_arc_token"}
+        )
+        status = "dev_seed" if is_dev_seed else ("queued" if supported else "held")
         with connect(settings.db) as connection:
             connection.execute(
                 """INSERT INTO forwarded_token_intake(chat_id,message_id,ca,chain_id,source_kind,source_text,status)
@@ -316,7 +323,9 @@ def queue_forwarded_notice(settings, chat_id, message):
                      updated_at=CURRENT_TIMESTAMP, status=excluded.status""",
                 (chat_id, message_id, token.ca, token.chain_id, token.source_kind, source_text, status),
             )
-        if supported:
+        if is_dev_seed:
+            dev_seeds.append(token)
+        elif supported:
             queue.enqueue(
                 token.ca, token.source_kind,
                 {
@@ -336,7 +345,7 @@ def queue_forwarded_notice(settings, chat_id, message):
             queued.append(token)
         else:
             held.append(token)
-    return {"queued": queued, "held": held, "reason": ""}
+    return {"queued": queued, "held": held, "dev_seeds": dev_seeds, "reason": ""}
 
 def load_candidates(settings):
     source = settings.snapshot if settings.snapshot.exists() else settings.report
@@ -561,6 +570,29 @@ def regenerate_dashboard(settings):
     )
 
 
+def source_switch_keyboard(switches):
+    """Build authenticated Telegram callback controls for each source."""
+    rows = []
+    for key, definition in SOURCE_DEFINITIONS.items():
+        enabled = bool(switches.get(key, False))
+        next_state = "off" if enabled else "on"
+        icon = "🟢 ON" if enabled else "⚪ OFF"
+        rows.append([{
+            "text": f"{definition['label']}: {icon}",
+            "callback_data": f"source:{key}:{next_state}",
+        }])
+    return {"inline_keyboard": rows}
+
+
+def source_switch_message(settings):
+    switches = load_source_switches(runtime_dir=settings.runtime)
+    lines = ["<b>⚙️ OmniReborn Intake & Discovery Sources</b>"]
+    for key, definition in SOURCE_DEFINITIONS.items():
+        icon = "🟢 ON" if switches.get(key, False) else "⚪ OFF"
+        lines.append(f"• <b>{html.escape(definition['label'])}:</b> {icon}\n  <i>{html.escape(definition['description'])}</i>")
+    lines.append("\n<i>Tap a button to switch it. Command fallback: /sources &lt;name&gt; [on|off]</i>")
+    return "\n".join(lines), source_switch_keyboard(switches)
+
 def status_message(settings, started, data_error=""):
     counts = {}
     latest = "none"
@@ -750,6 +782,7 @@ class BotService:
             else:
                 queued = result["queued"]
                 held = result["held"]
+                dev_seeds = result.get("dev_seeds", [])
                 lines = ["<b>Forwarded source intake</b>"]
                 if queued:
                     for item in queued:
@@ -761,6 +794,12 @@ class BotService:
                             extra.append(f"Dev: <code>{item.dev_wallet[:8]}...</code>")
                         extra_str = f" ({', '.join(extra)})" if extra else ""
                         lines.append(f"Queued for full forensic verification: <code>{html.escape(item.ca)}</code> [{tag}]{extra_str}")
+                if dev_seeds:
+                    for item in dev_seeds:
+                        lines.append(
+                            "Recorded developer seed (no token job queued): <code>"
+                            + html.escape(item.dev_wallet or item.ca) + "</code>"
+                        )
                 if held:
                     for item in held:
                         tag = str(item.chain_id or "unknown")
@@ -790,14 +829,8 @@ class BotService:
                 self.api.message(chat_id, f"✅ <b>{html.escape(label)}</b> is now <b>{icon}</b>")
                 return
 
-            switches = load_source_switches(runtime_dir=self.settings.runtime)
-            lines = ["<b>⚙️ OmniReborn Intake & Discovery Sources</b>\n"]
-            for key, defn in SOURCE_DEFINITIONS.items():
-                state = switches.get(key, False)
-                icon = "🟢 ON" if state else "⚪ OFF"
-                lines.append(f"• <b>{html.escape(defn['label'])}:</b> {icon}\n  <i>{html.escape(defn['description'])}</i> (toggle: <code>/sources {key} {'off' if state else 'on'}</code>)")
-            lines.append("\n<i>Toggle any source: <code>/sources &lt;name&gt; [on|off]</code></i>")
-            self.api.message(chat_id, "\n".join(lines))
+            source_body, keyboard = source_switch_message(self.settings)
+            self.api.message(chat_id, source_body, reply_markup=keyboard)
         elif command == "/status":
             self.api.message(chat_id, status_message(self.settings, self.started, self.error))
         elif command in ("/log", "/logs"):
@@ -835,7 +868,35 @@ class BotService:
                 self.api.message(chat_id, "⚠️ Market refresh failed: " + html.escape(str(exc)))
         else:
             self.api.message(chat_id, "Commands: /leads /dashboard /refresh /dbxlsx /dbcsv /ingest /sources /status /log")
+    def handle_source_callback(self, callback):
+        message = callback.get("message") or {}
+        chat_id = (message.get("chat") or {}).get("id")
+        if chat_id not in self.settings.chats:
+            LOG.warning("Ignored unauthorized source callback chat_id=%s", chat_id)
+            return
+        parts = str(callback.get("data") or "").split(":")
+        if len(parts) != 3 or parts[0] != "source" or parts[2] not in {"on", "off"}:
+            self.api.answer_callback(callback.get("id", ""), "Invalid source control")
+            return
+        source_key = normalize_source_name(parts[1])
+        if not source_key:
+            self.api.answer_callback(callback.get("id", ""), "Unknown source")
+            return
+        enabled = parts[2] == "on"
+        set_source_switch(source_key, enabled, runtime_dir=self.settings.runtime)
+        self.api.answer_callback(callback.get("id", ""), "Source updated")
+        body, keyboard = source_switch_message(self.settings)
+        self.api.message(int(chat_id), body, reply_markup=keyboard)
+
     def handle_update(self, update):
+        callback = update.get("callback_query") or {}
+        if callback:
+            try:
+                self.handle_source_callback(callback)
+            except Exception as exc:
+                LOG.exception("Source callback failed")
+                self.api.answer_callback(callback.get("id", ""), "Update failed safely")
+            return
         message = update.get("message") or {}
         chat_id = (message.get("chat") or {}).get("id")
         body = clean(message.get("text"))

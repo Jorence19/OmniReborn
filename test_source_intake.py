@@ -18,6 +18,17 @@ class SourceIntakeTests(unittest.TestCase):
         self.assertEqual(tokens[0].symbol, "ALF")
         self.assertEqual(tokens[0].name, "Agentic Liquid Fund")
 
+    def test_real_pons_referral_slug_and_dex_link_keep_the_token_ca(self):
+        ca = "0x35d9123d4fa11ee93e350c59c7ef70741714374a"
+        notice = (
+            "Pons Uniswap Migration\nALF | Agentic Liquid Fund\n"
+            f"{ca}\n"
+            f"https://gmgn.ai/robinhood/token/lZZ6fdDe_{ca}\n"
+            f"https://dexscreener.com/robinhood/{ca}"
+        )
+        tokens = parse_forwarded_tokens(notice)
+        self.assertEqual([item.ca for item in tokens], [ca])
+        self.assertEqual(tokens[0].source_kind, "forwarded_pons_migration")
     def test_multi_address_notice_disambiguates_token_dev_and_pair(self):
         token_ca = "0x1111111111111111111111111111111111111111"
         dev_ca = "0x2222222222222222222222222222222222222222"
