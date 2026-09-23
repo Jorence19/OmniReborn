@@ -183,6 +183,42 @@ class TelegramBotTests(unittest.TestCase):
         service.command(12345, "/unknown")
         self.assertIn("/refresh", fake.messages[-1][1])
 
+    def test_populate_command_adds_pending_jobs(self):
+        fake = FakeTelegram()
+        service = BotService(self.settings, fake)
+        ca1 = "0x1111111111111111111111111111111111111111"
+        ca2 = "0x2222222222222222222222222222222222222222"
+        # 1. Run populate with two comma-separated addresses
+        service.command(-1001, f"/populate {ca1}, {ca2}")
+        self.assertEqual(len(fake.messages), 1)
+        self.assertIn("Added to pending queue (2)", fake.messages[-1][1])
+        self.assertIn(ca1, fake.messages[-1][1])
+        self.assertIn(ca2, fake.messages[-1][1])
+
+        # Verify queued in QueueStore
+        queue = QueueStore(ForensicDatabase(str(self.db_path)))
+        self.assertEqual(queue.stats()["pending"], 2)
+
+        # 2. Run populate again on ca1 -> should report already pending
+        service.command(-1001, f"/populate {ca1}")
+        self.assertIn("Already in queue", fake.messages[-1][1])
+
+    def test_populate_command_detects_already_active(self):
+        ca = "0x3333333333333333333333333333333333333333"
+        db = ForensicDatabase(str(self.db_path))
+        db.upsert_token({"ca": ca, "symbol": "TEST", "is_qualified": True, "chain": "RBH"})
+        fake = FakeTelegram()
+        service = BotService(self.settings, fake)
+        service.command(-1001, f"/populate {ca}")
+        self.assertIn("Already on dashboard", fake.messages[-1][1])
+        self.assertIn("$TEST", fake.messages[-1][1])
+
+    def test_populate_command_without_addresses_shows_usage(self):
+        fake = FakeTelegram()
+        service = BotService(self.settings, fake)
+        service.command(-1001, "/populate")
+        self.assertIn("No valid EVM addresses found", fake.messages[-1][1])
+
 
 if __name__ == "__main__":
     unittest.main()

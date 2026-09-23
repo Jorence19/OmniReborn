@@ -19,7 +19,13 @@ from urllib.parse import quote
 import requests
 
 from database import ForensicDatabase
-from source_intake import forwarded_text, is_forwarded_message, parse_forwarded_tokens
+from source_intake import (
+    detect_chain,
+    extract_addresses,
+    forwarded_text,
+    is_forwarded_message,
+    parse_forwarded_tokens,
+)
 from sources import (
     SOURCE_DEFINITIONS,
     is_source_enabled,
@@ -188,6 +194,7 @@ class Telegram:
             {"command": "status", "description": "Collector and queue health"},
             {"command": "log", "description": "Audit recent collector and queue logs"},
             {"command": "ingest", "description": "Queue addresses from a forwarded token notice"},
+            {"command": "populate", "description": "Add addresses to pending queue to populate list"},
             {"command": "sources", "description": "Manage intake & discovery sources"},
             {"command": "queue", "description": "View or safely restart unfinished token jobs"},
         ]
@@ -811,6 +818,80 @@ class BotService:
                         lines.append(f"Held without enrichment (disabled/unsupported): <code>{html.escape(item.ca)}</code> [{tag}]{extra_str}")
                 lines.append("Forwarded text is intake evidence only; qualification still requires chain verification.")
                 self.api.message(chat_id, "\n".join(lines))
+        elif command in ("/populate", "/add", "/enqueue"):
+            source_text = body + "\n" + forwarded_text(message or {})
+            addrs = extract_addresses(source_text)
+            if not addrs:
+                self.api.message(
+                    chat_id,
+                    "⚠️ No valid EVM addresses found.\n"
+                    "Usage: <code>/populate 0x111..., 0x222...</code>\n"
+                    "Or reply to a message containing addresses with <code>/populate</code>.",
+                )
+                return
+
+            detected_chain = detect_chain(source_text) or 4663
+            chain_tag = CHAINS.get(detected_chain, str(detected_chain))
+            db = ForensicDatabase(str(self.settings.db))
+            queue = QueueStore(db)
+
+            queued_addrs = []
+            already_active_addrs = []
+            already_pending_addrs = []
+
+            for ca in addrs:
+                with connect(self.settings.db) as conn:
+                    existing_token = conn.execute(
+                        "SELECT is_qualified, is_graduated, symbol FROM tokens WHERE ca=? AND chain_id=?",
+                        (ca, detected_chain),
+                    ).fetchone()
+                    existing_job = conn.execute(
+                        "SELECT status, attempts FROM ingestion_jobs WHERE ca=? AND chain_id=?",
+                        (ca, detected_chain),
+                    ).fetchone()
+
+                if existing_token and (existing_token["is_qualified"] or existing_token["is_graduated"]):
+                    sym = existing_token["symbol"] or "UNKNOWN"
+                    already_active_addrs.append((ca, f"${sym} (on dashboard)"))
+                elif existing_job and existing_job["status"] in ("pending", "running"):
+                    already_pending_addrs.append((ca, f"already {existing_job['status']}"))
+                else:
+                    payload = {
+                        "populated_by": chat_id,
+                        "populated_at": now(),
+                        "source": "manual_populate",
+                    }
+                    queue.enqueue(ca, "manual_populate", payload, chain_id=detected_chain, priority=10)
+                    with connect(self.settings.db) as conn:
+                        conn.execute(
+                            """INSERT INTO forwarded_token_intake(chat_id,message_id,ca,chain_id,source_kind,source_text,status)
+                               VALUES(?,?,?,?,?,?,?)
+                               ON CONFLICT(chat_id,message_id,ca) DO UPDATE SET
+                                 updated_at=CURRENT_TIMESTAMP, status=excluded.status""",
+                            (chat_id, int((message or {}).get("message_id") or 0), ca, detected_chain, "manual_populate", source_text[:2000], "queued"),
+                        )
+                    queued_addrs.append(ca)
+
+            lines = [f"<b>Token Queue Population [{chain_tag}]</b>"]
+            if queued_addrs:
+                lines.append(f"📥 <b>Added to pending queue ({len(queued_addrs)}):</b>")
+                for ca in queued_addrs[:15]:
+                    lines.append(f"• <code>{ca}</code>")
+                if len(queued_addrs) > 15:
+                    lines.append(f"• ... and {len(queued_addrs) - 15} more")
+
+            if already_pending_addrs:
+                lines.append(f"\n⏳ <b>Already in queue ({len(already_pending_addrs)}):</b>")
+                for ca, reason in already_pending_addrs[:5]:
+                    lines.append(f"• <code>{ca[:10]}...{ca[-6:]}</code> ({reason})")
+
+            if already_active_addrs:
+                lines.append(f"\n✅ <b>Already on dashboard ({len(already_active_addrs)}):</b>")
+                for ca, reason in already_active_addrs[:5]:
+                    lines.append(f"• <code>{ca[:10]}...{ca[-6:]}</code> ({reason})")
+
+            lines.append("\nThe collector will enrich and populate qualified tokens onto the dashboard.")
+            self.api.message(chat_id, "\n".join(lines))
         elif command in ("/queue", "/queue_restart"):
             action = body.split(maxsplit=1)[1].strip().lower() if len(body.split(maxsplit=1)) > 1 else "status"
             queue = QueueStore(ForensicDatabase(str(self.settings.db)))
@@ -892,7 +973,7 @@ class BotService:
                 LOG.exception("Market refresh failed")
                 self.api.message(chat_id, "⚠️ Market refresh failed: " + html.escape(str(exc)))
         else:
-            self.api.message(chat_id, "Commands: /leads /dashboard /refresh /dbxlsx /dbcsv /ingest /sources /queue /status /log")
+            self.api.message(chat_id, "Commands: /leads /dashboard /refresh /dbxlsx /dbcsv /ingest /populate /sources /queue /status /log")
     def handle_source_callback(self, callback):
         message = callback.get("message") or {}
         chat_id = (message.get("chat") or {}).get("id")
