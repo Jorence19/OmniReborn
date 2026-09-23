@@ -278,6 +278,22 @@ CREATE TABLE IF NOT EXISTS telegram_alert_baselines (
     initialized_at TEXT NOT NULL
 );
 
+
+-- Append-only audit trail for historical graduation revalidation. Rejected
+-- rows remain in the forensic database; only their Phase 1 eligibility flags
+-- are withdrawn.
+CREATE TABLE IF NOT EXISTS graduation_revalidations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ca TEXT NOT NULL REFERENCES tokens(ca) ON DELETE CASCADE,
+    chain_id INTEGER NOT NULL,
+    checked_at TEXT NOT NULL DEFAULT (datetime('now')),
+    outcome TEXT NOT NULL CHECK(outcome IN ('verified', 'rejected', 'unverified', 'skipped')),
+    reason TEXT NOT NULL,
+    prior_is_qualified INTEGER NOT NULL,
+    prior_is_graduated INTEGER NOT NULL,
+    evidence_json TEXT
+);
+
 -- High Performance Indexes
 CREATE INDEX IF NOT EXISTS idx_exec_dev ON execution_profiles(dev_wallet);
 CREATE INDEX IF NOT EXISTS idx_exec_funder1 ON execution_profiles(funder_1hop);
@@ -298,6 +314,7 @@ CREATE INDEX IF NOT EXISTS idx_forwarded_token_intake_status ON forwarded_token_
 CREATE INDEX IF NOT EXISTS idx_discovery_observations_status ON discovery_observations(chain_id, graduation_status, last_seen_at);
 CREATE INDEX IF NOT EXISTS idx_chain_events_block ON chain_events(chain_id, block_number);
 CREATE INDEX IF NOT EXISTS idx_telegram_alerts_sent ON telegram_alerts(sent_at);
+CREATE INDEX IF NOT EXISTS idx_graduation_revalidations_ca ON graduation_revalidations(ca, checked_at);
 
 -- Unified Master Profile View
 DROP VIEW IF EXISTS v_full_forensic_profile;

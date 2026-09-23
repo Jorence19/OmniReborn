@@ -908,6 +908,166 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
         "is_graduated": True, "is_training_anchor": False,
         "qualification_gates": [graduation_gate],
     }
+STRICT_GRADUATION_GATES = {
+    CHAIN_ID: "robinhood_token_bound_launchpad_event_plus_fresh_dex_pair",
+    5042: "arc_confirmed_dex_pair",
+}
+
+
+def _evidence_object(value: Any) -> Dict[str, Any]:
+    """Decode persisted evidence without trusting malformed legacy values."""
+    if isinstance(value, dict):
+        return value
+    if not isinstance(value, str) or not value.strip():
+        return {}
+    try:
+        decoded = json.loads(value)
+    except (TypeError, ValueError):
+        return {}
+    return decoded if isinstance(decoded, dict) else {}
+
+
+def _positive_int(value: Any) -> Optional[int]:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def validate_persisted_graduation(row: Dict[str, Any]) -> Tuple[str, str]:
+    """Revalidate only durable, chain-specific graduation proof.
+
+    A missing or old paid-listing record is rejected. RPC problems are deliberately
+    reported as unverified so an outage cannot silently purge a valid token.
+    """
+    chain_id = int(row["chain_id"])
+    ca = validate_address(str(row["ca"]))
+    evidence = _evidence_object(row.get("graduation_evidence"))
+    required_gate = STRICT_GRADUATION_GATES.get(chain_id)
+    if not required_gate:
+        return "skipped", f"no historical graduation verifier for chain {chain_id}"
+    if evidence.get("gate") != required_gate:
+        return "rejected", "missing current chain-specific graduation gate"
+    if _positive_int(evidence.get("chain_id")) != chain_id:
+        return "rejected", "graduation evidence has a mismatched chain id"
+    if not isinstance(evidence.get("market_pair_url"), str) or not evidence["market_pair_url"].startswith(("https://", "http://")):
+        return "rejected", "graduation evidence has no confirmed DEX pair URL"
+    pair_created_at = _positive_int(evidence.get("pair_created_at"))
+    if pair_created_at is None:
+        return "rejected", "graduation evidence has no confirmed DEX pair timestamp"
+
+    if chain_id == 5042:
+        # Arc's strict gate is the confirmed base-token DEX pair captured at intake.
+        return "verified", "persisted Arc confirmed-Dex-pair evidence is complete"
+
+    event_timestamp = _positive_int(evidence.get("event_timestamp"))
+    migration_path = evidence.get("migration_path")
+    if event_timestamp is None or not isinstance(migration_path, dict):
+        return "rejected", "Robinhood evidence lacks event timestamp or migration path"
+    if abs((pair_created_at // 1000) - event_timestamp) > RBH_PAIR_TIME_TOLERANCE_SECONDS:
+        return "rejected", "Robinhood DEX pair is not time-matched to the migration event"
+    tx_hash = str(migration_path.get("transaction_hash") or "").lower()
+    if not TX_HASH_RE.fullmatch(tx_hash):
+        return "rejected", "Robinhood evidence lacks a valid migration transaction hash"
+    try:
+        proven_tokens = rbh_migration_tokens(tx_hash)
+    except Exception as exc:
+        return "unverified", f"could not re-read Robinhood migration transaction: {type(exc).__name__}: {exc}"
+    if ca not in proven_tokens:
+        return "rejected", "migration transaction no longer proves this token-bound launchpad event"
+    return "verified", "known Robinhood migration event and time-matched DEX pair re-proven"
+
+
+def _revalidation_reasons(prior: Any, outcome: str, reason: str) -> str:
+    preserved = _evidence_object(prior)
+    if not preserved and prior not in (None, ""):
+        preserved = {"legacy_qualification_reasons": str(prior)}
+    preserved["graduation_revalidation"] = {
+        "outcome": outcome,
+        "reason": reason,
+        "checked_at": iso_utc(),
+    }
+    return json.dumps(preserved, sort_keys=True)
+
+
+def revalidate_existing_tokens(db: ForensicDatabase, *, apply: bool = False,
+                               limit: Optional[int] = None) -> Dict[str, int]:
+    """Soft-filter historical Robinhood/Arc rows using the current strict gates.
+
+    This never deletes token or fingerprint evidence.  Rejected rows are only
+    removed from Phase 1 eligibility (`is_graduated` and `is_qualified`), and an
+    append-only audit row records the original state and reason.
+    """
+    if limit is not None and limit < 1:
+        raise ValueError("revalidation limit must be at least 1")
+    sql = """
+        SELECT ca, chain_id, is_qualified, is_graduated, is_training_anchor,
+               graduation_evidence, qualification_reasons
+        FROM tokens
+        WHERE chain_id IN (?, ?)
+        ORDER BY chain_id, ca
+    """
+    params: List[Any] = [CHAIN_ID, 5042]
+    if limit is not None:
+        sql += " LIMIT ?"
+        params.append(limit)
+    summary = {
+        "scanned": 0, "anchors_preserved": 0, "verified": 0, "rejected": 0,
+        "unverified": 0, "skipped": 0, "would_demote": 0,
+        "demoted": 0, "promoted": 0,
+    }
+    with db.get_connection() as conn:
+        rows = [dict(row) for row in conn.execute(sql, params).fetchall()]
+        for row in rows:
+            summary["scanned"] += 1
+            if int(row.get("is_training_anchor") or 0):
+                summary["anchors_preserved"] += 1
+                continue
+            outcome, reason = validate_persisted_graduation(row)
+            summary[outcome] += 1
+            old_qualified = int(row.get("is_qualified") or 0)
+            old_graduated = int(row.get("is_graduated") or 0)
+            needs_demotion = outcome == "rejected" and bool(old_qualified or old_graduated)
+            needs_promotion = outcome == "verified" and not (old_qualified and old_graduated)
+            if needs_demotion:
+                summary["would_demote"] += 1
+            if not apply:
+                continue
+            conn.execute(
+                """
+                INSERT INTO graduation_revalidations (
+                    ca, chain_id, checked_at, outcome, reason, prior_is_qualified,
+                    prior_is_graduated, evidence_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (row["ca"], row["chain_id"], iso_utc(), outcome, reason,
+                 old_qualified, old_graduated, row.get("graduation_evidence")),
+            )
+            if needs_demotion:
+                conn.execute(
+                    """
+                    UPDATE tokens
+                    SET is_qualified=0, is_graduated=0, qualification_reasons=?
+                    WHERE ca=? AND chain_id=? AND is_training_anchor=0
+                    """,
+                    (_revalidation_reasons(row.get("qualification_reasons"), outcome, reason),
+                     row["ca"], row["chain_id"]),
+                )
+                summary["demoted"] += 1
+            elif needs_promotion:
+                conn.execute(
+                    """
+                    UPDATE tokens
+                    SET is_qualified=1, is_graduated=1, qualification_reasons=?
+                    WHERE ca=? AND chain_id=? AND is_training_anchor=0
+                    """,
+                    (_revalidation_reasons(row.get("qualification_reasons"), outcome, reason),
+                     row["ca"], row["chain_id"]),
+                )
+                summary["promoted"] += 1
+    return summary
+
 def process_queue(db: ForensicDatabase, store: QueueStore, max_jobs: int = 10, concurrency: int = 4) -> Dict[str, int]:
     worker_id = f"{socket.gethostname()}:{os.getpid()}:{uuid.uuid4().hex[:8]}"
     counts = {"succeeded": 0, "failed": 0, "skipped": 0, "claimed": 0}
@@ -1208,14 +1368,24 @@ def main() -> int:
     mode.add_argument("--preflight", action="store_true")
     mode.add_argument("--status", action="store_true")
     mode.add_argument("--health-check", action="store_true")
+    mode.add_argument("--revalidate-existing", action="store_true",
+                      help="audit historical Robinhood/Arc rows against the current strict graduation gates")
     parser.add_argument("--interval", type=int, default=int(os.getenv("COLLECTION_INTERVAL_SECONDS", "300")))
     parser.add_argument("--max-jobs", type=int, default=10)
     parser.add_argument("--from-block", type=int)
     parser.add_argument("--retry-dead", action="store_true")
     parser.add_argument("--dex-only", action="store_true")
     parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--apply", action="store_true",
+                        help="apply a requested revalidation; without it the command is a dry run")
+    parser.add_argument("--revalidation-limit", type=int,
+                        help="only inspect this many historical rows during --revalidate-existing")
     args = parser.parse_args()
     configure_logging(args.verbose)
+    if args.apply and not args.revalidate_existing:
+        parser.error("--apply is only valid with --revalidate-existing")
+    if args.revalidation_limit is not None and not args.revalidate_existing:
+        parser.error("--revalidation-limit is only valid with --revalidate-existing")
     if args.health_check:
         return 0 if health_check(max_age_seconds=max(180, args.interval * 3)) else 1
     db, store = ForensicDatabase(str(DB_PATH)), None
@@ -1239,7 +1409,17 @@ def main() -> int:
             return 1
     try:
         with SingleInstanceLock(RUNTIME_DIR / "streamer.lock"):
-            if args.backfill:
+            if args.revalidate_existing:
+                result = revalidate_existing_tokens(
+                    db, apply=args.apply, limit=args.revalidation_limit,
+                )
+                if args.apply and (result["demoted"] or result["promoted"]):
+                    regenerate_outputs(db)
+                write_health(
+                    "ok", store, mode="revalidate-existing", applied=args.apply,
+                    revalidation=result,
+                )
+            elif args.backfill:
                 result = backfill(db, store, args.backfill, max(1, args.max_jobs), args.from_block)
             elif args.drain:
                 result = process_queue(db, store, max_jobs=max(1, args.max_jobs))
