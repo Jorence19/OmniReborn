@@ -25,6 +25,26 @@ class MarketRefreshTests(unittest.TestCase):
         }]
         self.assertEqual(choose_pairs(payload, {ca}), {})
 
+    def test_backup_database_pruning(self):
+        import sqlite3
+        import tempfile
+        from pathlib import Path
+        from refresh_market_data import backup_database
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "data" / "forensics.db"
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+            conn = sqlite3.connect(db_path)
+            conn.execute("CREATE TABLE t(x);")
+            conn.close()
+            
+            for _ in range(5):
+                backup_database(db_path, keep=2)
+            
+            backup_dir = db_path.parent / "runtime" / "backups"
+            backups = list(backup_dir.glob("forensics-pre-market-refresh-*.db"))
+            self.assertEqual(len(backups), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

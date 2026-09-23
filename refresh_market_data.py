@@ -66,13 +66,28 @@ def choose_pairs(payload: Any, requested: set[str]) -> dict[str, dict[str, Any]]
     return selected
 
 
-def backup_database(db_path: Path) -> Path:
+def backup_database(db_path: Path, keep: int = 3) -> Path:
     backup_dir = db_path.parent / "runtime" / "backups"
     backup_dir.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     backup_path = backup_dir / f"{db_path.stem}-pre-market-refresh-{stamp}.db"
-    with sqlite3.connect(db_path) as source, sqlite3.connect(backup_path) as target:
+    source = sqlite3.connect(str(db_path))
+    target = sqlite3.connect(str(backup_path))
+    try:
         source.backup(target)
+    finally:
+        target.close()
+        source.close()
+    backups = sorted(
+        backup_dir.glob(f"{db_path.stem}-pre-market-refresh-*.db"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    for old in backups[keep:]:
+        try:
+            old.unlink(missing_ok=True)
+        except OSError:
+            pass
     return backup_path
 
 
