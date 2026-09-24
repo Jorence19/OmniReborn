@@ -101,16 +101,16 @@ def sanitize_candidate(raw: Any) -> dict[str, Any]:
         chain_id = int(raw.get("chain_id", 4663))
     except (TypeError, ValueError):
         chain_id = 4663
-    if chain_id not in {4663, 5042}:
+    if chain_id not in {56, 4663, 5042}:
         chain_id = 4663
-    chain = "ARC" if chain_id == 5042 else "RBH"
+    chain = {56: "BSC", 4663: "RBH", 5042: "ARC"}.get(chain_id, "RBH")
     try:
         best_match_chain_id = int(raw.get("best_match_chain_id", chain_id))
     except (TypeError, ValueError):
         best_match_chain_id = chain_id
-    if best_match_chain_id not in {4663, 5042}:
+    if best_match_chain_id not in {56, 4663, 5042}:
         best_match_chain_id = chain_id
-    best_match_chain = "ARC" if best_match_chain_id == 5042 else "RBH"
+    best_match_chain = {56: "BSC", 4663: "RBH", 5042: "ARC"}.get(best_match_chain_id, "RBH")
     return {
         "ca": _address(raw.get("ca"), required=True),
         "chain_id": chain_id,

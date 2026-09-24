@@ -22,7 +22,7 @@ if DASHBOARD_API_URL and not (
     raise ValueError("DASHBOARD_API_URL must be an endpoint starting with /, http://, or https://")
 df_cand = pd.read_csv(DATA_DIR / "phase1_fingerprint_report_candidates.csv")
 df_tg = pd.read_csv(APP_DIR / "tgscan_rbh_1789559702282.csv")
-CHAIN_NAMES = {4663: "RBH", 5042: "ARC"}
+CHAIN_NAMES = {56: "BSC", 4663: "RBH", 5042: "ARC"}
 if 'chain_id' not in df_cand.columns:
     df_cand['chain_id'] = 4663
 df_cand['chain_id'] = pd.to_numeric(df_cand['chain_id'], errors='coerce').fillna(4663).astype(int)
@@ -88,7 +88,7 @@ if db_path.exists():
     with sqlite3.connect(db_path) as connection:
         df_db_all = pd.read_sql_query(
             '''SELECT t.ca, LOWER(t.ca) AS ca_lower, COALESCE(t.chain_id, 4663) AS chain_id,
-                      COALESCE(t.chain, CASE WHEN t.chain_id=5042 THEN 'ARC' ELSE 'RBH' END) AS chain,
+                      COALESCE(t.chain, CASE WHEN t.chain_id=56 THEN 'BSC' WHEN t.chain_id=5042 THEN 'ARC' ELSE 'RBH' END) AS chain,
                       COALESCE(t.symbol, 'TOKEN') AS symbol,
                       COALESCE(t.name, t.symbol, 'Token') AS name,
                       t.token_live_at, t.ath_usd AS ath,
@@ -1270,6 +1270,11 @@ html_content = f"""<!DOCTYPE html>
             color: #7dd3fc;
             border-color: rgba(56, 189, 248, 0.4);
         }}
+        .chain-pill.bsc {{
+            background: rgba(250, 204, 21, 0.14);
+            color: #fde68a;
+            border-color: rgba(250, 204, 21, 0.4);
+        }}
         .team-indicator-badge {{
             display: inline-flex;
             align-items: center;
@@ -1560,6 +1565,11 @@ html_content = f"""<!DOCTYPE html>
             color: #ffffff;
             box-shadow: 0 0 12px rgba(2, 132, 199, 0.5);
         }}
+        .chain-btn.active.chain-bsc {{
+            background: #b45309;
+            color: #ffffff;
+            box-shadow: 0 0 12px rgba(180, 83, 9, 0.5);
+        }}
         .chain-badge {{
             background: rgba(0, 0, 0, 0.35);
             padding: 2px 7px;
@@ -1651,10 +1661,14 @@ html_content = f"""<!DOCTYPE html>
                     <span>🔷 Arc</span>
                     <span class="chain-badge" id="top-badge-5042">{len([c for c in candidates_data if c['chain_id'] == 5042])}</span>
                 </button>
+                <button class="chain-btn chain-bsc" id="top-chain-56" onclick="selectTopChain('56')">
+                    <span>🟡 BSC</span>
+                    <span class="chain-badge" id="top-badge-56">{len([c for c in candidates_data if c['chain_id'] == 56])}</span>
+                </button>
             </div>
         </div>
         <div class="chain-context-indicator" id="top-chain-desc">
-            🌐 Viewing combined dual-chain cross-forensic evidence
+            🌐 Viewing combined multi-chain cross-forensic evidence
         </div>
     </div>
 
@@ -1915,11 +1929,11 @@ html_content = f"""<!DOCTYPE html>
             if (!/^0x[0-9a-fA-F]{{40}}$/.test(ca)) return null;
             const bestCa = String(raw.best_match_ca || '');
             const parsedChainId = Number(raw.chain_id);
-            const chainId = [4663, 5042].includes(parsedChainId) ? parsedChainId : 4663;
-            const chainName = chainId === 5042 ? 'ARC' : 'RBH';
+            const chainId = [56, 4663, 5042].includes(parsedChainId) ? parsedChainId : 4663;
+            const chainName = chainId === 56 ? 'BSC' : chainId === 5042 ? 'ARC' : 'RBH';
             const parsedBestChainId = Number(raw.best_match_chain_id);
-            const bestMatchChainId = [4663, 5042].includes(parsedBestChainId) ? parsedBestChainId : chainId;
-            const bestMatchChainName = bestMatchChainId === 5042 ? 'ARC' : 'RBH';
+            const bestMatchChainId = [56, 4663, 5042].includes(parsedBestChainId) ? parsedBestChainId : chainId;
+            const bestMatchChainName = bestMatchChainId === 56 ? 'BSC' : bestMatchChainId === 5042 ? 'ARC' : 'RBH';
             const confidence = ['HIGH_LEAD', 'PROBABLE_LEAD', 'WATCH', 'WEAK'].includes(raw.confidence)
                 ? raw.confidence : 'WEAK';
             const number = (value, fallback = 0) => {{
@@ -2067,13 +2081,13 @@ html_content = f"""<!DOCTYPE html>
             activeChainFilter = chainId;
 
             // Update top button active states
-            const keys = ['all', '4663', '5042'];
+            const keys = ['all', '4663', '5042', '56'];
             keys.forEach(k => {{
                 const btn = document.getElementById('top-chain-' + k);
                 if (!btn) return;
                 const matches = (k === 'all' && chainId === 'ALL') || (k === chainId);
                 if (matches) {{
-                    btn.className = 'chain-btn active ' + (k === 'all' ? 'chain-all' : k === '4663' ? 'chain-rbh' : 'chain-arc');
+                    btn.className = 'chain-btn active ' + (k === 'all' ? 'chain-all' : k === '4663' ? 'chain-rbh' : k === '5042' ? 'chain-arc' : 'chain-bsc');
                 }} else {{
                     btn.className = 'chain-btn';
                 }}
@@ -2083,11 +2097,13 @@ html_content = f"""<!DOCTYPE html>
             const desc = document.getElementById('top-chain-desc');
             if (desc) {{
                 if (chainId === 'ALL') {{
-                    desc.innerHTML = '🌐 Viewing combined dual-chain cross-forensic evidence';
+                    desc.innerHTML = '🌐 Viewing combined multi-chain cross-forensic evidence';
                 }} else if (chainId === '4663') {{
                     desc.innerHTML = '🟣 Viewing Robinhood Chain • Native Gas/Value: ETH';
                 }} else if (chainId === '5042') {{
                     desc.innerHTML = '🔷 Viewing Arc Chain • Native Gas/Value: USDC';
+                }} else if (chainId === '56') {{
+                    desc.innerHTML = '🟡 Viewing BNB Smart Chain • Native Gas/Value: BNB';
                 }}
             }}
 
@@ -2165,10 +2181,12 @@ html_content = f"""<!DOCTYPE html>
             const totalAll = currentCandidates.length;
             const totalRbh = currentCandidates.filter(c => c.chain_id === 4663).length;
             const totalArc = currentCandidates.filter(c => c.chain_id === 5042).length;
+            const totalBsc = currentCandidates.filter(c => c.chain_id === 56).length;
 
             if (document.getElementById('top-badge-all')) document.getElementById('top-badge-all').textContent = totalAll;
             if (document.getElementById('top-badge-4663')) document.getElementById('top-badge-4663').textContent = totalRbh;
             if (document.getElementById('top-badge-5042')) document.getElementById('top-badge-5042').textContent = totalArc;
+            if (document.getElementById('top-badge-56')) document.getElementById('top-badge-56').textContent = totalBsc;
 
             currentCandidates.forEach(cand => {{
                 const res = calculateTokenScore(cand, activeWeights, activeBufferPct);
@@ -2593,11 +2611,12 @@ html_content = f"""<!DOCTYPE html>
                 }}
 
                 const isArc = c.chain_id === 5042;
-                const chainPillClass = isArc ? 'chain-pill arc' : 'chain-pill';
-                const chainPillLabel = isArc ? 'ARC' : 'RBH';
-                const gmgnUrl = isArc ? '' : `https://gmgn.ai/robinhood/token/${{c.ca}}`;
-                const dexUrl = `https://dexscreener.com/${{isArc ? 'arc' : 'robinhood'}}/${{c.ca}}`;
-                const scanUrl = `${{isArc ? 'https://explorer.arc.io/address/' : 'https://robinhoodchain.blockscout.com/address/'}}${{c.ca}}`;
+                const isBsc = c.chain_id === 56;
+                const chainPillClass = isArc ? 'chain-pill arc' : isBsc ? 'chain-pill bsc' : 'chain-pill';
+                const chainPillLabel = isArc ? 'ARC' : isBsc ? 'BSC' : 'RBH';
+                const gmgnUrl = isArc ? '' : isBsc ? `https://gmgn.ai/bsc/token/${{c.ca}}` : `https://gmgn.ai/robinhood/token/${{c.ca}}`;
+                const dexUrl = `https://dexscreener.com/${{isBsc ? 'bsc' : isArc ? 'arc' : 'robinhood'}}/${{c.ca}}`;
+                const scanUrl = `${{isBsc ? 'https://bscscan.com/address/' : isArc ? 'https://explorer.arc.io/address/' : 'https://robinhoodchain.blockscout.com/address/'}}${{c.ca}}`;
                 const gmgnButton = !isArc
                     ? `<a href="${{gmgnUrl}}" target="_blank" rel="noopener noreferrer" class="btn btn-gmgn" title="Open chart on GMGN.ai">GMGN</a>`
                     : `<span class="btn-gmgn-disabled" title="GMGN does not index Arc chain yet">GMGN</span>`;

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional, Tuple, List
 from config import (
     CHAIN_METADATA, KNOWN_EXCHANGES, RPC_ENDPOINTS, ETHERSCAN_API_KEY,
-    BASESCAN_API_KEY, ROBIN_ETHERSCAN_API_KEY,
+    BASESCAN_API_KEY, ROBIN_ETHERSCAN_API_KEY, BSCSCAN_API_KEY,
 )
 
 def rpc_call(rpc_url: str, method: str, params: list, req_id: int = 1):
@@ -311,6 +311,8 @@ def _duration_text(seconds: Optional[int]) -> Optional[str]:
 
 
 def _api_key_for_chain(chain_id: int) -> str:
+    if chain_id == 56:
+        return BSCSCAN_API_KEY or ETHERSCAN_API_KEY
     if chain_id == 4663:
         return ROBIN_ETHERSCAN_API_KEY
     if chain_id == 5042:

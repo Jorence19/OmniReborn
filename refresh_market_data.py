@@ -118,7 +118,7 @@ def refresh(db_path: Path, threshold: float | None, batch_size: int, pause: floa
         rows = [dict(row) for row in connection.execute(
             """SELECT ca,chain_id,symbol,ath_usd,current_market_cap_usd
                FROM tokens
-               WHERE chain_id IN (4663,5042)
+               WHERE chain_id IN (56,4663,5042)
                  AND (? IS NULL OR current_market_cap_usd IS NULL OR current_market_cap_usd < ?)
                ORDER BY chain_id,created_at,ca""",
             (threshold, threshold),

@@ -423,7 +423,7 @@ def evidence_quality(profile: Dict[str, Any]) -> Dict[str, Any]:
 def persist_profile(db: ForensicDatabase, profile: Dict[str, Any], *, qualified: bool = False) -> str:
     """Persist both indexed fields and a lossless Phase 1 fingerprint payload."""
     chain_id = int(profile.get("chain_id") or 4663)
-    chain_tag = {4663: "RBH", 5042: "ARC", 8453: "BASE", 1: "ETH"}.get(
+    chain_tag = {56: "BSC", 4663: "RBH", 5042: "ARC", 8453: "BASE", 1: "ETH"}.get(
         chain_id, str(chain_id)
     )
     canonical_ca = db.upsert_token({
@@ -446,7 +446,7 @@ def persist_profile(db: ForensicDatabase, profile: Dict[str, Any], *, qualified:
             "funder_address", "funder_hop2_address", "eth_received",
             "funding_count_before_deploy", "funding_total_eth_before_deploy",
             "setup_time_seconds", "wallet_age_at_deploy_seconds",
-        )} | {"chain_id": chain_id, "native_symbol": "USDC" if chain_id == 5042 else "ETH"},
+        )} | {"chain_id": chain_id, "native_symbol": "BNB" if chain_id == 56 else "USDC" if chain_id == 5042 else "ETH"},
         "launch_habits_json": {k: profile.get(k) for k in (
             "creation_method", "creation_nonce", "gas_price_gwei", "max_fee_gwei",
             "priority_fee_gwei", "creation_gas_used", "creation_tx_fee",

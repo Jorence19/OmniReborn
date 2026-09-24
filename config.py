@@ -11,12 +11,14 @@ except ImportError:
 ETHERSCAN_API_KEY = os.getenv("ETHERSCAN_API_KEY", "")
 BASESCAN_API_KEY = os.getenv("BASESCAN_API_KEY", "")
 ROBIN_ETHERSCAN_API_KEY = os.getenv("ROBIN_ETHERSCAN_API_KEY", "")
+BSCSCAN_API_KEY = os.getenv("BSCSCAN_API_KEY", "")
 
 # RPC Endpoints by Chain ID
 # 4663: Robinhood Chain (EVM)
 # 8453: Base L2
 # 1: Ethereum Mainnet
 RPC_ENDPOINTS = {
+    56: os.getenv("BSC_RPC_URL", "https://bsc-dataseed.bnbchain.org"),
     4663: os.getenv("ROBINHOOD_RPC_URL", "https://rpc.mainnet.chain.robinhood.com"),
     5042: os.getenv("ARC_RPC_URL", "https://rpc.mainnet.arc.io"),
     8453: os.getenv("BASE_RPC_URL", "https://mainnet.base.org"),
@@ -24,6 +26,12 @@ RPC_ENDPOINTS = {
 }
 
 CHAIN_METADATA = {
+    56: {
+        "name": "BNB Smart Chain", "tag": "BSC", "dex_chain_id": "bsc",
+        "explorer_url": "https://bscscan.com",
+        "native_symbol": "BNB",
+        "public_rpc": "https://bsc-dataseed.bnbchain.org",
+    },
     4663: {
         "name": "Robinhood Chain", "tag": "RBH", "dex_chain_id": "robinhood",
         "explorer_url": "https://robinhoodchain.blockscout.com",

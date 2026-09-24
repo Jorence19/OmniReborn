@@ -23,7 +23,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from branding_scraper import BrandingScraper
-from config import CHAIN_METADATA, RPC_ENDPOINTS, ROBIN_ETHERSCAN_API_KEY
+from config import BSCSCAN_API_KEY, CHAIN_METADATA, RPC_ENDPOINTS, ROBIN_ETHERSCAN_API_KEY
 from database import ForensicDatabase
 from forensics import extract_full_token_metadata
 from phase1 import build_report, persist_profile, write_report_artifacts
@@ -712,6 +712,20 @@ def forwarded_age_seconds(payload: Dict[str, Any]) -> int:
     except ValueError:
         return FORWARDED_INTAKE_GRACE_SECONDS + 1
 
+def configured_bsc_forward_channels() -> set[int]:
+    """Read the explicit BSC source allowlist at use time so revocation takes effect immediately."""
+    channels = set()
+    for raw in os.getenv("BSC_TRUSTED_FORWARD_CHANNEL_IDS", "").split(","):
+        value = raw.strip()
+        if not value:
+            continue
+        try:
+            channels.add(int(value))
+        except ValueError as exc:
+            raise CollectorError("BSC_TRUSTED_FORWARD_CHANNEL_IDS must contain integer chat IDs") from exc
+    return channels
+
+
 def source_payload_dict(job: Dict[str, Any]) -> Dict[str, Any]:
     raw_payload = job.get("source_payload") or {}
     if isinstance(raw_payload, str):
@@ -769,8 +783,19 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
     spec = CHAIN_METADATA[chain_id]
     source = str(job.get("source") or "stream")
     source_parts = {part for part in source.split("+") if part}
+    raw_payload = source_payload_dict(job)
     forwarded_rbh = chain_id == CHAIN_ID and "forwarded_pons_migration" in source_parts
     forwarded_arc = chain_id == 5042 and "forwarded_arc_token" in source_parts
+    forwarded_bsc = chain_id == 56 and "forwarded_bsc_token" in source_parts
+    try:
+        bsc_origin_channel_id = int(raw_payload.get("trusted_forward_channel_id"))
+    except (TypeError, ValueError):
+        bsc_origin_channel_id = None
+    bsc_migration = (
+        forwarded_bsc
+        and raw_payload.get("trusted_forward_template") == "flap_bsc_migration_v1"
+        and bsc_origin_channel_id in configured_bsc_forward_channels()
+    )
     manual_populate = "manual_populate" in source_parts
     rbh_migration = chain_id == CHAIN_ID and ("uniswap_v4_initialize" in source_parts or forwarded_rbh)
     arc_dex_pair = chain_id == 5042 and ("arc_dex_pair" in source_parts or forwarded_arc)
@@ -795,12 +820,17 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
                     "manual Arc address has no confirmed DEX graduation pair"
                 )
             arc_dex_pair = True
-    if not (rbh_migration or arc_dex_pair):
+        elif chain_id == 56:
+            raise NonGraduatedDiscoveryError(
+                "manual BSC address has no authenticated Flap migration provenance"
+            )
+    if not (rbh_migration or arc_dex_pair or bsc_migration):
         raise NonGraduatedDiscoveryError(
             f"graduated-only gate rejected {spec['tag']} source(s): {', '.join(sorted(source_parts)) or 'unknown'}"
         )
 
     event_block, event_timestamp = None, None
+    migration_evidence: Dict[str, Any] = {}
     if rbh_migration:
         if is_rbh_quote_asset(ca):
             raise NonGraduatedDiscoveryError("Robinhood pool quote asset is not a migrated token")
@@ -836,15 +866,15 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
                 f"Robinhood event block {event_block} has no time-matched DEX base-token pair"
             )
     else:
-        # Arc's graduation evidence is a live base-token DEX pair. Verify it before expensive RPC/explorer work.
+        # Arc requires a confirmed DEX pair; BSC additionally has authenticated Flap provenance.
         pair = manual_arc_pair or fetch_market_profile(ca, chain_id)
         if not pair:
-            raise NonGraduatedDiscoveryError("Arc graduation pair is no longer confirmed")
+            label = "BSC trusted Flap migration" if bsc_migration else "Arc"
+            raise NonGraduatedDiscoveryError(label + " graduation pair is no longer confirmed")
 
     LOG.info("enriching graduated %s on %s from %s (attempt %s)",
              ca, spec["tag"], source, job.get("attempts"))
     profile = extract_full_token_metadata(ca, chain_id=chain_id)
-    raw_payload = source_payload_dict(job)
     source_metadata = raw_payload.get("metadata") or {}
     if not isinstance(source_metadata, dict):
         source_metadata = {}
@@ -868,7 +898,11 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
     canonical_ca = persist_profile(db, profile, qualified=False)
     market = market_fields(pair)
     paid_surface_observed = bool(source_parts & DEX_PAID_SOURCES)
-    graduation_gate = "robinhood_token_bound_launchpad_event_plus_fresh_dex_pair" if rbh_migration else "arc_confirmed_dex_pair"
+    graduation_gate = (
+        "robinhood_token_bound_launchpad_event_plus_fresh_dex_pair" if rbh_migration
+        else "trusted_flap_bsc_migration_notice_plus_confirmed_dex_pair" if bsc_migration
+        else "arc_confirmed_dex_pair"
+    )
     graduation_evidence = {
         "gate": graduation_gate,
         "chain_id": chain_id,
@@ -876,6 +910,8 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
         "event_block": event_block,
         "event_timestamp": event_timestamp,
         "migration_path": migration_evidence.get(ca) if rbh_migration else None,
+        "trusted_forward_channel_id": bsc_origin_channel_id if bsc_migration else None,
+        "trusted_forward_template": raw_payload.get("trusted_forward_template") if bsc_migration else None,
         "source_observations": {
             key: source_metadata[key] for key in (
                 "reported_quote_asset", "reported_tax_percent", "reported_age_seconds",
@@ -888,7 +924,7 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
     }
     canonical_ca = db.upsert_token({
         "ca": canonical_ca, "chain_id": chain_id, "chain": spec["tag"],
-        "launchpad": "Uniswap v4" if rbh_migration else "Arc DEX",
+        "launchpad": "Uniswap v4" if rbh_migration else "Flap.sh" if bsc_migration else "Arc DEX",
         "symbol": market.get("symbol") or profile.get("token_symbol"),
         "name": market.get("name") or profile.get("token_name"),
         "token_live_at": market.get("token_live_at"),
@@ -901,7 +937,7 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
         "peak_liquidity_usd": market.get("peak_liquidity_usd"),
         "website": market.get("website") or profile.get("website_url"),
         "x_handle": market.get("x_handle") or profile.get("twitter_url"),
-        "description": profile.get("description"), "is_migrated": rbh_migration,
+        "description": profile.get("description"), "is_migrated": rbh_migration or bsc_migration,
         "is_dex_paid": paid_surface_observed, "is_graduated": True,
         "graduation_evidence": graduation_evidence, "is_qualified": True,
         "is_training_anchor": False,
@@ -931,6 +967,7 @@ def ingest_and_enrich_job(db: ForensicDatabase, job: Dict[str, Any]) -> Dict[str
         "qualification_gates": [graduation_gate],
     }
 STRICT_GRADUATION_GATES = {
+    56: "trusted_flap_bsc_migration_notice_plus_confirmed_dex_pair",
     CHAIN_ID: "robinhood_token_bound_launchpad_event_plus_fresh_dex_pair",
     5042: "arc_confirmed_dex_pair",
 }
@@ -978,6 +1015,17 @@ def validate_persisted_graduation(row: Dict[str, Any]) -> Tuple[str, str]:
     pair_created_at = _positive_int(evidence.get("pair_created_at"))
     if pair_created_at is None:
         return "rejected", "graduation evidence has no confirmed DEX pair timestamp"
+
+    if chain_id == 56:
+        try:
+            origin_channel_id = int(evidence.get("trusted_forward_channel_id"))
+        except (TypeError, ValueError):
+            return "rejected", "BSC evidence has no trusted forwarded source channel"
+        if origin_channel_id not in configured_bsc_forward_channels():
+            return "rejected", "BSC evidence source channel is not currently trusted"
+        if evidence.get("trusted_forward_template") != "flap_bsc_migration_v1":
+            return "rejected", "BSC evidence lacks the required Flap migration template"
+        return "verified", "authenticated Flap BSC migration and confirmed DEX pair evidence is complete"
 
     if chain_id == 5042:
         # Arc's strict gate is the confirmed base-token DEX pair captured at intake.
@@ -1027,10 +1075,10 @@ def revalidate_existing_tokens(db: ForensicDatabase, *, apply: bool = False,
         SELECT ca, chain_id, is_qualified, is_graduated, is_training_anchor,
                graduation_evidence, qualification_reasons
         FROM tokens
-        WHERE chain_id IN (?, ?)
+        WHERE chain_id IN (?, ?, ?)
         ORDER BY chain_id, ca
     """
-    params: List[Any] = [CHAIN_ID, 5042]
+    params: List[Any] = [56, CHAIN_ID, 5042]
     if limit is not None:
         sql += " LIMIT ?"
         params.append(limit)
@@ -1274,6 +1322,9 @@ def preflight(db: ForensicDatabase, store: QueueStore) -> Tuple[bool, Dict[str, 
     if 4663 in ENABLED_CHAIN_IDS:
         record("explorer_key_4663", bool(ROBIN_ETHERSCAN_API_KEY),
                "configured" if ROBIN_ETHERSCAN_API_KEY else "ROBIN_ETHERSCAN_API_KEY missing")
+    if 56 in ENABLED_CHAIN_IDS:
+        record("explorer_key_56", bool(BSCSCAN_API_KEY),
+               "configured" if BSCSCAN_API_KEY else "BSCSCAN_API_KEY missing")
     if 5042 in ENABLED_CHAIN_IDS:
         try:
             arc_api = str(CHAIN_METADATA[5042]["explorer_api_url"])

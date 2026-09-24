@@ -24,6 +24,7 @@ from source_intake import (
     extract_addresses,
     forwarded_text,
     is_forwarded_message,
+    is_flap_bsc_migration_template,
     parse_forwarded_tokens,
 )
 from sources import (
@@ -37,8 +38,9 @@ from streamer import QueueStore
 
 ROOT = Path(__file__).resolve().parent
 LOG = logging.getLogger("omnireborn.telegram")
-CHAINS = {4663: "RBH", 5042: "ARC"}
+CHAINS = {56: "BSC", 4663: "RBH", 5042: "ARC"}
 EXPLORERS = {
+    56: "https://bscscan.com/address/{ca}",
     4663: "https://robinhoodchain.blockscout.com/address/{ca}",
     5042: "https://explorer.arc.io/address/{ca}",
 }
@@ -294,6 +296,35 @@ def enabled_chain_ids():
         raise ValueError("ENABLED_CHAIN_IDS must contain comma-separated integers") from exc
 
 
+def configured_forward_channel_ids(setting: str) -> set[int]:
+    """Parse explicit Telegram source IDs; an absent setting is fail-closed."""
+    values = set()
+    for raw in os.getenv(setting, "").split(","):
+        value = raw.strip()
+        if not value:
+            continue
+        try:
+            values.add(int(value))
+        except ValueError as exc:
+            raise ValueError(setting + " must contain comma-separated integer chat IDs") from exc
+    return values
+
+
+def forwarded_origin_channel_id(message: dict) -> int | None:
+    """Return the original forwarded channel ID, never the destination chat ID."""
+    for item in ((message.get("reply_to_message") or {}), message):
+        origin = item.get("forward_origin") or {}
+        origin_chat = origin.get("chat") if isinstance(origin, dict) else None
+        legacy_chat = item.get("forward_from_chat")
+        candidate = origin_chat or legacy_chat
+        if isinstance(candidate, dict):
+            try:
+                return int(candidate.get("id"))
+            except (TypeError, ValueError):
+                continue
+    return None
+
+
 def queue_forwarded_notice(settings, chat_id, message):
     """Audit a forwarded notice and queue only configured supported chains and enabled sources."""
     text = forwarded_text(message)
@@ -306,6 +337,8 @@ def queue_forwarded_notice(settings, chat_id, message):
     queued, held, dev_seeds = [], [], []
     message_id = int(message.get("message_id") or 0)
     source_text = text[:8000]
+    origin_channel_id = forwarded_origin_channel_id(message)
+    trusted_bsc_channels = configured_forward_channel_ids("BSC_TRUSTED_FORWARD_CHANNEL_IDS")
 
     kind_to_switch = {
         "forwarded_pons_migration": "pons_forward",
@@ -318,9 +351,18 @@ def queue_forwarded_notice(settings, chat_id, message):
         switch_enabled = is_source_enabled(switch_key, runtime_dir=settings.runtime) if switch_key else False
         chain_supported = token.chain_id in enabled and token.chain_id in CHAINS
         is_dev_seed = bool(token.metadata.get("is_dev_seed"))
+        bsc_trusted = (
+            token.source_kind == "forwarded_bsc_token"
+            and origin_channel_id is not None
+            and origin_channel_id in trusted_bsc_channels
+            and is_flap_bsc_migration_template(text)
+        )
         supported = (
             not is_dev_seed and chain_supported and switch_enabled
-            and token.source_kind in {"forwarded_pons_migration", "forwarded_arc_token"}
+            and (
+                token.source_kind in {"forwarded_pons_migration", "forwarded_arc_token"}
+                or bsc_trusted
+            )
         )
         status = "dev_seed" if is_dev_seed else ("queued" if supported else "held")
         with connect(settings.db) as connection:
@@ -347,6 +389,8 @@ def queue_forwarded_notice(settings, chat_id, message):
                     "symbol": token.symbol,
                     "name": token.name,
                     "metadata": token.metadata,
+                    "trusted_forward_channel_id": origin_channel_id if bsc_trusted else None,
+                    "trusted_forward_template": "flap_bsc_migration_v1" if bsc_trusted else None,
                 },
                 chain_id=token.chain_id, priority=5,
             )
@@ -422,6 +466,10 @@ def lead_links(row):
     if chain_id == 4663:
         links.append(
             '<a href="https://gmgn.ai/robinhood/token/' + address + '">GMGN</a>'
+        )
+    if chain_id == 56:
+        links.append(
+            '<a href="https://gmgn.ai/bsc/token/' + address + '">GMGN</a>'
         )
     if chain_id in EXPLORERS:
         links.append(
@@ -845,6 +893,12 @@ class BotService:
                     "⚠️ " + html.escape(str(CHAINS.get(detected_chain, f"Chain {detected_chain}")))
                     + " manual population is not enabled. BSC notices are retained as held until its RPC, "
                     "explorer, and chain-specific graduation gate are configured.",
+                )
+                return
+            if detected_chain == 56:
+                self.api.message(
+                    chat_id,
+                    "⚠️ BSC cannot be added with <code>/populate</code>, because a raw address cannot prove it came from the trusted Flap migration channel. Forward the original Flap notice from the configured source instead.",
                 )
                 return
             chain_tag = CHAINS[detected_chain]

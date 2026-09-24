@@ -92,6 +92,16 @@ def detect_chain(text: str) -> int | None:
     return hits[0] if len(hits) == 1 else None
 
 
+def is_flap_bsc_migration_template(text: str) -> bool:
+    """Recognize the stable Flap BSC migration message shape, not its claims."""
+    value = str(text or "").lower()
+    return (
+        "new token migration detected" in value
+        and "flap.sh/bnb/" in value
+        and "contract address" in value
+    )
+
+
 def source_kind(text: str, chain_id: int | None) -> str:
     value = str(text or "").lower()
     if chain_id == 4663 and "pons" in value and "migration" in value:
