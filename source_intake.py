@@ -272,10 +272,13 @@ def forwarded_text(message: dict) -> str:
 
 
 def is_forwarded_message(message: dict) -> bool:
-    """True only for Telegram-forwarded messages, not ordinary group chatter."""
+    """True only for Telegram-forwarded messages, auto-forwards, or channel posts."""
+    chat = message.get("chat")
+    is_channel = isinstance(chat, dict) and chat.get("type") == "channel"
     return bool(
         message.get("forward_origin")
         or message.get("forward_from")
         or message.get("forward_from_chat")
         or message.get("is_automatic_forward")
+        or is_channel
     )

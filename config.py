@@ -29,6 +29,7 @@ CHAIN_METADATA = {
     56: {
         "name": "BNB Smart Chain", "tag": "BSC", "dex_chain_id": "bsc",
         "explorer_url": "https://bscscan.com",
+        "explorer_api_url": os.getenv("BSC_EXPLORER_API_URL", "https://api.etherscan.io/v2/api"),
         "native_symbol": "BNB",
         "public_rpc": "https://bsc-dataseed.bnbchain.org",
     },

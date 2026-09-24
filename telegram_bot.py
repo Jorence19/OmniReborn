@@ -208,7 +208,7 @@ class Telegram:
             {
                 "offset": offset,
                 "timeout": timeout,
-                "allowed_updates": json.dumps(["message", "callback_query"]),
+                "allowed_updates": json.dumps(["message", "channel_post", "callback_query"]),
             },
             timeout=timeout + 10,
         )
@@ -311,7 +311,7 @@ def configured_forward_channel_ids(setting: str) -> set[int]:
 
 
 def forwarded_origin_channel_id(message: dict) -> int | None:
-    """Return the original forwarded channel ID, never the destination chat ID."""
+    """Return the original forwarded channel ID, or direct chat ID if sent from an allowlisted channel."""
     for item in ((message.get("reply_to_message") or {}), message):
         origin = item.get("forward_origin") or {}
         origin_chat = origin.get("chat") if isinstance(origin, dict) else None
@@ -322,6 +322,17 @@ def forwarded_origin_channel_id(message: dict) -> int | None:
                 return int(candidate.get("id"))
             except (TypeError, ValueError):
                 continue
+    # If the message arrived directly from an allowlisted channel or chat
+    chat = message.get("chat")
+    if isinstance(chat, dict):
+        try:
+            candidate_id = int(chat.get("id"))
+            if candidate_id in configured_forward_channel_ids("BSC_TRUSTED_FORWARD_CHANNEL_IDS"):
+                return candidate_id
+            if chat.get("type") == "channel":
+                return candidate_id
+        except (TypeError, ValueError):
+            pass
     return None
 
 
@@ -1073,7 +1084,7 @@ class BotService:
                 LOG.exception("Source callback failed")
                 self.api.answer_callback(callback.get("id", ""), "Update failed safely")
             return
-        message = update.get("message") or {}
+        message = update.get("message") or update.get("channel_post") or {}
         chat_id = (message.get("chat") or {}).get("id")
         body = clean(message.get("text"))
         if chat_id not in self.settings.chats:
